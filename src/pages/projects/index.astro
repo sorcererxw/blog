@@ -1,0 +1,42 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { ProjectsList } from "@/domains/projects/projects-list";
+import { listProjects } from "@/domains/projects/list-projects";
+import { buildSeo } from "@/domains/seo/build-seo";
+import { buildCollectionPageStructuredData } from "@/domains/seo/build-structured-data";
+import { createMemoryProjectListCache } from "@/integrations/kv/projects-cache";
+import { createNotionProjectSource, listProjectsFromNotion } from "@/integrations/notion/projects";
+
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
+
+const source = createNotionProjectSource(listProjectsFromNotion);
+const items = await listProjects({
+  source,
+  cache: createMemoryProjectListCache(),
+});
+const description =
+  "Selected engineering projects, experiments, and publishing infrastructure work that shipped or taught something real.";
+const seo = buildSeo({
+  description,
+  kind: "collection",
+  pathname: Astro.url.pathname,
+  structuredData: buildCollectionPageStructuredData({
+    description,
+    items: items.map((item) => ({
+      name: item.title,
+      url: item.url,
+    })),
+    pathname: Astro.url.pathname,
+    title: "Selected engineering projects and experiments",
+  }),
+  title: "Selected engineering projects, experiments, and infrastructure work",
+});
+---
+
+<SiteLayout currentPath={Astro.url.pathname} seo={seo}>
+  <section class="publication-page">
+    <ProjectsList className="publication-project-list" items={items} />
+  </section>
+</SiteLayout>

@@ -1,0 +1,198 @@
+.stackList {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100%, 48rem);
+}
+
+.intro {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  text-wrap: balance;
+}
+
+.description {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 1.03rem;
+  line-height: 1.85;
+}
+
+.filters {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filter {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.filterLabel {
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.8rem 0.95rem;
+  font-size: 0.96rem;
+  line-height: 1.4;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+.emptyState {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.clearButton {
+  justify-self: start;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--foreground);
+  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 1.1rem;
+  background: color-mix(in oklab, var(--background) 92%, var(--card) 8%);
+  overflow: clip;
+}
+
+.link {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  transition: transform 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.link:hover {
+  transform: translateY(-0.1rem);
+}
+
+.link:hover .cardTitle,
+.link:hover .summary {
+  color: var(--foreground);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.iconImage {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background-color: var(--card);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-wrap: pretty;
+}
+
+.linkText {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.94rem;
+  line-height: 1.7;
+  word-break: break-all;
+}
+
+.summary {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 1rem;
+  line-height: 1.8;
+}
+
+.cardMeta {
+  display: grid;
+  gap: 1rem;
+}
+
+.metaGroup {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.9rem;
+}
+
+@media (min-width: 960px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

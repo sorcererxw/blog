@@ -1,0 +1,11 @@
+.wrangler/
+.open-next/
+.pnpm-store/
+.astro/
+node_modules
+tsconfig.tsbuildinfo
+.next
+.turbo
+dist
+.vercel
+.omx/

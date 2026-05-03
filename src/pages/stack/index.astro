@@ -1,0 +1,42 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { buildSeo } from "@/domains/seo/build-seo";
+import { buildCollectionPageStructuredData } from "@/domains/seo/build-structured-data";
+import { StackList } from "@/domains/stack/stack-list";
+import { listStack } from "@/domains/stack/list-stack";
+import { createMemoryStackListCache } from "@/integrations/kv/stack-cache";
+import { createNotionStackSource, listStacksFromNotion } from "@/integrations/notion/stack";
+
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
+
+const source = createNotionStackSource(listStacksFromNotion);
+const items = await listStack({
+  source,
+  cache: createMemoryStackListCache(),
+});
+const description =
+  "The tools, runtimes, services, and deployment surfaces behind how this site is built, published, and maintained.";
+const seo = buildSeo({
+  description,
+  kind: "collection",
+  pathname: Astro.url.pathname,
+  structuredData: buildCollectionPageStructuredData({
+    description,
+    items: items.map((item) => ({
+      name: item.name,
+      url: item.link,
+    })),
+    pathname: Astro.url.pathname,
+    title: "Engineering stack, tools, runtimes, and services",
+  }),
+  title: "Engineering stack, tools, runtimes, and services",
+});
+---
+
+<SiteLayout currentPath={Astro.url.pathname} seo={seo}>
+  <section class="publication-page">
+    <StackList client:load items={items} />
+  </section>
+</SiteLayout>

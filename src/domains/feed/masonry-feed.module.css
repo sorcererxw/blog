@@ -1,0 +1,53 @@
+.root {
+  display: grid;
+}
+
+.grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cell {
+  transition: opacity 180ms ease;
+}
+
+@media (hover: hover) {
+  .root:hover .cell {
+    opacity: 0.24;
+  }
+
+  .root:hover .cell:hover {
+    opacity: 1;
+  }
+}
+
+.tabletLayout,
+.desktopLayout {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mobileLayout {
+    display: none;
+  }
+
+  .tabletLayout {
+    display: block;
+  }
+}
+
+@media (min-width: 1280px) {
+  .tabletLayout {
+    display: none;
+  }
+
+  .desktopLayout {
+    display: block;
+  }
+}

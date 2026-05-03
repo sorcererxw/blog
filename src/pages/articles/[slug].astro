@@ -1,0 +1,103 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { ArticleDetailView } from "@/domains/article/article-detail-view";
+import { buildSeo } from "@/domains/seo/build-seo";
+import {
+  buildBreadcrumbStructuredData,
+  buildTechArticleStructuredData,
+} from "@/domains/seo/build-structured-data";
+import { PublicBoundary } from "@/domains/shell/public-boundary";
+import { getArticleBySlug } from "@/domains/article/get-article-by-slug";
+import { articleDetailMemoryCache } from "@/integrations/kv/article-detail-cache";
+import { createNotionArticleDetailSource } from "@/integrations/notion/article-detail";
+
+export const prerender = false;
+
+const slug = Astro.params.slug;
+
+if (!slug) {
+  Astro.response.status = 404;
+}
+
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
+
+const article = slug
+  ? await getArticleBySlug({
+      source: createNotionArticleDetailSource(),
+      cache: articleDetailMemoryCache,
+      slug,
+    })
+  : null;
+
+if (!article) {
+  Astro.response.status = 404;
+}
+
+const seo = article
+  ? buildSeo({
+      description: article.summary,
+      image: article.cover
+        ? {
+            alt: article.title,
+            url: article.cover,
+          }
+        : article.icon?.kind === "url"
+          ? {
+              alt: `${article.title} icon`,
+              url: article.icon.value,
+            }
+          : null,
+      kind: "article",
+      pathname: Astro.url.pathname,
+      publishedTime: article.date.toISOString(),
+      structuredData: [
+        buildTechArticleStructuredData({
+          description: article.summary,
+          image: article.cover
+            ? {
+                alt: article.title,
+                url: article.cover,
+              }
+            : article.icon?.kind === "url"
+              ? {
+                  alt: `${article.title} icon`,
+                  url: article.icon.value,
+                }
+              : null,
+          pathname: Astro.url.pathname,
+          publishedTime: article.date.toISOString(),
+          title: article.title,
+        }),
+        buildBreadcrumbStructuredData([
+          { name: "Home", path: "/" },
+          { name: "Engineering archive", path: "/blog" },
+          { name: article.title, path: Astro.url.pathname },
+        ]),
+      ],
+      title: article.title,
+    })
+  : buildSeo({
+      description: "The requested article is missing. Open the homepage or return to the engineering archive.",
+      indexable: false,
+      kind: "boundary",
+      pathname: Astro.url.pathname,
+      title: "Page not found.",
+    });
+---
+
+<SiteLayout currentPath={Astro.url.pathname} seo={seo}>
+  {
+    article ? (
+      <ArticleDetailView article={article} />
+    ) : (
+      <PublicBoundary
+        actions={[
+          { href: "/", label: "Open homepage" },
+          { href: "/blog", label: "Open archive" },
+        ]}
+        message="The requested article is missing. Open the homepage or return to the archive."
+        title="Page not found."
+      />
+    )
+  }
+</SiteLayout>

@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "@astrojs/cloudflare/entrypoints/server",
+  "name": "blog",
+  "compatibility_date": "2026-04-14",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "routes": [
+    {
+      "custom_domain": true,
+      "pattern": "sorcererxw.com"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "SESSION",
+      "id": "5ab66144d45d49d79a0533680313c6f0"
+    },
+    {
+      "binding": "BLOG_CACHE",
+      "id": "82255de05f7d4b9e8cf0cb43521ee243"
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  }
+}

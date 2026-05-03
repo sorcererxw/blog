@@ -1,0 +1,34 @@
+---
+import "@/styles/globals.css";
+import { PublicBoundary } from "@/domains/shell/public-boundary";
+---
+
+<!doctype html>
+<html lang="en" class="h-full antialiased font-sans">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Page not found. | sorcererxw'blog</title>
+    <meta content="noindex,nofollow,max-image-preview:large" name="robots" />
+    <meta
+      content="The requested page is missing. Return to the engineering archive or the homepage."
+      name="description"
+    />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Outfit:wght@400;500;600&family=Roboto+Slab:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="min-h-full bg-background text-foreground">
+    <PublicBoundary
+      actions={[
+        { href: "/", label: "Open homepage" },
+        { href: "/blog", label: "Open archive" },
+      ]}
+      message="The requested page is missing. Open the homepage or return to the reading surfaces."
+      title="Page not found."
+    />
+  </body>
+</html>

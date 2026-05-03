@@ -1,0 +1,196 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { PublicBoundary } from "@/domains/shell/public-boundary";
+import { listArticles } from "@/domains/article/list-articles";
+import { buildSeo } from "@/domains/seo/build-seo";
+import { buildCollectionPageStructuredData } from "@/domains/seo/build-structured-data";
+import {
+  ASTRO_CLOUDFLARE_WEDGE,
+  buildAstroCloudflareProof,
+  getAstroCloudflareProofLinks,
+} from "@/domains/seo/query-wedge";
+import { listThoughts } from "@/domains/thoughts/list-thoughts";
+import { listProjects } from "@/domains/projects/list-projects";
+import { listStack } from "@/domains/stack/list-stack";
+import { articleListMemoryCache } from "@/integrations/kv/article-cache";
+import { createMemoryProjectListCache } from "@/integrations/kv/projects-cache";
+import { createMemoryStackListCache } from "@/integrations/kv/stack-cache";
+import { createBlogArticleSource } from "@/integrations/notion/articles";
+import { createNotionProjectSource, listProjectsFromNotion } from "@/integrations/notion/projects";
+import { createNotionStackSource, listStacksFromNotion } from "@/integrations/notion/stack";
+
+export const prerender = false;
+
+Astro.response.headers.set("Cache-Control", "public, max-age=0, s-maxage=600");
+
+const [articles, projects, stack, thoughts] = await Promise.all([
+  listArticles({
+    source: createBlogArticleSource(),
+    cache: articleListMemoryCache,
+  }),
+  listProjects({
+    source: createNotionProjectSource(listProjectsFromNotion),
+    cache: createMemoryProjectListCache(),
+  }),
+  listStack({
+    source: createNotionStackSource(listStacksFromNotion),
+    cache: createMemoryStackListCache(),
+  }),
+  Promise.resolve(listThoughts()),
+]);
+
+const proof = buildAstroCloudflareProof({
+  articles,
+  projects,
+  stack,
+  thoughts,
+});
+const proofLinks = getAstroCloudflareProofLinks(proof);
+const hasProof = proofLinks.length > 0;
+
+if (!hasProof) {
+  Astro.response.status = 404;
+}
+
+const seo = buildSeo({
+  description: ASTRO_CLOUDFLARE_WEDGE.description,
+  indexable: hasProof,
+  kind: "query-entry",
+  pathname: ASTRO_CLOUDFLARE_WEDGE.path,
+  queryFamily: ASTRO_CLOUDFLARE_WEDGE.queryFamily,
+  structuredData: buildCollectionPageStructuredData({
+    description: ASTRO_CLOUDFLARE_WEDGE.description,
+    items: proofLinks,
+    pathname: ASTRO_CLOUDFLARE_WEDGE.path,
+    title: ASTRO_CLOUDFLARE_WEDGE.title,
+  }),
+  title: ASTRO_CLOUDFLARE_WEDGE.title,
+});
+---
+
+<SiteLayout currentPath={Astro.url.pathname} seo={seo}>
+  {
+    hasProof ? (
+      <section class="publication-page space-y-10">
+        <header class="space-y-4">
+          <p class="shell-eyebrow">Query wedge</p>
+          <h1 class="publication-home-title text-4xl">{ASTRO_CLOUDFLARE_WEDGE.headline}</h1>
+          <p class="publication-home-summary">{ASTRO_CLOUDFLARE_WEDGE.intro}</p>
+        </header>
+
+        <section class="space-y-4">
+          <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Why this page deserves the click</h2>
+          <p class="publication-home-summary">
+            If you are evaluating Astro on Cloudflare for a content-heavy site, this page
+            points at the concrete proof surfaces behind the migration: the public article
+            work, the stack choices, the related project work, and the smaller thought
+            fragments that show how the decisions were made.
+          </p>
+        </section>
+
+        <section class="space-y-4">
+          <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Query-to-proof map</h2>
+          <div class="grid gap-3 md:grid-cols-2">
+            <article class="rounded-lg border p-4">
+              <h3 class="font-medium">Astro migration proof</h3>
+              <p class="mt-2 text-sm text-muted-foreground">
+                Articles and route-level work that show how the site moved off the old
+                runtime and what changed in the publishing path.
+              </p>
+            </article>
+            <article class="rounded-lg border p-4">
+              <h3 class="font-medium">Cloudflare runtime proof</h3>
+              <p class="mt-2 text-sm text-muted-foreground">
+                Stack entries, project pages, and public notes that show the edge runtime,
+                deployment, and image-delivery choices behind the current site.
+              </p>
+            </article>
+          </div>
+        </section>
+
+        {
+          proof.articles.length > 0 ? (
+            <section class="space-y-4">
+              <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Articles</h2>
+              <ul class="grid gap-4">
+                {proof.articles.map((item) => (
+                  <li class="rounded-lg border p-4">
+                    <a class="text-lg font-medium text-foreground underline underline-offset-4" href={`/articles/${item.slug}`}>
+                      {item.title}
+                    </a>
+                    <p class="mt-2 text-sm text-muted-foreground">{item.summary}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null
+        }
+
+        {
+          proof.projects.length > 0 ? (
+            <section class="space-y-4">
+              <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Projects</h2>
+              <ul class="grid gap-4">
+                {proof.projects.map((item) => (
+                  <li class="rounded-lg border p-4">
+                    <a class="text-lg font-medium text-foreground underline underline-offset-4" href={item.url} rel="noreferrer" target="_blank">
+                      {item.title}
+                    </a>
+                    <p class="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null
+        }
+
+        {
+          proof.stack.length > 0 ? (
+            <section class="space-y-4">
+              <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Stack and services</h2>
+              <ul class="grid gap-4">
+                {proof.stack.map((item) => (
+                  <li class="rounded-lg border p-4">
+                    <a class="text-lg font-medium text-foreground underline underline-offset-4" href={item.link} rel="noreferrer" target="_blank">
+                      {item.name}
+                    </a>
+                    <p class="mt-2 text-sm text-muted-foreground">{item.description}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null
+        }
+
+        {
+          proof.thoughts.length > 0 ? (
+            <section class="space-y-4">
+              <h2 class="font-serif text-3xl font-semibold tracking-tight text-foreground">Supporting notes</h2>
+              <ul class="grid gap-4">
+                {proof.thoughts.map((item) => (
+                  <li class="rounded-lg border p-4">
+                    <a class="text-lg font-medium text-foreground underline underline-offset-4" href={`/thoughts#1_${item.id}`}>
+                      {item.webpage?.title || item.richText.map((segment) => segment.plainText).join(" ").slice(0, 100)}
+                    </a>
+                    <p class="mt-2 text-sm text-muted-foreground">
+                      {item.webpage?.description || item.richText.map((segment) => segment.plainText).join(" ").slice(0, 180)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null
+        }
+      </section>
+    ) : (
+      <PublicBoundary
+        actions={[
+          { href: "/blog", label: "Open archive" },
+          { href: "/stack", label: "Open stack" },
+        ]}
+        message="The Astro and Cloudflare proof map is not ready yet. Return to the archive or the stack page."
+        title="Topic page not ready."
+      />
+    )
+  }
+</SiteLayout>

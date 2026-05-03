@@ -1,0 +1,34 @@
+---
+import SiteLayout from "@/layouts/SiteLayout.astro";
+import { buildSeo } from "@/domains/seo/build-seo";
+import { buildCollectionPageStructuredData } from "@/domains/seo/build-structured-data";
+import { ThoughtsPage } from "@/domains/thoughts/thoughts-page";
+import { listThoughts } from "@/domains/thoughts/list-thoughts";
+
+export const prerender = true;
+
+const items = listThoughts();
+const description =
+  "Short engineering notes, linked ideas, and snapshot-backed observations about infrastructure, tools, publishing systems, and day-to-day debugging work.";
+const seo = buildSeo({
+  description,
+  kind: "collection",
+  pathname: Astro.url.pathname,
+  structuredData: buildCollectionPageStructuredData({
+    description,
+    items: items.slice(0, 10).map((item) => ({
+      name:
+        item.webpage?.title ||
+        item.richText.map((segment) => segment.plainText).join(" ").slice(0, 80),
+      url: `/thoughts#1_${item.id}`,
+    })),
+    pathname: Astro.url.pathname,
+    title: "Short engineering notes and linked ideas",
+  }),
+  title: "Short engineering notes, linked ideas, and debugging fragments",
+});
+---
+
+<SiteLayout currentPath={Astro.url.pathname} seo={seo}>
+  <ThoughtsPage />
+</SiteLayout>

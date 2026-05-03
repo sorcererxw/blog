@@ -1,0 +1,164 @@
+.page {
+  width: min(100% - 2rem, 42rem);
+  margin: 0 auto;
+}
+
+.emptyState {
+  width: min(100% - 2rem, 42rem);
+  margin: 0 auto;
+  padding: 4rem 0;
+}
+
+.reading {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+}
+
+.reading > * + * {
+  margin-top: 1.5rem;
+}
+
+.reading :where(figure, .bookmark) {
+  max-width: 48rem;
+}
+
+.reading h1,
+.reading h2,
+.reading h3 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.reading h1 {
+  font-size: clamp(2.5rem, 4vw, 4rem);
+}
+
+.reading h2 {
+  font-size: clamp(2rem, 3vw, 2.75rem);
+}
+
+.reading h3 {
+  font-size: 1.5rem;
+}
+
+.reading p,
+.reading li,
+.reading figcaption,
+.reading td,
+.reading summary {
+  font-size: 1.05rem;
+  line-height: 1.9;
+}
+
+.reading p,
+.reading figcaption {
+  color: var(--muted-foreground);
+}
+
+.reading a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.reading blockquote {
+  margin: 0;
+  border-left: 2px solid var(--border);
+  padding-left: 1rem;
+  color: var(--foreground);
+  font-family: var(--font-serif);
+}
+
+.reading pre,
+.reading details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in oklab, var(--background) 88%, var(--card) 12%);
+}
+
+.reading pre,
+.reading details {
+  padding: 1rem;
+}
+
+.reading th,
+.reading td {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+
+.reading th {
+  color: var(--foreground);
+  font-weight: 600;
+  vertical-align: top;
+}
+
+.reading thead th {
+  background-color: color-mix(in oklab, var(--background) 72%, var(--muted) 28%);
+}
+
+.reading tr:first-child td,
+.reading tr:first-child th {
+  border-top: 0;
+}
+
+.reading th:first-child,
+.reading td:first-child {
+  border-left: 0;
+}
+
+.reading img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.reading ul,
+.reading ol {
+  display: grid;
+  gap: 0.75rem;
+  padding-left: 1.25rem;
+  margin: 0;
+}
+
+.callout {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 1rem;
+}
+
+.bookmarkLink {
+  display: block;
+}
+
+.bookmark {
+  transition: background-color 160ms ease;
+}
+
+.bookmark:hover {
+  background-color: var(--accent);
+}
+
+.tableShell {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: color-mix(in oklab, var(--background) 88%, var(--card) 12%);
+}
+
+.divider {
+  margin: 0;
+}
+
+@media (max-width: 959px) {
+  .page {
+    width: min(100% - 1.5rem, 72rem);
+  }
+}
