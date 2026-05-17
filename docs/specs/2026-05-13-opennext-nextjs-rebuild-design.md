@@ -66,7 +66,7 @@ Initial freshness targets:
 
 - `/`: `600` second revalidation target through response/cache policy or route config
 - `/articles/[slug]`: `600` second revalidation target
-- sitemap: generated from current article list at request/build time
+- sitemap: generated from current article list at request time so Cloudflare builds do not require Notion secrets
 - compatibility redirects: permanent redirects from middleware for supported legacy non-blog paths
 - health and cron endpoints: always dynamic
 

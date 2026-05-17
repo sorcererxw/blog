@@ -165,6 +165,21 @@ Verification:
 - `pnpm build`
 - HTTP checks for `/`, `/?type=projects`, and `/sitemap.xml`
 
+## Slice 9: Sitemap Runtime Build Guard
+
+Status: done.
+
+Work:
+
+1. keep `/sitemap.xml` runtime-generated instead of build-prerendered
+2. preserve the 600 second sitemap freshness target
+3. prevent Cloudflare build environments without `NOTION_SECRET` from failing during `next build`
+
+Verification:
+
+- `pnpm test -- src/app/sitemap.xml/route.test.ts`
+- `pnpm build`
+
 ## Slice 5: Wrangler Env Consolidation
 
 Status: done.

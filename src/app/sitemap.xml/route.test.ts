@@ -4,9 +4,13 @@ vi.mock("@/domains/article/list-articles", () => ({
   listArticles: vi.fn(async () => []),
 }));
 
-import { GET } from "./route";
+import { dynamic, GET } from "./route";
 
 describe("GET /sitemap.xml", () => {
+  it("stays runtime-generated so Cloudflare builds do not require Notion secrets", () => {
+    expect(dynamic).toBe("force-dynamic");
+  });
+
   it("returns a sitemap with the personal site root", async () => {
     const response = await GET();
     const body = await response.text();

@@ -1,5 +1,25 @@
 # Blog2 Verification Guide
 
+## 2026-05-17 Sitemap Runtime Build Guard State
+
+Current route shape:
+
+- `/sitemap.xml` is explicitly runtime-generated with `dynamic = "force-dynamic"`.
+- The route keeps `revalidate = 600`.
+- Cloudflare build environments without `NOTION_SECRET` may warn about the missing required secret but must not fail during `next build`.
+- Runtime requests still require valid Notion configuration to list current article URLs.
+
+Current evidence:
+
+- `pnpm test -- src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm build`: PASS, route table marks `/sitemap.xml` as dynamic
+- `tmp=.dev.vars.codex-build-backup; mv .dev.vars "$tmp"; pnpm build; rc=$?; mv "$tmp" .dev.vars; exit $rc`: PASS, build succeeded without local `NOTION_SECRET`; Wrangler emitted missing-secret warnings, and `/sitemap.xml` stayed dynamic
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3234`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-sitemap-runtime.xml -w '%{http_code} %{content_type}\n' http://127.0.0.1:3234/sitemap.xml && rg -n '<loc>|/blog|/projects|/thoughts|/topics|/en|/zh' /tmp/blog-sitemap-runtime.xml`: PASS, returned `200 application/xml; charset=utf-8` and listed only `/` plus article URLs in the checked output
+- `curl --max-time 20 -I http://127.0.0.1:3234/sitemap.xml`: PASS, returned `200 OK`, `Content-Type: application/xml; charset=utf-8`, and `x-opennext: 1`
+- Browser verification: not applicable for this XML route/build classification fix
+
 ## Overview Feed Layout Verification
 
 Current target shape:

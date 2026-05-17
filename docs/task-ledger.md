@@ -16,6 +16,52 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-17 - Cloudflare Sitemap Build Secret Guard
+
+Status: done
+
+Summary:
+
+- fixed Cloudflare deploy builds failing during `next build` when `NOTION_SECRET` is absent from the build environment
+- made `/sitemap.xml` explicitly runtime-generated with `dynamic = "force-dynamic"` while preserving the 600 second freshness target
+- updated the OpenNext rebuild spec and plan so sitemap generation is request-time only, not build-prerendered
+
+Files:
+
+- `src/app/sitemap.xml/route.ts`
+- `src/app/sitemap.xml/route.test.ts`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Production Notion reads still fail fast when runtime secrets are missing.
+- Cloudflare build environments must not need `NOTION_SECRET` just to compile the Worker.
+- Sitemap content remains Notion-backed at request time rather than falling back to static or synthetic content.
+- Roadmap impact: no milestone change; this is an M2a/M3 deploy blocker fix.
+
+Verification:
+
+- `pnpm test -- src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm build`: PASS, route table marks `/sitemap.xml` as dynamic
+- `tmp=.dev.vars.codex-build-backup; mv .dev.vars "$tmp"; pnpm build; rc=$?; mv "$tmp" .dev.vars; exit $rc`: PASS, reproduced a Cloudflare-like build without local `NOTION_SECRET`; warnings were emitted but build succeeded and `/sitemap.xml` stayed dynamic
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3234`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-sitemap-runtime.xml -w '%{http_code} %{content_type}\n' http://127.0.0.1:3234/sitemap.xml && rg -n '<loc>|/blog|/projects|/thoughts|/topics|/en|/zh' /tmp/blog-sitemap-runtime.xml`: PASS, returned `200 application/xml; charset=utf-8` and listed only `/` plus article URLs in the checked output
+- `curl --max-time 20 -I http://127.0.0.1:3234/sitemap.xml`: PASS, returned `200 OK`, `Content-Type: application/xml; charset=utf-8`, and `x-opennext: 1`
+- Browser verification: not run; this change affects an XML route and build-time route classification, not rendered UI.
+
+Follow-up:
+
+- Cloudflare still needs `NOTION_SECRET` configured for runtime requests to `/`, article pages, and `/sitemap.xml`.
+
+Blockers:
+
+- none
+
 ## 2026-05-17 - Browser-Owned Overview Feed Layout Estimates
 
 Status: done

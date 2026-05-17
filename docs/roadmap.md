@@ -179,6 +179,7 @@ Exit criteria:
 - Wrangler enters through checked-in `src/worker.ts`, which delegates fetch handling to OpenNext's generated worker and leaves room for future Worker-level handlers
 - runtime variables are defined through Wrangler `vars` and `secrets.required`; there is no repo-local `src/config` package
 - runtime integrations must not synthesize content when source configuration is missing
+- `/sitemap.xml` is runtime-generated so Cloudflare builds do not require `NOTION_SECRET`, while runtime requests still require valid Notion configuration
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
 - feed UI primitives should come from the local shadcn component set, not HeroUI
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext

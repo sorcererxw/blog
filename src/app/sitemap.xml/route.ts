@@ -3,6 +3,7 @@ import { listArticles } from "@/domains/article/list-articles";
 import { articleListMemoryCache } from "@/integrations/kv/article-cache";
 import { createBlogArticleSource } from "@/integrations/notion/articles";
 
+export const dynamic = "force-dynamic";
 export const revalidate = 600;
 
 function escapeXml(value: string) {
