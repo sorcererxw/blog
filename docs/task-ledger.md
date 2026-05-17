@@ -16,6 +16,74 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-17 - Browser-Owned Overview Feed Layout Estimates
+
+Status: done
+
+Summary:
+
+- moved Overview Feed size ownership out of Content Sources and into a browser-side Feed Layout Engine
+- added `@chenglou/pretext` and a tested layout engine that measures variable text, accounts for media intrinsic ratios, maps Presentation Intent to presentation-owned Module Size, and assigns tablet/desktop masonry columns
+- changed SSR Overview Feed output to a single-column fallback in Overview Feed Index order, with hydrated tablet/desktop masonry after container width is known
+- restored item-level enter/exit animation classes after moving Overview Feed off the old `MasonryFeed` renderer
+- removed source-owned `moduleSize` from the standard Feed Item model and replaced it with optional `presentationIntent`
+- documented the domain boundary in CONTEXT, spec/plan/PRD, verification guide, roadmap, and ADR 0001
+
+Files:
+
+- `CONTEXT.md`
+- `docs/adr/0001-browser-owned-feed-layout-estimates.md`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/prds/2026-05-12-personal-site-overview.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `src/domains/feed/feed-layout-engine.ts`
+- `src/domains/feed/feed-layout-engine.test.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/feed/types.ts`
+- `src/domains/article/types.ts`
+- `src/domains/projects/types.ts`
+- `src/domains/thoughts/types.ts`
+- `package.json`
+- `pnpm-lock.yaml`
+
+Decisions:
+
+- Content Sources may carry media intrinsic size and optional Presentation Intent, but must not provide Module Size, card height, column placement, or masonry estimates.
+- The server-rendered Overview Feed is a readable single-column fallback; hydrated tablet and desktop views use the Feed Layout Engine for masonry.
+- Pretext runs in the browser-side presentation layer, not in SSR.
+- Legacy `MasonryFeed` remains available for old non-primary pages; the first migration scope is the primary Overview Feed.
+
+Verification:
+
+- `pnpm test -- src/domains/feed/feed-layout-engine.test.ts src/domains/feed/overview-feed.test.ts src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`32` files, `107` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `curl --max-time 30 -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3229/`: PASS, returned `200`
+- `curl --max-time 30 -s http://127.0.0.1:3229/ | rg -n 'data-feed-layout="fallback-single-column"|data-masonry-estimate|data-masonry-columns|Overview feed|moduleSize'`: PASS, SSR output includes `data-feed-layout="fallback-single-column"` and no Overview Feed `data-masonry-estimate`, `data-masonry-columns`, or `moduleSize`
+- `curl --max-time 30 -s http://127.0.0.1:3230/ | rg -n 'data-overview-feed-reveal="pending"|opacity-0|data-feed-layout="fallback-single-column"|noscript'`: PASS, SSR output starts the Overview Feed reveal at `pending` with `opacity-0` and a `noscript` visible fallback
+- Browser verification at `http://127.0.0.1:3229/`: PASS, hydrated layout used 3 masonry columns, rendered `138` cards, no horizontal overflow, and `0` card overlaps; screenshot saved to `/tmp/blog-overview-feed-layout-home.png`
+- Browser verification at `http://127.0.0.1:3229/?source=telegram`: PASS, hydrated layout used 3 masonry columns, rendered `87` cards, no horizontal overflow, and `0` card overlaps; screenshot saved to `/tmp/blog-overview-feed-layout-telegram.png`
+- Browser resize verification: PASS, mobile viewport stayed on `fallback-single-column` with no overflow, tablet viewport used 2 hydrated masonry columns with no overflow, and filter switching back to All kept hydrated masonry stable
+- Browser reveal verification at `http://127.0.0.1:3230/`: PASS, Overview Feed reveal moved to `ready`, faded to computed opacity `1`, and hydrated desktop layout used 3 masonry columns
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`32` files, `107` tests) and confirmed Overview Feed item wrappers carry the CSS module cell animation class plus `data-feed-transition`
+- `pnpm typecheck`: PASS after restoring item-level animation classes
+- `pnpm lint`: PASS after restoring item-level animation classes
+
+Follow-up:
+
+- Existing local Next image requests for some non-canonical Telegram `/cdn-cgi/image/.../https:/cdn*.telesco.pe/...` resources still return image `404`s in the browser console; these were resource errors, not layout or hydration errors.
+
+Blockers:
+
+- none
+
 ## 2026-05-17 - Remove Runtime Demo Fallbacks
 
 Status: done

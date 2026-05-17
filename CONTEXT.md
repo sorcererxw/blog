@@ -46,7 +46,7 @@ _Avoid_: Type-specific card, source-specific component
 
 **Module Size**:
 The visual weight assigned to a **Feed Module** within the masonry layout.
-_Avoid_: Feed item type
+_Avoid_: Feed item type, content source size
 
 **Feed Filter**:
 A view state that narrows which **Feed Items** are shown in the **Overview Feed**.
@@ -104,6 +104,30 @@ _Avoid_: Link, URL
 The lightweight media representation shown inside a **Feed Module**.
 _Avoid_: Full media embed
 
+**Media Intrinsic Size**:
+The original or preview media width and height carried with a **Feed Media Preview**.
+_Avoid_: Card height, layout size
+
+**Presentation Intent**:
+An author-owned signal that a **Feed Item** should receive special presentation treatment.
+_Avoid_: Source size, module size override
+
+**Layout Estimate**:
+The presentation-layer size estimate used to place a **Feed Module** in the masonry layout.
+_Avoid_: Source-provided height, feed item size
+
+**Measured Text**:
+The variable **Feed Module** text content measured by the **Feed Layout Engine**.
+_Avoid_: DOM height, source text size
+
+**Feed Layout Engine**:
+The browser-side presentation layer that calculates **Layout Estimates** and assigns **Feed Modules** to masonry columns.
+_Avoid_: Content source layout, server feed merge
+
+**Overview Feed Fallback Layout**:
+The server-rendered single-column ordering used before the **Feed Layout Engine** hydrates.
+_Avoid_: Server masonry estimate, duplicate layout engine
+
 ## Relationships
 
 - A **Personal Site** has exactly one **Overview Feed**
@@ -126,11 +150,26 @@ _Avoid_: Full media embed
 - **Feed Modules** share one presentation system across item types and sources
 - A **Feed Module** can include a **Feed Media Preview**
 - **Feed Media Preview** is lightweight and should not embed full external media players
-- A **Feed Module** has one **Module Size**: compact, standard, or feature
+- A **Feed Media Preview** can carry **Media Intrinsic Size**
+- **Media Intrinsic Size** is source metadata, not a **Layout Estimate**
+- A **Feed Module** can have one **Module Size**: compact, standard, or feature
 - **Module Size** changes visual weight, not **Feed Item** type
-- **Module Size** can be provided by a **Content Source** as an explicit override
-- Missing or invalid **Module Size** falls back to the item type default
-- The feature **Module Size** is manual-only and must not be inferred automatically
+- **Module Size** belongs to feed presentation, not **Content Source** normalization
+- A **Feed Item** can carry **Presentation Intent**
+- Feature presentation is driven by **Presentation Intent**, not by source-owned size calculation
+- **Presentation Intent** is the only v1 **Feed Item** display hint
+- The **Feed Item** model should not keep a deprecated source-owned module size field
+- A **Layout Estimate** is calculated in one feed presentation layer
+- **Measured Text** includes title, summary or rich text, and other variable visible text that can wrap
+- Fixed **Feed Module** chrome contributes constants to the **Layout Estimate**
+- **Content Sources** provide normalized **Feed Item** data, not **Layout Estimates**
+- The **Feed Layout Engine** owns **Layout Estimates** for the hydrated **Overview Feed**
+- The server-rendered **Overview Feed** should not depend on browser text measurement
+- The **Feed Layout Engine** recalculates **Layout Estimates** when the feed container width changes
+- Text preparation can be cached separately from width-dependent text layout
+- The **Overview Feed Fallback Layout** preserves **Overview Feed Index** order in one column
+- Hydrated tablet and desktop views can replace the **Overview Feed Fallback Layout** with masonry columns
+- Mobile views can keep the **Overview Feed Fallback Layout** after hydration
 - A **Feed Filter** changes the visible subset of the **Overview Feed** without creating a separate public page
 - A **Feed Filter** is represented by a server-rendered **Filter Query**
 - **Filter Query** can filter by item type or **Social Source**

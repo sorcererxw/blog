@@ -39,10 +39,10 @@ The Overview Feed combines Blog Entries, Projects, and Social Posts through one 
 23. As a visitor on a media-heavy feed, I want media previews to load responsibly, so that the one-page feed remains usable.
 24. As a search engine crawler, I want the sitemap to expose the new Personal Site structure, so that discovery reflects the active product.
 25. As a search engine crawler, I do not want legacy archive routes or filter query URLs in the sitemap, so that indexing does not preserve outdated site structure.
-26. As the author, I want to control visual emphasis through Module Size, so that important Feed Items can become feature modules without creating custom components.
-27. As the author, I want `feature` Module Size to be manual-only, so that the feed does not over-promote items accidentally.
-28. As the author, I want Blog Entries and Projects to default to standard modules, so that the feed has predictable weight.
-29. As the author, I want Social Posts to default to compact modules unless substantial media justifies standard weight, so that short updates do not dominate.
+26. As the author, I want to control special visual emphasis through Presentation Intent, so that important Feed Items can become feature modules without source-owned layout logic.
+27. As the author, I want feature presentation to be manual-only, so that the feed does not over-promote items accidentally.
+28. As a future maintainer, I want Module Size and Layout Estimates to be presentation-owned, so that Content Sources cannot create competing size calculations.
+29. As a visitor, I want the server-rendered feed to remain readable before hydration, so that the feed does not depend on browser-only text measurement.
 30. As the author, I want Displayed Time overrides separate from Source Published Time, so that I can control feed order without losing upstream publication metadata.
 31. As the author, I want the first Social Source to use the existing Telegram snapshot, so that the first implementation ships without waiting on Twitter/X ingestion.
 32. As a future maintainer, I want Twitter/X reserved in the model but not implemented in v1, so that later ingestion can be added without blocking the first slice.
@@ -55,13 +55,14 @@ The Overview Feed combines Blog Entries, Projects, and Social Posts through one 
 
 - Build around the domain language in `CONTEXT.md`: Personal Site, Profile Hero, Profile Page, Profile Content, Hero Expansion, Overview Feed, Overview Feed Index, Feed Item, Feed Module, Module Size, Feed Filter, Filter Query, Blog Entry, Project, Social Post, Social Source, Content Detail, External Target, and Feed Media Preview.
 - Keep Astro and Cloudflare as the runtime direction. This PRD changes product structure, not the approved framework direction.
-- Introduce a deep Feed Index module that exposes a small interface for building and reading normalized Feed Items. This module should encapsulate source mapping, sorting, Module Size defaults, Displayed Time fallback, and last-successful-index behavior.
-- Introduce a normalized Feed Item shape with item type, source metadata, Displayed Time, Source Published Time, Module Size, destination, summary, media preview, and enough identity fields for stable rendering and filtering.
+- Introduce a deep Feed Index module that exposes a small interface for building and reading normalized Feed Items. This module should encapsulate source mapping, sorting, Presentation Intent preservation, Displayed Time fallback, and last-successful-index behavior.
+- Introduce a normalized Feed Item shape with item type, source metadata, Displayed Time, Source Published Time, optional Presentation Intent, destination, summary, media preview, and enough identity fields for stable rendering and filtering.
 - Keep Content Source ingestion paths separate from presentation. Blog Entry, Project, and Telegram Social Post data can come from different adapters, but all must normalize into the same Feed Item model.
 - Implement sorting with Displayed Time first, Source Published Time second, and untimed items at the bottom.
 - Keep Displayed Time separate from Source Published Time. Displayed Time controls feed order. Source Published Time preserves upstream publication metadata.
-- Allow Content Sources to provide Module Size overrides. Missing or invalid values fall back to item-type defaults.
-- Use these Module Size defaults: Blog Entries default to standard, Projects default to standard, Social Posts default to compact, media-heavy Social Posts may default to standard, and feature is manual-only.
+- Do not allow Content Sources to provide Module Size, card height, column placement, or masonry estimates.
+- Use a browser-side Feed Layout Engine to map Feed Items into presentation-owned Module Size and Layout Estimates after hydration.
+- Render the server Overview Feed as a single-column fallback in Overview Feed Index order.
 - Introduce a Profile Hero module backed by a single fixed Notion Profile Page. Do not introduce a profile database or active-record selection rule.
 - Render full Profile Content from the Profile Page. Do not restrict the Profile Hero to a small whitelist of fields.
 - Support same-page Hero Expansion for long Profile Content. Prefer native HTML/CSS behavior before introducing client-side hydration.
@@ -81,12 +82,12 @@ The Overview Feed combines Blog Entries, Projects, and Social Posts through one 
 ## Testing Decisions
 
 - Tests should assert external behavior and domain contracts, not component internals or incidental markup.
-- Add focused unit tests for the Feed Index module. Good tests cover source mapping, item identity, type/source filters, sorting by Displayed Time, fallback to Source Published Time, untimed item placement, Module Size defaults, manual Module Size overrides, invalid override fallback, and last-successful-index behavior.
+- Add focused unit tests for the Feed Index module. Good tests cover source mapping, item identity, type/source filters, sorting by Displayed Time, fallback to Source Published Time, untimed item placement, Presentation Intent preservation, and last-successful-index behavior.
 - Add tests for Blog Entry to Feed Item normalization using the existing article list behavior as prior art.
 - Add tests for Project to Feed Item normalization, including External Target priority, missing Displayed Time, and non-clickable projects.
 - Add tests for Telegram snapshot to Social Post normalization using the existing thoughts/Telegram tests as prior art.
 - Add tests for Feed Filter parsing and application. Good tests cover `type=writing`, `type=projects`, `type=social`, `source=telegram`, unsupported values, and combined filter behavior.
-- Add component or static-render tests for Feed Module rendering. Good tests cover compact, standard, and feature modules; destination behavior; media preview fallback; and source badges without creating source-specific component branches.
+- Add component or static-render tests for Feed Module rendering. Good tests cover server fallback layout, presentation-owned compact, standard, and feature modules; destination behavior; media preview fallback; and source badges without creating source-specific component branches.
 - Add tests for Profile Hero normalization and rendering. Good tests cover fixed Profile Page loading, full Profile Content rendering, default constrained rendering semantics, and native Hero Expansion availability.
 - Add HTTP-level tests or `curl` verification for Compatibility Routes. Good checks confirm permanent redirect status and Location headers for `/blog`, `/projects`, and `/thoughts`.
 - Add sitemap tests confirming `/` and article Content Details are included while `/blog`, `/projects`, `/thoughts`, and filter query URLs are excluded.

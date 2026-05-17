@@ -1,5 +1,25 @@
 # Blog2 Verification Guide
 
+## Overview Feed Layout Verification
+
+Current target shape:
+
+- Content sources provide standard Feed Items and do not provide Module Size, card height, column placement, or masonry estimates.
+- The server-rendered Overview Feed uses a single-column fallback in Overview Feed Index order.
+- Hydrated tablet and desktop views use the browser-side Feed Layout Engine to calculate Layout Estimates and assign masonry columns.
+- The Feed Layout Engine uses Pretext for variable text measurement, media intrinsic ratios or fallback ratios, Presentation Intent, and fixed Feed Module chrome constants.
+- Browser resize and filter changes should recalculate layout without relying on DOM height measurement.
+
+Required evidence for layout changes:
+
+- targeted layout unit tests covering width-dependent Layout Estimates, column assignment, and stable item ordering
+- DOM or component tests proving the server fallback does not expose source-owned masonry estimates
+- `pnpm test`
+- `pnpm typecheck`
+- `pnpm build`
+- `curl` check for `/`
+- browser verification for `/` and `/?source=telegram`, including no horizontal overflow, no card overlap, stable filter reflow, stable responsive resize behavior, and no console layout or hydration errors
+
 ## 2026-05-17 Telegram Public Page Runtime Ingestion State
 
 Current content shape:

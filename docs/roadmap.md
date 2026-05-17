@@ -181,6 +181,7 @@ Exit criteria:
 - runtime integrations must not synthesize content when source configuration is missing
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
 - feed UI primitives should come from the local shadcn component set, not HeroUI
+- Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
 - ordinary component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions
 
 ## Active Priorities

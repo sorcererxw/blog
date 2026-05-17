@@ -8,7 +8,6 @@ import {
   applyFeedFilter,
   articleToFeedItem,
   buildOverviewFeedIndex,
-  normalizeModuleSize,
   parseFeedFilter,
   projectToFeedItem,
   sortFeedItems,
@@ -73,7 +72,7 @@ describe("overview feed", () => {
       summary: "",
       displayedAt: null,
       sourcePublishedAt: null,
-      moduleSize: "standard",
+      presentationIntent: null,
       destination: { kind: "none" },
       media: [],
     };
@@ -131,19 +130,20 @@ describe("overview feed", () => {
     expect(unlinked.displayedAt).toBeNull();
   });
 
-  it("defaults module sizes and only accepts valid manual overrides", () => {
-    expect(normalizeModuleSize("feature", "standard")).toBe("feature");
-    expect(normalizeModuleSize("oversized", "standard")).toBe("standard");
-    expect(articleToFeedItem(article()).moduleSize).toBe("standard");
-    expect(projectToFeedItem(project()).moduleSize).toBe("standard");
-    expect(thoughtToFeedItem(thought()).moduleSize).toBe("compact");
+  it("preserves only manual feature presentation intent from sources", () => {
+    expect(articleToFeedItem(article()).presentationIntent).toBeNull();
+    expect(projectToFeedItem(project()).presentationIntent).toBeNull();
+    expect(thoughtToFeedItem(thought()).presentationIntent).toBeNull();
+    expect(articleToFeedItem(article({ presentationIntent: "feature" })).presentationIntent).toBe(
+      "feature",
+    );
     expect(
       thoughtToFeedItem(
         thought({
           photos: [{ id: 1, originalUrl: "https://example.com/photo.jpg", width: 100, height: 100 }],
         }),
-      ).moduleSize,
-    ).toBe("standard");
+      ).presentationIntent,
+    ).toBeNull();
   });
 
   it("preserves Telegram rich text for overview rendering", () => {

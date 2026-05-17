@@ -41,8 +41,8 @@ Files:
 
 Work:
 
-- introduce a normalized Feed Item model with item type, source, Displayed Time, Module Size, destination, and summary fields
-- implement Module Size defaults and manual override handling
+- introduce a normalized Feed Item model with item type, source, Displayed Time, destination, summary, media metadata, and optional Presentation Intent
+- remove source-owned Module Size defaults and manual override handling from Feed Item normalization
 - implement Displayed Time overrides separately from Source Published Time
 - implement sorting rules: timed items newest first, untimed items at the bottom
 - map existing article, project, and thoughts/social data into the feed model
@@ -89,7 +89,11 @@ Files:
 Work:
 
 - replace archive-like homepage content with the unified masonry Overview Feed
-- implement Feed Module variants: compact, standard, feature
+- implement Feed Module variants as presentation-owned weights: compact, standard, feature
+- render the server Overview Feed as a single-column fallback in Overview Feed Index order
+- introduce a browser-side Feed Layout Engine that uses Pretext to calculate Layout Estimates after hydration
+- keep media intrinsic width and height as Feed Media Preview metadata, not source-owned layout estimates
+- scope the first Feed Layout Engine migration to the Overview Feed; legacy thoughts-page masonry is follow-up work if that page remains visible
 - implement lightweight Feed Media Preview handling using existing media delivery where possible
 - keep presentation unified across item types and sources
 - implement Feed Filters as URL-backed client state after SSR, not section pages
@@ -100,11 +104,13 @@ Work:
 Verification:
 
 - component tests for Feed Module rendering
+- Feed Layout Engine unit tests for width-dependent Layout Estimates, column assignment, and stable item ordering
+- DOM tests proving SSR renders the Overview Feed fallback without source-owned masonry estimates
 - `pnpm test`
 - `pnpm typecheck`
 - `pnpm build`
 - `curl` checks for `/`
-- browser verification for filters and masonry rendering
+- browser verification for `/` and `/?source=telegram`, including no horizontal overflow, no card overlap, stable filter reflow, stable responsive resize behavior, and no console layout or hydration errors
 
 ## Slice 4: Compatibility Routes
 

@@ -1,0 +1,3 @@
+# Browser-Owned Feed Layout Estimates
+
+The Overview Feed uses browser-owned layout estimates instead of source-provided sizes, server-side masonry estimates, or DOM height measurement. Content sources normalize public content into standard Feed Items and may carry media intrinsic size, but they do not output module size, card height, column placement, or masonry estimates. The server renders a single-column fallback in Overview Feed Index order; after hydration, the Feed Layout Engine uses Pretext text measurement, media intrinsic ratios, and fixed chrome constants to calculate Layout Estimates and assign tablet and desktop masonry columns.

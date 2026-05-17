@@ -4,7 +4,7 @@ export type ProjectListItem = {
   url: string;
   emoji: string | null;
   displayedAt?: Date | null;
-  moduleSize?: string | null;
+  presentationIntent?: "feature" | null;
   period?: Date | null;
 };
 

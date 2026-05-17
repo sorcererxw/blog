@@ -14,9 +14,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
-import { MasonryFeed } from "@/domains/feed/masonry-feed";
+import { assignFeedLayout, getFeedModuleSize } from "@/domains/feed/feed-layout-engine";
 import { cn } from "@/lib/utils";
 
+import masonryStyles from "./masonry-feed.module.css";
 import type {
   FeedDestination,
   FeedFilter,
@@ -24,6 +25,7 @@ import type {
   FeedMediaPreview,
   FeedRichTextSegment,
   ModuleSize,
+  PresentationIntent,
 } from "./types";
 
 export type OverviewFeedViewItem = {
@@ -32,7 +34,7 @@ export type OverviewFeedViewItem = {
   id: string;
   media: FeedMediaPreview[];
   metaLabel?: string | null;
-  moduleSize: ModuleSize;
+  presentationIntent?: PresentationIntent | null;
   source: string;
   sourcePublishedAt: string | null;
   summary: string;
@@ -96,14 +98,6 @@ function formatFeedDate(item: OverviewFeedViewItem) {
     dateStyle: "medium",
     timeZone: "UTC",
   }).format(new Date(date));
-}
-
-function calculateFeedItemHeight(item: OverviewFeedViewItem) {
-  const base = item.moduleSize === "feature" ? 220 : item.moduleSize === "compact" ? 120 : 170;
-  const text = Math.min(item.summary.length, 420);
-  const media = item.media.length > 0 ? (item.media.length === 1 ? 180 : item.media.length * 150) : 0;
-
-  return base + media + text * 0.45;
 }
 
 function renderRichTextSegment(segment: FeedRichTextSegment, index: number): ReactNode {
@@ -236,9 +230,11 @@ function MediaGrid({ item }: { item: OverviewFeedViewItem }) {
 function ModuleInner({
   item,
   footerDestination,
+  moduleSize,
 }: {
   footerDestination?: FeedDestination | null;
   item: OverviewFeedViewItem;
+  moduleSize: ModuleSize;
 }) {
   const isTelegram = item.source === "telegram";
   const time = (
@@ -256,8 +252,8 @@ function ModuleInner({
       <div
         className={cn(
           "grid gap-[0.85rem] p-[1.15rem]",
-          item.moduleSize === "compact" && "gap-[0.65rem] p-4",
-          item.moduleSize === "feature" && "p-[1.35rem]",
+          moduleSize === "compact" && "gap-[0.65rem] p-4",
+          moduleSize === "feature" && "p-[1.35rem]",
         )}
       >
         <div className="justify-self-start">
@@ -269,8 +265,8 @@ function ModuleInner({
           <h2
             className={cn(
               "m-0 flex items-baseline gap-2 font-serif text-[1.35rem] font-semibold leading-[1.1] tracking-normal text-foreground",
-              item.moduleSize === "compact" && "text-[1.05rem]",
-              item.moduleSize === "feature" && "text-[1.65rem]",
+              moduleSize === "compact" && "text-[1.05rem]",
+              moduleSize === "feature" && "text-[1.65rem]",
             )}
           >
             {item.titleEmoji ? (
@@ -300,15 +296,17 @@ function ModuleInner({
 }
 
 function FeedModule({ item }: { item: OverviewFeedViewItem }) {
+  const moduleSize = getFeedModuleSize(item);
   const shouldUseOuterLink = item.destination.kind !== "none" && !hasInlineLinks(item);
   const surface = (
     <Card
       className="block gap-0 overflow-hidden py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      data-size={item.moduleSize}
+      data-size={moduleSize}
     >
       <ModuleInner
         footerDestination={shouldUseOuterLink ? null : item.destination}
         item={item}
+        moduleSize={moduleSize}
       />
     </Card>
   );
@@ -333,6 +331,18 @@ function FeedModule({ item }: { item: OverviewFeedViewItem }) {
       {surface}
     </NextLink>
   );
+}
+
+function getColumnCount(width: number) {
+  if (width >= 1024) {
+    return 3;
+  }
+
+  if (width >= 640) {
+    return 2;
+  }
+
+  return 1;
 }
 
 function buildTransitionStates(
@@ -363,8 +373,10 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
     buildTransitionStates(filteredItems, "active"),
   );
   const previousItemsRef = useRef(filteredItems);
+  const feedRegionRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
   const transitionTimerRef = useRef<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -374,6 +386,27 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
     window.addEventListener("popstate", handlePopState);
 
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const node = feedRegionRef.current;
+
+    if (!node) {
+      return;
+    }
+
+    const observer = new ResizeObserver((entries) => {
+      const [entry] = entries;
+
+      if (entry) {
+        setContainerWidth(entry.contentRect.width);
+      }
+    });
+
+    observer.observe(node);
+    setContainerWidth(node.getBoundingClientRect().width);
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -421,6 +454,19 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
     window.history.pushState(null, "", `${url.pathname}${url.search}${url.hash}`);
     setFilter(parseFilterFromLocation());
   };
+  const columnCount = containerWidth ? getColumnCount(containerWidth) : 1;
+  const hydratedLayout = useMemo(
+    () =>
+      containerWidth && columnCount > 1
+        ? assignFeedLayout(renderedItems, {
+            columnCount,
+            containerWidth,
+            gap: 8,
+          })
+        : null,
+    [columnCount, containerWidth, renderedItems],
+  );
+  const isFeedLayoutReady = containerWidth !== null && (columnCount === 1 || hydratedLayout !== null);
 
   return (
     <section
@@ -463,16 +509,54 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
           </div>
         </div>
       </div>
-      <div aria-live="polite" data-overview-feed-region>
+      <div aria-live="polite" data-overview-feed-region ref={feedRegionRef}>
+        <noscript>
+          <style>{`[data-overview-feed-reveal="pending"]{opacity:1!important}`}</style>
+        </noscript>
         {renderedItems.length > 0 ? (
-          <MasonryFeed
-            calculateItemHeight={(item) => calculateFeedItemHeight(item)}
-            className="mt-4"
-            getItemKey={(item) => item.id}
-            getItemTransitionState={(item) => transitionStates[item.id]}
-            items={renderedItems}
-            renderItem={(item) => <FeedModule item={item} />}
-          />
+          <div
+            className={cn(
+              "transition-opacity duration-300 ease-out",
+              isFeedLayoutReady ? "opacity-100" : "opacity-0",
+            )}
+            data-overview-feed-reveal={isFeedLayoutReady ? "ready" : "pending"}
+          >
+            {hydratedLayout ? (
+              <div
+                className="mt-4 grid gap-2"
+                data-feed-layout="hydrated-masonry"
+                style={{
+                  gridTemplateColumns: `repeat(${hydratedLayout.columns.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {hydratedLayout.columns.map((column, columnIndex) => (
+                  <div className="flex flex-col gap-2" key={columnIndex}>
+                    {column.items.map(({ item }) => (
+                      <div
+                        className={masonryStyles.cell}
+                        data-feed-transition={transitionStates[item.id]}
+                        key={item.id}
+                      >
+                        <FeedModule item={item} />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-col gap-2" data-feed-layout="fallback-single-column">
+                {renderedItems.map((item) => (
+                  <div
+                    className={masonryStyles.cell}
+                    data-feed-transition={transitionStates[item.id]}
+                    key={item.id}
+                  >
+                    <FeedModule item={item} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="rounded-lg border border-dashed border-border p-8 text-muted-foreground">
             No feed items match this filter.

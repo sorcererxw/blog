@@ -7,10 +7,8 @@ import type {
   FeedItem,
   FeedItemType,
   FeedMediaPreview,
-  ModuleSize,
+  PresentationIntent,
 } from "./types";
-
-type ModuleSizeInput = ModuleSize | string | null | undefined;
 
 type FeedSourceInput = {
   articles: ArticleListItem[];
@@ -18,22 +16,11 @@ type FeedSourceInput = {
   thoughts: ThoughtListItem[];
 };
 
-const validModuleSizes = new Set<ModuleSize>(["compact", "standard", "feature"]);
 const validFeedTypes = new Set<FeedItemType>(["writing", "projects", "social"]);
 
-export const normalizeModuleSize = (
-  value: ModuleSizeInput,
-  fallback: ModuleSize,
-): ModuleSize => {
-  if (value && validModuleSizes.has(value as ModuleSize)) {
-    return value as ModuleSize;
-  }
-
-  return fallback;
-};
-
-const hasSubstantialMedia = (thought: ThoughtListItem) =>
-  thought.photos.length > 0 || thought.webpage?.photo != null;
+const normalizePresentationIntent = (
+  value: string | null | undefined,
+): PresentationIntent | null => (value === "feature" ? "feature" : null);
 
 const toSortTime = (item: FeedItem) =>
   item.displayedAt?.getTime() ?? item.sourcePublishedAt?.getTime() ?? null;
@@ -67,7 +54,7 @@ export const articleToFeedItem = (article: ArticleListItem): FeedItem => ({
   titleEmoji: article.icon?.kind === "emoji" ? article.icon.value : null,
   displayedAt: article.displayedAt ?? article.date,
   sourcePublishedAt: article.date,
-  moduleSize: normalizeModuleSize(article.moduleSize, "standard"),
+  presentationIntent: normalizePresentationIntent(article.presentationIntent),
   destination: {
     kind: "internal",
     href: `/articles/${article.slug}`,
@@ -103,7 +90,7 @@ export const projectToFeedItem = (project: ProjectListItem): FeedItem => {
     titleEmoji: project.emoji,
     displayedAt,
     sourcePublishedAt: project.period ?? null,
-    moduleSize: normalizeModuleSize(project.moduleSize, "standard"),
+    presentationIntent: normalizePresentationIntent(project.presentationIntent),
     destination,
     media: [],
     metaLabel: "Project",
@@ -163,10 +150,7 @@ export const thoughtToFeedItem = (thought: ThoughtListItem): FeedItem => ({
   summaryRichText: thought.richText,
   displayedAt: thought.displayedAt ?? thought.date,
   sourcePublishedAt: thought.date,
-  moduleSize: normalizeModuleSize(
-    thought.moduleSize,
-    hasSubstantialMedia(thought) ? "standard" : "compact",
-  ),
+  presentationIntent: normalizePresentationIntent(thought.presentationIntent),
   destination: {
     kind: "external",
     href: thought.link,

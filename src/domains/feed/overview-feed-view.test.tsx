@@ -13,7 +13,7 @@ const item = (overrides: Partial<FeedItem> = {}): FeedItem => ({
   summary: "Feed item summary",
   displayedAt: new Date("2026-05-01T00:00:00.000Z"),
   sourcePublishedAt: new Date("2026-04-01T00:00:00.000Z"),
-  moduleSize: "standard",
+  presentationIntent: null,
   destination: { kind: "internal", href: "/articles/one" },
   media: [],
   metaLabel: "Writing",
@@ -41,7 +41,6 @@ describe("OverviewFeed", () => {
             source: "telegram",
             title: "Hidden Telegram title",
             destination: { kind: "external", href: "https://t.me/s/example/1" },
-            moduleSize: "compact",
             metaLabel: "Telegram",
           }),
         ])}
@@ -70,6 +69,14 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain('data-size="standard"');
     expect(markup).not.toContain('data-size="compact"');
+    expect(markup).toContain('data-feed-layout="fallback-single-column"');
+    expect(markup).toContain('data-overview-feed-reveal="pending"');
+    expect(markup).toContain("opacity-0");
+    expect(markup).toContain('[data-overview-feed-reveal="pending"]{opacity:1!important}');
+    expect(markup).toMatch(/class="[^"]*_cell_[^"]*"/);
+    expect(markup).toContain('data-feed-transition="active"');
+    expect(markup).not.toContain("data-masonry-estimate");
+    expect(markup).not.toContain("data-masonry-columns");
     expect(markup).not.toContain("Hidden Telegram title");
     expect(markup).toMatch(/✦[\s\S]*A feed item/);
     expect(markup.indexOf("Feed item summary")).toBeLessThan(markup.indexOf("May 1, 2026"));
@@ -110,7 +117,6 @@ describe("OverviewFeed", () => {
             source: "telegram",
             title: "Hidden Telegram title",
             destination: { kind: "external", href: "https://t.me/s/example/1" },
-            moduleSize: "compact",
             metaLabel: "Telegram",
             summary: "Telegram rich link",
             summaryRichText: [

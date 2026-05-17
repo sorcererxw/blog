@@ -39,7 +39,7 @@ export type ThoughtListItem = {
   date: Date;
   displayedAt?: Date | null;
   link: string;
-  moduleSize?: string | null;
+  presentationIntent?: "feature" | null;
   richText: ThoughtRichTextSegment[];
   photos: ThoughtPhoto[];
   replyTo: string | null;

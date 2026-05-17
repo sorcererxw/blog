@@ -16,7 +16,7 @@ export type ArticleListItem = {
   cover?: string | null;
   displayedAt?: Date | null;
   icon?: ArticleIcon | null;
-  moduleSize?: string | null;
+  presentationIntent?: "feature" | null;
 };
 
 export type NotionArticleRecord = {

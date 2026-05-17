@@ -67,15 +67,18 @@ Module Size changes visual weight only. It must not change the underlying Feed I
 
 Different content types and sources may have distinct ingestion and normalization paths, but the rendered feed modules should stay visually unified.
 
-Module Size source rules:
+Module Size ownership rules:
 
-- Content Sources may provide an explicit Module Size override
-- missing or invalid Module Size values fall back to item-type defaults
-- Blog Entries default to `standard`
-- Projects default to `standard`
-- Social Posts default to `compact`
-- Social Posts with substantial media may default to `standard`
+- Content Sources must not provide Module Size, card height, column placement, or masonry estimates
+- Content Sources normalize public content into standard Feed Items
+- Feed Items may carry `presentationIntent: "feature"` when the author explicitly wants special presentation treatment
 - `feature` is manual-only and must not be inferred automatically
+- the hydrated Feed Layout Engine maps Feed Items and Presentation Intent into Module Size and Layout Estimates
+- media intrinsic width and height can be carried as Feed Media Preview metadata, but they are not Layout Estimates
+
+The server-rendered Overview Feed should use a single-column fallback in Overview Feed Index order. Browser-hydrated tablet and desktop views may replace that fallback with masonry columns after the Feed Layout Engine calculates Layout Estimates. The server-rendered feed must not depend on browser text measurement.
+
+The Feed Layout Engine should use Pretext for variable text measurement after hydration. It should calculate Layout Estimates from measured text, media intrinsic ratios or fallback ratios, Presentation Intent, and fixed Feed Module chrome constants. Text preparation can be cached separately from width-dependent layout, and container width changes should trigger a new Layout Estimate pass without relying on DOM height measurement.
 
 ## Sorting
 

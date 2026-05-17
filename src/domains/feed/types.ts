@@ -3,6 +3,7 @@ export type FeedItemType = "writing" | "projects" | "social";
 export type SocialSource = "telegram" | "twitter" | string;
 
 export type ModuleSize = "compact" | "standard" | "feature";
+export type PresentationIntent = "feature";
 
 export type FeedDestination =
   | {
@@ -46,7 +47,7 @@ export type FeedItem = {
   titleEmoji?: string | null;
   displayedAt: Date | null;
   sourcePublishedAt: Date | null;
-  moduleSize: ModuleSize;
+  presentationIntent?: PresentationIntent | null;
   destination: FeedDestination;
   media: FeedMediaPreview[];
   metaLabel?: string | null;
