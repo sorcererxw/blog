@@ -76,7 +76,9 @@ describe("ProjectsList", () => {
     expect(markup).not.toContain(
       "A selective ledger of products, experiments, and systems with enough weight to stand on their own.",
     );
-    expect(markup).toMatch(/class="[^"]*card[^"]*"[\s\S]*class="[^"]*head[^"]*"[\s\S]*class="[^"]*summary[^"]*"[\s\S]*class="[^"]*cta[^"]*"/);
+    expect(markup).toContain("project-card-title");
+    expect(markup).toContain("project-card-cta");
+    expect(markup).toContain("text-muted-foreground");
   });
 
   it("passes responsive projects into the masonry feed", () => {

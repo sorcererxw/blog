@@ -1,8 +1,0 @@
----
-export const prerender = false;
-const path = Astro.params.path;
-const target = path
-  ? (path.startsWith("/") ? path : `/${path}`)
-  : "/";
-return Astro.redirect(target, 301);
----

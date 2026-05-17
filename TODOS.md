@@ -1,47 +1,43 @@
 # TODOs
 
-## Rotate and externalize blog2 secrets
+## Remove historical Telegram secret references from archived docs
 
 What:
-- remove committed Notion and Telegram secrets from `web/apps/blog2/src/config/server.ts`
+- audit archived migration notes for obsolete Telegram secret references and mark them historical where needed
 
 Why:
-- the repo still contains plaintext secrets even though thoughts runtime no longer needs them
+- the current runtime crawler does not need Telegram credentials, but older notes may still describe the removed client/sync model
 
 Pros:
 - reduces secret exposure risk
-- aligns the local sync command with explicit environment-based credentials
+- keeps future agents from reviving the old client-based ingestion path
 
 Cons:
-- requires coordinated local and deployment env setup
-- may touch code outside the thoughts slice
+- archived docs are historical, so edits must avoid rewriting provenance
 
 Context:
-- thoughts runtime no longer depends on Telegram secrets, but the repo still carries committed values
-- the local sync command now expects `TELEGRAM_APP_ID`, `TELEGRAM_APP_SECRET`, and `TELEGRAM_TOKEN`
+- current code has no `TELEGRAM_SESSION`, Telegram client, Bot API, MTProto, or `@mtcute/*` dependency
 
 Depends on / blocked by:
 - none
 
-## Add sync drift guard for thoughts snapshot
+## Monitor Telegram public page crawler cold-start cost
 
 What:
-- add a `--check` mode or CI guard that validates the checked-in thoughts snapshot is current and stable
+- add lightweight observability or a cap policy if `tech_bb` public pagination grows enough to make cold-cache rendering slow
 
 Why:
-- manual sync can drift, and the failure mode is a stale or unexpectedly reshaped public snapshot
+- full crawl now happens at render time behind Next revalidation
 
 Pros:
-- catches nondeterministic ordering and accidental snapshot drift before deploy
-- turns the sync command into a safer content pipeline
+- makes revalidation behavior visible before it becomes a user-facing latency issue
+- keeps the no-client/no-snapshot architecture intact
 
 Cons:
-- adds one more maintenance point to the local content workflow
-- needs a clear policy for when snapshot changes are expected
+- may require deployment metrics rather than local-only verification
 
 Context:
-- the current refactor intentionally uses a manual `sync:thoughts` flow
-- the repo now relies on `src/domains/thoughts/thoughts.snapshot.json` as the public source of truth for `/thoughts`
+- `listThoughts()` crawls `https://t.me/s/tech_bb` and follows public `before` pagination with `next.revalidate = 600`
 
 Depends on / blocked by:
-- depends on the new snapshot contract staying stable
+- depends on production traffic and channel growth

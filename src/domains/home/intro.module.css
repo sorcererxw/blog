@@ -159,6 +159,20 @@
 
 @media (max-width: 959px) {
   .page {
-    width: min(100% - 1.5rem, 72rem);
+    width: min(100% - 4rem, 42rem);
+  }
+
+  .reading h1 {
+    font-size: 1.7rem;
+    line-height: 1.15;
+  }
+
+  .reading p,
+  .reading li,
+  .reading figcaption,
+  .reading td,
+  .reading summary {
+    font-size: 1rem;
+    line-height: 1.75;
   }
 }

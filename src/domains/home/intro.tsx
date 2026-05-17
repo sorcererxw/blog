@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import NextLink from "next/link";
 
 import {
   Card,
@@ -23,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/classnames";
+import { cn } from "@/lib/utils";
 import type { HomePageBlock } from "@/integrations/notion/home";
 
 import styles from "./intro.module.css";
@@ -117,14 +118,14 @@ function renderRichText(richText: NotionRichText[]): ReactNode[] {
 
     if (href) {
       content = (
-        <a
+        <NextLink
           className="break-all text-primary underline underline-offset-4"
           href={href}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </a>
+        </NextLink>
       );
     }
 
@@ -187,7 +188,7 @@ function renderBlock(block: HomePageBlock): ReactNode {
     case "heading_1":
       return (
         <>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground md:text-5xl">
+          <h1 className="font-serif text-[1.7rem] font-semibold leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl">
             {renderRichText(getRichText(block))}
           </h1>
           {renderChildren(block)}
@@ -196,7 +197,7 @@ function renderBlock(block: HomePageBlock): ReactNode {
     case "heading_2":
       return (
         <>
-          <h2 className="font-serif text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+          <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-3xl md:text-4xl">
             {renderRichText(getRichText(block))}
           </h2>
           {renderChildren(block)}
@@ -205,7 +206,7 @@ function renderBlock(block: HomePageBlock): ReactNode {
     case "heading_3":
       return (
         <>
-          <h3 className="font-serif text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          <h3 className="font-serif text-xl font-semibold tracking-tight text-foreground sm:text-2xl md:text-3xl">
             {renderRichText(getRichText(block))}
           </h3>
           {renderChildren(block)}
@@ -307,7 +308,7 @@ function renderBlock(block: HomePageBlock): ReactNode {
 
       return (
         <>
-          <a
+          <NextLink
             className={styles.bookmarkLink}
             href={url}
             rel="noreferrer"
@@ -326,7 +327,7 @@ function renderBlock(block: HomePageBlock): ReactNode {
                 <p className="break-all text-sm text-muted-foreground">{url}</p>
               </CardContent>
             </Card>
-          </a>
+          </NextLink>
           {renderChildren(block)}
         </>
       );

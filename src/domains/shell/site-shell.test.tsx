@@ -12,49 +12,36 @@ import {
 describe("site shell", () => {
   it("maps the current public route from the pathname", () => {
     expect(getCurrentPublicRoute("/")).toBe("home");
-    expect(getCurrentPublicRoute("/blog")).toBe("blog");
+    expect(getCurrentPublicRoute("/blog")).toBeNull();
     expect(getCurrentPublicRoute("/thoughts")).toBe("thoughts");
     expect(getCurrentPublicRoute("/projects")).toBe("projects");
     expect(getCurrentPublicRoute("/stack")).toBe("stack");
     expect(getCurrentPublicRoute("/articles/hello-world")).toBe("blog");
-    expect(getPublicRoutes("blog").find((route) => route.key === "blog")?.active).toBe(true);
-    expect(getPublicRoutes("stack").find((route) => route.key === "stack")?.active).toBe(true);
-    expect(getPublicRoutes("blog").map((route) => route.key)).toEqual([
-      "home",
-      "blog",
-      "thoughts",
-      "projects",
-      "stack",
-    ]);
+    expect(getPublicRoutes("blog").find((route) => route.key === "blog")).toBeUndefined();
+    expect(getPublicRoutes("stack").find((route) => route.key === "stack")).toBeUndefined();
+    expect(getPublicRoutes("home").map((route) => route.key)).toEqual([]);
   });
 
-  it("renders the header with the full public navigation", () => {
-    const markup = renderToStaticMarkup(<SiteHeader currentPath="/blog" />);
+  it("renders the header with the brand only", () => {
+    const markup = renderToStaticMarkup(<SiteHeader currentPath="/" />);
 
     expect(markup).toContain('href="/"');
-    expect(markup).toContain('href="/blog"');
-    expect(markup).toContain('href="/thoughts"');
-    expect(markup).toContain('href="/projects"');
-    expect(markup).toContain('href="/stack"');
-    expect(markup).toContain('href="/favicon.svg"');
-    expect(markup).toContain("sorcererxw&#x27;s blog");
+    expect(markup).not.toContain('href="/blog"');
+    expect(markup).not.toContain('href="/thoughts"');
+    expect(markup).not.toContain('href="/projects"');
+    expect(markup).not.toContain('href="/stack"');
+    expect(markup).toContain('src="/favicon.svg"');
+    expect(markup).toContain(">sorcererxw<");
+    expect(markup).not.toContain("sorcererxw&#x27;s blog");
     expect(markup).toContain("items-center");
-    expect(markup).toMatch(/<a[^>]*href="\/blog"[^>]*aria-current="page"|<a[^>]*aria-current="page"[^>]*href="\/blog"/);
+    expect(markup).not.toContain("Public routes");
+    expect(markup).not.toContain("border-b");
+    expect(markup).not.toContain(">Home<");
   });
 
-  it("can hide the stack entry for production route lists", () => {
-    expect(getPublicRoutes("blog", { includeStack: false }).map((route) => route.key)).toEqual([
-      "home",
-      "blog",
-      "thoughts",
-      "projects",
-    ]);
-    expect(getFooterLinks({ includeStack: false }).find((group) => group.title === "站内")?.links.map((route) => route.label)).toEqual([
-      "Home",
-      "Blog",
-      "Thoughts",
-      "Projects",
-    ]);
+  it("keeps compatibility routes out of route lists", () => {
+    expect(getPublicRoutes("blog", { includeStack: false }).map((route) => route.key)).toEqual([]);
+    expect(getFooterLinks({ includeStack: false }).find((group) => group.title === "站内")).toBeUndefined();
     expect(getFooterLinks({ includeStack: false }).find((group) => group.title === "站外")?.links.map((route) => route.label)).toEqual([
       "Jike",
       "Github",
@@ -71,15 +58,17 @@ describe("site shell", () => {
     expect(markup).toContain("© 2026 sorcererxw");
     expect(markup).toContain("Footer site map");
     expect(markup).toContain("sm:justify-self-end");
+    expect(markup).not.toContain("border-t");
+    expect(markup).not.toContain(">Home<");
     expect(markup).not.toContain(">站内<");
     expect(markup).not.toContain(">站外<");
     expect(markup).toContain('href="https://github.com/sorcererxw"');
     expect(markup).toContain('href="https://t.me/s/tech_bb"');
     expect(markup).toContain('href="https://jike.sorcererxw.com"');
-    expect(markup).toContain('href="/stack"');
-    expect(markup).toContain('href="/blog"');
-    expect(markup).toContain('href="/projects"');
-    expect(markup).toContain('href="/thoughts"');
+    expect(markup).not.toContain('href="/stack"');
+    expect(markup).not.toContain('href="/blog"');
+    expect(markup).not.toContain('href="/projects"');
+    expect(markup).not.toContain('href="/thoughts"');
     expect(markup).not.toContain('aria-label="Locale switcher"');
     expect(markup).not.toContain(">EN<");
     expect(markup).not.toContain(">ZH<");

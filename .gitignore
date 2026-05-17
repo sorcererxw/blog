@@ -9,3 +9,6 @@ tsconfig.tsbuildinfo
 dist
 .vercel
 .omx/
+.idea/
+.dev.vars*
+!.dev.vars.example

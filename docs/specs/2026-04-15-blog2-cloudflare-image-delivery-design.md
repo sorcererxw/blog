@@ -2,7 +2,7 @@
 
 ## Summary
 
-Add an app-owned Cloudflare-backed image delivery layer to `web/apps/blog2` so the public site stops shipping raw third-party image URLs directly from Notion, Telegram, and demo content.
+Add an app-owned Cloudflare-backed image delivery layer to `web/apps/blog2` so the public site stops shipping raw third-party image URLs directly from Notion and Telegram content.
 
 The goal is not "use Astro image APIs everywhere."
 
@@ -167,7 +167,7 @@ The plan may also choose to bypass formats that are not worth transforming in th
 
 Current image sources already span multiple external origins:
 
-- Unsplash demo covers
+- Notion-provided covers
 - Telegram CDN photo URLs
 - Notion-driven remote images and file URLs
 

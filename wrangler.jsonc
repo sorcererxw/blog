@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": "@astrojs/cloudflare/entrypoints/server",
+  "main": "src/worker.ts",
   "name": "blog",
   "compatibility_date": "2026-04-14",
   "compatibility_flags": [
@@ -10,6 +10,18 @@
   "observability": {
     "enabled": true
   },
+  "vars": {
+    "APP_ENV": "production",
+    "PUBLIC_SITE_URL": "https://sorcererxw.com",
+    "NOTION_BLOG_DATABASE_ID": "d6f20169e3b849059656e33a47e19003",
+    "NOTION_PROJECTS_DATABASE_ID": "63605072597640c4b666cd334b428aee",
+    "NOTION_INTRO_PAGE_ID": "ac63bdb57d224c41a951c0536396bdf4"
+  },
+  "secrets": {
+    "required": [
+      "NOTION_SECRET"
+    ]
+  },
   "routes": [
     {
       "custom_domain": true,
@@ -18,16 +30,12 @@
   ],
   "kv_namespaces": [
     {
-      "binding": "SESSION",
-      "id": "5ab66144d45d49d79a0533680313c6f0"
-    },
-    {
       "binding": "BLOG_CACHE",
       "id": "82255de05f7d4b9e8cf0cb43521ee243"
     }
   ],
   "assets": {
-    "directory": "./dist",
+    "directory": ".open-next/assets",
     "binding": "ASSETS"
   }
 }

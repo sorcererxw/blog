@@ -66,15 +66,16 @@ describe("ArticleDetailView", () => {
     expect(markup).toContain("Bookmark title");
     expect(markup).not.toContain("Continue the thread");
     expect(markup).not.toContain("Comments are not wired into blog2 yet.");
-    expect(markup).toContain('href="/blog"');
-    expect(markup).toContain("Back to the archive");
+    expect(markup).toContain('href="/?type=writing"');
+    expect(markup).toContain("Back to writing");
     expect(markup).toContain("✦");
+    expect(markup).toContain("photo-1498050108023-c5249f4df085");
     expect(markup).toMatch(/<article class="[^"]+"><div class="[^"]+">/);
     expect(markup).toMatch(/<header[\s\S]*Hello World[\s\S]*sorcererxw[\s\S]*Feb 11, 2026/);
     expect(markup).toMatch(
       /<section aria-label="Article content"[\s\S]*Getting started[\s\S]*Bookmark title/,
     );
-    expect(markup).toMatch(/<footer[\s\S]*Back to the archive/);
+    expect(markup).toMatch(/<footer[\s\S]*Back to writing/);
     expect(markup).toContain("publication-button");
   });
 

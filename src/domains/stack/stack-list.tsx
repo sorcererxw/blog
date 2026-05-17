@@ -1,5 +1,6 @@
 "use client";
 
+import NextLink from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -23,11 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/classnames";
+import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
 
 import type { StackListItem } from "./types";
-import styles from "./stack-list.module.css";
 
 type StackListProps = {
   items: StackListItem[];
@@ -53,19 +53,20 @@ function StackIcon({ item }: { item: StackListItem }) {
   }
 
   if (item.icon.kind === "emoji") {
-    return <span className={styles.mark}>{item.icon.value}</span>;
+    return (
+      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+        {item.icon.value}
+      </span>
+    );
   }
 
   return (
     <span
       aria-label={`${item.name} icon`}
-      className={styles.iconImage}
+      className="h-8 w-8 rounded-full border border-border bg-card bg-cover bg-center bg-no-repeat"
       role="img"
       style={{
         backgroundImage: `url(${buildCloudflareImageUrl(item.icon.value, "icon")})`,
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        backgroundSize: "cover",
       }}
     />
   );
@@ -83,9 +84,9 @@ function ChipRow({
   }
 
   return (
-    <div className={styles.metaGroup}>
-      <p className="shell-eyebrow">{label}</p>
-      <div className={styles.chipRow}>
+    <div className="grid gap-2">
+      <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <div className="flex flex-wrap gap-2">
         {values.map((value) => (
           <Badge key={`${label}-${value}`} variant="outline">
             {value}
@@ -131,19 +132,21 @@ export function StackListView({
     .filter((item) => !category || item.tags.includes(category));
 
   return (
-    <section aria-label="Stack" className={cn(styles.stackList, className)}>
-      <header className={styles.intro}>
-        <p className="shell-eyebrow">Engineering stack</p>
-        <h1 className={styles.title}>The tools, runtimes, and services behind how the site ships.</h1>
-        <p className={styles.description}>
+    <section aria-label="Stack" className={cn("grid w-full max-w-3xl gap-5", className)}>
+      <header className="grid gap-2">
+        <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Engineering stack</p>
+        <h1 className="m-0 text-balance font-serif text-[clamp(2rem,4vw,3.25rem)] font-medium leading-[0.98] tracking-[-0.04em]">
+          The tools, runtimes, and services behind how the site ships.
+        </h1>
+        <p className="m-0 text-[1.03rem] leading-[1.85] text-muted-foreground">
           This stack page documents the software, infrastructure, and deployment surfaces
           used to publish, debug, and maintain the site.
         </p>
       </header>
 
-      <div className={styles.filters} aria-label="Stack filters">
-        <Field className={styles.filter}>
-          <FieldLabel className={styles.filterLabel} htmlFor="stack-platform-filter">
+      <div className="grid gap-3 lg:grid-cols-2" aria-label="Stack filters">
+        <Field className="grid gap-2">
+          <FieldLabel className="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground" htmlFor="stack-platform-filter">
             Platform
           </FieldLabel>
           <FieldContent>
@@ -153,7 +156,7 @@ export function StackListView({
             >
               <SelectTrigger
                 aria-label="Platform"
-                className={styles.select}
+                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-[0.96rem] leading-[1.4]"
                 id="stack-platform-filter"
               >
                 <SelectValue placeholder={FILTER_PLACEHOLDER.platform} />
@@ -170,8 +173,8 @@ export function StackListView({
           </FieldContent>
         </Field>
 
-        <Field className={styles.filter}>
-          <FieldLabel className={styles.filterLabel} htmlFor="stack-category-filter">
+        <Field className="grid gap-2">
+          <FieldLabel className="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground" htmlFor="stack-category-filter">
             Category
           </FieldLabel>
           <FieldContent>
@@ -181,7 +184,7 @@ export function StackListView({
             >
               <SelectTrigger
                 aria-label="Category"
-                className={styles.select}
+                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-[0.96rem] leading-[1.4]"
                 id="stack-category-filter"
               >
                 <SelectValue placeholder={FILTER_PLACEHOLDER.category} />
@@ -199,20 +202,20 @@ export function StackListView({
         </Field>
       </div>
 
-      <Separator className={styles.divider} />
+      <Separator className="m-0" />
 
       {items.length === 0 ? (
-        <Empty className={styles.emptyState}>
+        <Empty className="m-0 grid gap-3 text-base leading-7 text-muted-foreground">
           <EmptyContent>
             <EmptyTitle>No stack entries published yet.</EmptyTitle>
           </EmptyContent>
         </Empty>
       ) : visibleItems.length === 0 ? (
-        <Empty className={styles.emptyState}>
+        <Empty className="m-0 grid gap-3 text-base leading-7 text-muted-foreground">
           <EmptyContent>
             <EmptyTitle>No matching entries for the selected filters.</EmptyTitle>
             <Button
-              className={styles.clearButton}
+              className="justify-self-start rounded-full"
               onClick={onClearFilters}
               size="sm"
               type="button"
@@ -223,26 +226,37 @@ export function StackListView({
           </EmptyContent>
         </Empty>
       ) : (
-        <div className={styles.grid}>
+        <div className="grid gap-4 lg:grid-cols-2">
           {visibleItems.map((item) => (
             <article key={`${item.name}-${item.link}`}>
-              <Card className={cn(styles.card, "py-0")}>
-                <a className={styles.link} href={item.link} rel="noreferrer" target="_blank">
-                  <div className={styles.cardHeader}>
+              <Card className="overflow-clip rounded-[1.1rem] bg-[color:color-mix(in_oklab,var(--background)_92%,var(--card)_8%)] py-0">
+                <NextLink
+                  className="grid gap-4 p-4 transition-[color,transform,border-color] duration-150 hover:-translate-y-0.5 [&:hover_.stack-card-title]:text-foreground [&:hover_.stack-summary]:text-foreground"
+                  href={item.link}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-4">
                     <div className="space-y-2">
-                      <h2 className={styles.cardTitle}>{item.name}</h2>
-                      <p className={styles.linkText}>{item.link}</p>
+                      <h2 className="stack-card-title m-0 text-pretty font-serif text-[clamp(1.25rem,2vw,1.65rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+                        {item.name}
+                      </h2>
+                      <p className="m-0 break-all text-[0.94rem] leading-[1.7] text-muted-foreground">
+                        {item.link}
+                      </p>
                     </div>
                     <StackIcon item={item} />
                   </div>
 
-                  <p className={styles.summary}>{item.description}</p>
+                  <p className="stack-summary m-0 text-base leading-[1.8] text-muted-foreground">
+                    {item.description}
+                  </p>
 
-                  <div className={styles.cardMeta}>
+                  <div className="grid gap-4">
                     <ChipRow label="Platforms" values={item.platforms} />
                     <ChipRow label="Tags" values={item.tags} />
                   </div>
-                </a>
+                </NextLink>
               </Card>
             </article>
           ))}

@@ -4,7 +4,7 @@
 
 This repository contains the standalone public blog product.
 
-The goal is to maintain the Astro + Cloudflare public blog application that was extracted from `tempura/web/apps/blog2` into its own repository at `/Users/sorcererxw/repo/sorcererxw/blog`.
+The goal is to maintain the Next.js + OpenNext public Personal Site application that was extracted from `tempura/web/apps/blog2` into its own repository at `/Users/sorcererxw/repo/sorcererxw/blog`.
 
 This repository replaces the current split public-blog architecture across:
 
@@ -245,7 +245,8 @@ Before ending a task, confirm:
 
 Start from:
 
-- `docs/specs/2026-03-28-blog2-design.md`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
 - `docs/roadmap.md`
 - `docs/task-ledger.md`
 - `docs/verification.md`

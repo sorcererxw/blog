@@ -9,14 +9,6 @@ vi.mock("@/domains/thoughts/list-thoughts", () => ({
   listThoughts: thoughtsState.listThoughts,
 }));
 
-vi.mock("@mtcute/node", () => {
-  throw new Error("thoughts page should not import @mtcute/node");
-});
-
-vi.mock("@mtcute/core", () => {
-  throw new Error("thoughts page should not import @mtcute/core");
-});
-
 import { ThoughtsPage } from "./thoughts-page";
 
 describe("ThoughtsPage", () => {
@@ -24,8 +16,8 @@ describe("ThoughtsPage", () => {
     thoughtsState.listThoughts.mockReset();
   });
 
-  it("renders thought cards from the processed snapshot model", async () => {
-    thoughtsState.listThoughts.mockReturnValue([
+  it("renders thought cards from the runtime public-page model", async () => {
+    thoughtsState.listThoughts.mockResolvedValue([
       {
         id: "6",
         date: new Date("2026-03-29T12:00:00.000Z"),
@@ -67,20 +59,19 @@ describe("ThoughtsPage", () => {
       },
     ]);
 
-    const markup = renderToStaticMarkup(<ThoughtsPage />);
+    const markup = renderToStaticMarkup(await ThoughtsPage());
 
     expect(markup).toContain('href="https://t.me/s/tech_bb/5"');
     expect(markup).toContain("Forwarded from Forward Source");
     expect(markup).toContain("Preview title");
-    expect(markup).toContain("/cdn-cgi/image/");
     expect(markup).toContain("/media/");
     expect(markup).toContain('href="#1_5"');
   });
 
   it("renders the explicit empty state when the snapshot is empty", async () => {
-    thoughtsState.listThoughts.mockReturnValue([]);
+    thoughtsState.listThoughts.mockResolvedValue([]);
 
-    const markup = renderToStaticMarkup(<ThoughtsPage />);
+    const markup = renderToStaticMarkup(await ThoughtsPage());
 
     expect(markup).toContain("No thoughts published yet.");
   });

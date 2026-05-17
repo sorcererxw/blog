@@ -1,85 +1,13 @@
 import { Client, collectPaginatedAPI } from "@notionhq/client";
-import { NotionSecret } from "@/config/server";
-import { getRuntimeConfig } from "@/config/runtime";
 import { highlightCode } from "@/domains/article/highlight-code";
 import { getPrimaryDataSourceId } from "@/integrations/notion/data-source";
+import { getRuntimeInfo, getWorkerEnv } from "@/lib/cloudflare-env";
 import type {
   ArticleDetailBlock,
   ArticleDetailRichText,
   ArticleDetailTocNode,
   NotionArticleDetailRecord,
 } from "@/domains/article/article-detail-types";
-
-const BLOG_DATABASE_ID = "d6f20169e3b849059656e33a47e19003";
-
-const demoArticleDetails: NotionArticleDetailRecord[] = [
-  {
-    id: "demo-modern-astro-detail",
-    slug: "modern-astro",
-    title: "Building the new blog shell",
-    summary: "A first pass at the public blog surface on Cloudflare.",
-    date: new Date("2026-02-01T00:00:00.000Z"),
-    cover: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1600&q=80",
-    icon: { kind: "emoji", value: "✦" },
-    blocks: [
-      {
-        kind: "heading",
-        level: 2,
-        text: "The first public slice",
-      },
-      {
-        kind: "paragraph",
-        text:
-          "This demo article mirrors the shape of the eventual Notion-backed detail page while the migration work is still in progress.",
-      },
-      {
-        kind: "quote",
-        text: "Build the route first, then replace the content source.",
-      },
-      {
-        kind: "list-item",
-        ordered: false,
-        text: "Locale-aware routing",
-      },
-      {
-        kind: "list-item",
-        ordered: false,
-        text: "Static-friendly article rendering",
-      },
-      {
-        kind: "bookmark",
-        url: "https://example.com",
-        title: "Demo bookmark",
-      },
-    ],
-  },
-  {
-    id: "demo-content-pipeline-detail",
-    slug: "content-pipeline",
-    title: "Normalizing Notion content",
-    summary: "How public content moves from Notion into app-native models.",
-    date: new Date("2026-01-18T00:00:00.000Z"),
-    cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1600&q=80",
-    icon: { kind: "emoji", value: "◇" },
-    blocks: [
-      {
-        kind: "heading",
-        level: 2,
-        text: "Content pipeline",
-      },
-      {
-        kind: "paragraph",
-        text:
-          "This article placeholder is intentionally plain, but it still proves the public read path and rendering surface.",
-      },
-      {
-        kind: "code",
-        language: "ts",
-        text: "export const source = 'notion';",
-      },
-    ],
-  },
-];
 
 type NotionPageProperty = {
   type?: string;
@@ -663,15 +591,30 @@ const fetchNotionArticleBySlug = async ({
   slug: string;
   includeWip?: boolean;
 }): Promise<NotionArticleDetailRecord | null> => {
-  if (!NotionSecret) {
-    const article = demoArticleDetails.find((item) => item.slug === slug) ?? null;
-    return article ? withHighlightedCode(article) : null;
+  const workerEnv = await getWorkerEnv();
+  const notionSecret = workerEnv.NOTION_SECRET;
+  const blogDatabaseId = workerEnv.NOTION_BLOG_DATABASE_ID;
+
+  if (!notionSecret) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return null;
+    }
+
+    throw new Error("Missing NOTION_SECRET.");
   }
 
-  const notion = new Client({ auth: NotionSecret });
+  if (!blogDatabaseId) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return null;
+    }
+
+    throw new Error("Missing NOTION_BLOG_DATABASE_ID.");
+  }
+
+  const notion = new Client({ auth: notionSecret });
 
   try {
-    const dataSourceId = await getPrimaryDataSourceId(notion, BLOG_DATABASE_ID);
+    const dataSourceId = await getPrimaryDataSourceId(notion, blogDatabaseId);
     const data = await notion.dataSources.query({
       data_source_id: dataSourceId,
       page_size: 1,
@@ -714,9 +657,8 @@ const fetchNotionArticleBySlug = async ({
 
     return withHighlightedCode(toArticleDetailRecord(page, blocks));
   } catch (error) {
-    if (!getRuntimeConfig().isProduction) {
-      const article = demoArticleDetails.find((item) => item.slug === slug) ?? null;
-      return article ? withHighlightedCode(article) : null;
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return null;
     }
 
     if (error instanceof Error) {

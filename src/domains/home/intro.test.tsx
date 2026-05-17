@@ -83,7 +83,6 @@ describe("HomePageContent", () => {
     const html = renderToStaticMarkup(<HomePageContent blocks={[]} />);
 
     expect(html).toContain("The home page content is empty.");
-    expect(html).not.toContain("shell-eyebrow");
     expect(html).not.toContain("publication-home-summary");
   });
 

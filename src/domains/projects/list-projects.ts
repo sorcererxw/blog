@@ -26,6 +26,7 @@ export const normalizeProjectListItem = (
   description: record.description,
   url: record.url,
   emoji: record.emoji,
+  period: record.period,
 });
 
 export const listProjects = async ({

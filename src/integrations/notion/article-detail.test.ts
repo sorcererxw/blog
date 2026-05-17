@@ -19,12 +19,13 @@ vi.mock("@notionhq/client", () => ({
   collectPaginatedAPI: collectPaginatedAPIMock,
 }));
 
-vi.mock("@/config/server", () => ({
-  NotionSecret: "test-notion-secret",
-}));
-
-vi.mock("@/config/runtime", () => ({
-  getRuntimeConfig: () => ({
+vi.mock("@/lib/cloudflare-env", () => ({
+  getWorkerEnv: () => ({
+    NOTION_SECRET: "test-notion-secret",
+    NOTION_BLOG_DATABASE_ID: "blog-database-id",
+    APP_ENV: "production",
+  }),
+  getRuntimeInfo: () => ({
     isProduction: true,
   }),
 }));
@@ -213,6 +214,10 @@ describe("createNotionArticleDetailSource", () => {
     ]);
 
     expect(collectPaginatedAPIMock).toHaveBeenCalledTimes(2);
+    expect(getPrimaryDataSourceIdMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      "blog-database-id",
+    );
   });
 
   it("produces Shiki html for notion code blocks", async () => {
@@ -270,5 +275,34 @@ describe("createNotionArticleDetailSource", () => {
     expect(codeBlock && "highlightedHtml" in codeBlock ? codeBlock.highlightedHtml : null).toContain(
       'class="shiki',
     );
+  });
+
+  it("normalizes Notion file covers for article detail pages", async () => {
+    getPrimaryDataSourceIdMock.mockResolvedValue("data-source-1");
+    queryMock.mockResolvedValue({
+      results: [
+        {
+          id: "page-1",
+          cover: { file: { url: "https://secure.notion-static.com/cover.png" } },
+          properties: {
+            Name: {
+              type: "title",
+              title: [{ plain_text: "Deep Dive" }],
+            },
+            Slug: {
+              type: "rich_text",
+              rich_text: [{ plain_text: "deep-dive" }],
+            },
+          },
+        },
+      ],
+    });
+    collectPaginatedAPIMock.mockResolvedValue([]);
+
+    const { createNotionArticleDetailSource } = await import("@/integrations/notion/article-detail");
+    const source = createNotionArticleDetailSource();
+    const article = await source.getArticleBySlug({ slug: "deep-dive" });
+
+    expect(article?.cover).toBe("https://secure.notion-static.com/cover.png");
   });
 });

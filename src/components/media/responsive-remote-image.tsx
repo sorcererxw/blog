@@ -1,7 +1,9 @@
+import NextImage from "next/image";
+
+import cloudflareImageLoader from "../../../image-loader";
 import {
-  buildCloudflareImageSrcSet,
-  buildCloudflareImageUrl,
   getDefaultImageSizes,
+  getCloudflareImagePreset,
   type CloudflareImagePreset,
 } from "@/lib/images/cloudflare";
 
@@ -28,20 +30,21 @@ export function ResponsiveRemoteImage({
   src,
   width,
 }: ResponsiveRemoteImageProps) {
-  const resolvedSrc = buildCloudflareImageUrl(src, preset);
-  const srcSet = buildCloudflareImageSrcSet(src, preset);
+  const presetConfig = getCloudflareImagePreset(preset);
+  const imageWidth = width ?? presetConfig.width;
+  const imageHeight = height ?? Math.round(presetConfig.width * 0.625);
 
   return (
-    <img
+    <NextImage
       alt={alt}
       className={className}
       fetchPriority={fetchPriority}
+      height={imageHeight}
+      loader={cloudflareImageLoader}
       loading={loading ?? (fetchPriority === "high" ? "eager" : "lazy")}
-      sizes={srcSet ? (sizes ?? getDefaultImageSizes(preset)) : undefined}
-      src={resolvedSrc}
-      srcSet={srcSet}
-      {...(width ? { width } : {})}
-      {...(height ? { height } : {})}
+      sizes={sizes ?? getDefaultImageSizes(preset)}
+      src={src}
+      width={imageWidth}
     />
   );
 }

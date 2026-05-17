@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { cn } from "@/lib/classnames";
+import { cn } from "@/lib/utils";
 
 import styles from "./masonry-feed.module.css";
 
@@ -9,6 +9,7 @@ type MasonryFeedProps<T> = {
   renderItem: (item: T) => ReactNode;
   calculateItemHeight: (item: T, columns: number) => number;
   getItemKey: (item: T, index: number) => string;
+  getItemTransitionState?: (item: T, index: number) => string | undefined;
   className?: string;
 };
 
@@ -36,6 +37,7 @@ export function MasonryFeed<T>({
   renderItem,
   calculateItemHeight,
   getItemKey,
+  getItemTransitionState,
   className,
 }: MasonryFeedProps<T>) {
   const layouts = [
@@ -69,11 +71,13 @@ export function MasonryFeed<T>({
                   {column.map((item, itemIndex) => {
                     const itemKey = getItemKey(item, itemIndex);
                     const estimate = calculateItemHeight(item, layout.columns);
+                    const transitionState = getItemTransitionState?.(item, itemIndex);
 
                     return (
                       <div
                         key={itemKey}
                         className={styles.cell}
+                        data-feed-transition={transitionState}
                         data-masonry-estimate={estimate}
                         data-masonry-item-key={itemKey}
                       >

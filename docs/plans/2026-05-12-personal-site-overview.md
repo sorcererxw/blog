@@ -1,0 +1,140 @@
+# Personal Site Overview Implementation Plan
+
+## Goal
+
+Rebuild the public product around one Personal Site homepage with a Notion-backed Profile Hero and unified masonry Overview Feed, while preserving Astro + Cloudflare as the runtime direction.
+
+## Scope
+
+This plan is intentionally staged. It should replace the older archive-first public-blog sequence for future implementation work.
+
+## Slice 0: Contract and Current-State Alignment
+
+Files:
+
+- `CONTEXT.md`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+
+Work:
+
+- record domain language for Personal Site, Overview Feed, Feed Item, Feed Module, and Compatibility Route
+- mark the roadmap product pivot explicitly
+- keep existing Astro migration work as the runtime foundation rather than reopening the framework choice
+
+Verification:
+
+- documentation review only
+- no runtime behavior changes in this slice
+
+## Slice 1: Feed Domain Model
+
+Files:
+
+- `src/domains/feed/*`
+- `src/domains/article/*`
+- `src/domains/projects/*`
+- `src/domains/thoughts/*`
+- `src/integrations/kv/*`
+- tests beside changed modules
+
+Work:
+
+- introduce a normalized Feed Item model with item type, source, Displayed Time, Module Size, destination, and summary fields
+- implement Module Size defaults and manual override handling
+- implement Displayed Time overrides separately from Source Published Time
+- implement sorting rules: timed items newest first, untimed items at the bottom
+- map existing article, project, and thoughts/social data into the feed model
+- map existing Telegram snapshot content as the first Social Source
+- reserve Twitter/X in the model without implementing ingestion
+- introduce or extend the app-owned Overview Feed Index abstraction
+
+Verification:
+
+- targeted unit tests for feed normalization and sorting
+- typecheck
+
+## Slice 2: Profile Hero Source
+
+Files:
+
+- `src/domains/home/*`
+- `src/integrations/notion/*`
+- `src/integrations/kv/*`
+- homepage route/layout files
+
+Work:
+
+- render the full content from one fixed Notion Profile Page
+- fetch and normalize Profile Hero content
+- cache or revalidate the Profile Hero with a one hour freshness target
+- render the Profile Hero above the Overview Feed with native same-page expansion for long content
+
+Verification:
+
+- targeted tests for Profile Hero normalization
+- HTTP check for `/`
+- browser verification for homepage rendering
+
+## Slice 3: Unified Overview Feed UI
+
+Files:
+
+- `src/domains/feed/*`
+- `src/pages/index.astro`
+- feed CSS module files
+- related tests
+
+Work:
+
+- replace archive-like homepage content with the unified masonry Overview Feed
+- implement Feed Module variants: compact, standard, feature
+- implement lightweight Feed Media Preview handling using existing media delivery where possible
+- keep presentation unified across item types and sources
+- implement Feed Filters as URL-backed client state after SSR, not section pages
+- use shadcn `Tabs` for Feed Filters, shadcn `Card` for Feed Modules, and shadcn `Badge` for source labels
+- animate Feed Module insertion and removal when hydrated filters change the visible item set
+- render all matching Feed Items in one response without pagination or infinite scroll
+
+Verification:
+
+- component tests for Feed Module rendering
+- `pnpm test`
+- `pnpm typecheck`
+- `pnpm build`
+- `curl` checks for `/`
+- browser verification for filters and masonry rendering
+
+## Slice 4: Compatibility Routes
+
+Files:
+
+- `src/pages/blog/index.astro`
+- `src/pages/projects/index.astro`
+- `src/pages/thoughts/index.astro`
+- `src/pages/stack/index.astro`
+- `src/pages/sitemap.xml.ts`
+- route tests if present
+
+Work:
+
+- keep `/blog` absent; it should return `404` rather than redirecting
+- redirect `/projects` to `/?type=projects`
+- redirect `/thoughts` to `/?type=social`
+- keep `/articles/[slug]` as Content Detail
+- keep `/stack` hidden from the primary product structure
+- remove old archive routes and filter query URLs from sitemap discovery
+
+Verification:
+
+- `curl -I` checks for redirect status and location headers, plus `/blog` 404 behavior
+- browser check for old-route navigation behavior
+
+## Follow-Up Decisions
+
+- exact first Social Sources beyond existing Telegram snapshot
+- how Twitter/X data is collected and authorized
+- whether projects without Displayed Time need an authoring cleanup pass
+- exact collapsed height and native expansion labels for Profile Hero
+- exact accepted query parameter values for Feed Filters

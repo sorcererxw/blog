@@ -3,6 +3,9 @@ export type ProjectListItem = {
   description: string;
   url: string;
   emoji: string | null;
+  displayedAt?: Date | null;
+  moduleSize?: string | null;
+  period?: Date | null;
 };
 
 export type NotionProjectRecord = ProjectListItem & {

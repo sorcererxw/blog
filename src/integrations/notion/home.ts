@@ -1,10 +1,7 @@
 import { Client, collectPaginatedAPI } from "@notionhq/client";
 import { cache } from "react";
 
-import { getRuntimeConfig } from "@/config/runtime";
-import { NotionSecret } from "@/config/server";
-
-export const HOME_PAGE_ID = "ac63bdb57d224c41a951c0536396bdf4";
+import { getRuntimeInfo, getWorkerEnv } from "@/lib/cloudflare-env";
 
 export type HomePageBlock = {
   id: string;
@@ -37,49 +34,6 @@ type NotionRichText = {
     content?: string;
     link?: { url?: string | null } | null;
   };
-};
-
-const demoHomePage: HomePageRecord = {
-  id: HOME_PAGE_ID,
-  blocks: [
-    {
-      id: "demo-home-heading",
-      type: "heading_1",
-      children: [],
-      heading_1: {
-        rich_text: [
-          {
-            plain_text: "A focused homepage for articles, thoughts, and projects.",
-          },
-        ],
-      },
-    },
-    {
-      id: "demo-home-summary",
-      type: "paragraph",
-      children: [],
-      paragraph: {
-        rich_text: [
-          {
-            plain_text:
-              "Blog2 is the new public surface for Tempura, backed by a fixed Notion page so the home route can stay simple and content-first.",
-          },
-        ],
-      },
-    },
-    {
-      id: "demo-home-note",
-      type: "quote",
-      children: [],
-      quote: {
-        rich_text: [
-          {
-            plain_text: "Build the shell first, then let the page content speak for itself.",
-          },
-        ],
-      },
-    },
-  ],
 };
 
 const readPlainText = (value: unknown): string => {
@@ -182,22 +136,38 @@ const toDescription = (blocks: HomePageBlock[]): string => {
 };
 
 const fetchHomePage = async (): Promise<HomePageRecord> => {
-  if (!NotionSecret) {
-    return demoHomePage;
+  const workerEnv = await getWorkerEnv();
+  const notionSecret = workerEnv.NOTION_SECRET;
+  const introPageId = workerEnv.NOTION_INTRO_PAGE_ID;
+
+  if (!notionSecret) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return { id: introPageId ?? "", blocks: [] };
+    }
+
+    throw new Error("Missing NOTION_SECRET.");
   }
 
-  const notion = new Client({ auth: NotionSecret });
+  if (!introPageId) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return { id: "", blocks: [] };
+    }
+
+    throw new Error("Missing NOTION_INTRO_PAGE_ID.");
+  }
+
+  const notion = new Client({ auth: notionSecret });
 
   try {
-    const blocks = await createBlockTree(notion, HOME_PAGE_ID);
+    const blocks = await createBlockTree(notion, introPageId);
 
     return {
-      id: HOME_PAGE_ID,
+      id: introPageId,
       blocks,
     };
   } catch (error) {
-    if (!getRuntimeConfig().isProduction) {
-      return demoHomePage;
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return { id: introPageId, blocks: [] };
     }
 
     if (error instanceof Error) {

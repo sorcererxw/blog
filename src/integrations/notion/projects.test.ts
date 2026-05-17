@@ -11,12 +11,13 @@ vi.mock("@notionhq/client", () => ({
   },
 }));
 
-vi.mock("@/config/server", () => ({
-  NotionSecret: "test-notion-secret",
-}));
-
-vi.mock("@/config/runtime", () => ({
-  getRuntimeConfig: () => ({
+vi.mock("@/lib/cloudflare-env", () => ({
+  getWorkerEnv: () => ({
+    NOTION_SECRET: "test-notion-secret",
+    NOTION_PROJECTS_DATABASE_ID: "projects-database-id",
+    APP_ENV: "production",
+  }),
+  getRuntimeInfo: () => ({
     isProduction: true,
   }),
 }));
@@ -64,6 +65,16 @@ describe("listProjectsFromNotion", () => {
     const { listProjectsFromNotion } = await import("@/integrations/notion/projects");
     const records = await listProjectsFromNotion();
 
+    expect(getPrimaryDataSourceIdMock).toHaveBeenCalledWith(
+      expect.any(Object),
+      "projects-database-id",
+    );
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data_source_id: "data-source-1",
+        sorts: [{ property: "Period", direction: "descending" }],
+      }),
+    );
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({
       title: "Project One",

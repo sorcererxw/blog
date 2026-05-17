@@ -1,4 +1,4 @@
-import styles from "@/styles/route-boundary.module.css";
+import NextLink from "next/link";
 
 type BoundaryAction = {
   href: string;
@@ -21,16 +21,16 @@ export function PublicBoundary({
   note,
 }: PublicBoundaryProps) {
   return (
-    <section className={styles.boundary}>
+    <section className="grid w-[min(100%_-_2rem,40rem)] gap-5">
       <div className="space-y-5">
-        <p className="shell-eyebrow">{eyebrow}</p>
+        <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p>
         <h1 className="publication-home-title text-4xl">{title}</h1>
         <p className="publication-home-summary">{message}</p>
         <div className="flex flex-wrap gap-3">
           {actions.map((action) => (
-            <a key={action.label} className="publication-link" href={action.href}>
+            <NextLink key={action.label} className="publication-link" href={action.href}>
               {action.label}
-            </a>
+            </NextLink>
           ))}
         </div>
         {note ? <p className="publication-note">{note}</p> : null}

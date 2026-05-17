@@ -1,6 +1,5 @@
-import { getOptionalEnv } from "@/config/env";
-
-import type { EnvSource } from "@/config/env";
+import { getWorkerEnvSync } from "@/lib/cloudflare-env";
+import type { CloudflareEnv } from "@/types/cloudflare";
 import type { SeoImage } from "./model";
 
 export const SITE_NAME = "sorcererxw'blog";
@@ -12,8 +11,10 @@ function stripTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
 
-export function getSiteOrigin(source: EnvSource = process.env) {
-  const configured = getOptionalEnv("PUBLIC_SITE_URL", source, DEFAULT_SITE_ORIGIN).trim();
+export function getSiteOrigin(source: Partial<Pick<CloudflareEnv, "PUBLIC_SITE_URL">> = getWorkerEnvSync()) {
+  const configured = typeof source.PUBLIC_SITE_URL === "string" && source.PUBLIC_SITE_URL.length > 0
+    ? source.PUBLIC_SITE_URL.trim()
+    : DEFAULT_SITE_ORIGIN;
 
   try {
     const url = new URL(configured);
@@ -36,7 +37,10 @@ export function normalizePathname(pathname: string) {
   return normalized || "/";
 }
 
-export function buildAbsoluteUrl(pathname: string, source: EnvSource = process.env) {
+export function buildAbsoluteUrl(
+  pathname: string,
+  source: Partial<Pick<CloudflareEnv, "PUBLIC_SITE_URL">> = getWorkerEnvSync(),
+) {
   return `${getSiteOrigin(source)}${normalizePathname(pathname)}`;
 }
 

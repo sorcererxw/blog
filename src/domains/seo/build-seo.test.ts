@@ -7,12 +7,12 @@ describe("buildSeo", () => {
     const seo = buildSeo({
       description: "Technical notes about Astro and Cloudflare.",
       kind: "collection",
-      pathname: "/blog.html",
-      title: "Engineering writing archive",
+      pathname: "/",
+      title: "Engineering writing overview",
     });
 
-    expect(seo.title).toBe("Engineering writing archive | sorcererxw'blog");
-    expect(seo.canonicalUrl).toBe("https://sorcererxw.com/blog");
+    expect(seo.title).toBe("Engineering writing overview | sorcererxw'blog");
+    expect(seo.canonicalUrl).toBe("https://sorcererxw.com/");
     expect(seo.robots).toBe("index,follow,max-image-preview:large");
     expect(seo.openGraph.type).toBe("website");
     expect(seo.twitter.card).toBe("summary");

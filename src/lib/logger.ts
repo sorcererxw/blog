@@ -58,4 +58,4 @@ export function createLogger(
   };
 }
 
-export const logger = createLogger("blog2");
+export const logger = createLogger("blog");

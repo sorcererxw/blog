@@ -16,6 +16,1413 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-17 - Remove Runtime Demo Fallbacks
+
+Status: done
+
+Summary:
+
+- removed runtime synthetic article, article detail, home intro, project, and stack records from Notion adapters
+- changed missing `NOTION_SECRET` handling so production fails fast and non-production returns empty content instead of synthetic content
+- changed non-production Notion config/query failures to empty lists, empty profile content, or missing article results instead of synthetic content
+- updated the sitemap test so it does not depend on runtime fallback article data
+
+Files:
+
+- `src/integrations/notion/articles.ts`
+- `src/integrations/notion/article-detail.ts`
+- `src/integrations/notion/home.ts`
+- `src/integrations/notion/projects.ts`
+- `src/integrations/notion/stack.ts`
+- `src/app/sitemap.xml/route.test.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/specs/2026-04-15-blog2-cloudflare-image-delivery-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep mocks inside test files only; do not ship runtime demo content from integration adapters.
+- Production should expose source misconfiguration as an error instead of silently serving empty or synthetic public content.
+- Non-production can return empty content to keep local development and tests from requiring real Notion credentials.
+
+Verification:
+
+- `rg -n "\bdemo\b|demo[A-Z_]|Demo|demo-|mock[A-Z_]|Mock|\bmock\b" src/integrations src/app src/domains -S`: PASS, only test-file mocks remain; runtime integration files have no demo/mock records
+- `pnpm test -- src/integrations/notion/articles.test.ts src/integrations/notion/article-detail.test.ts src/integrations/notion/home.test.ts src/integrations/notion/projects.test.ts src/app/sitemap.xml/route.test.ts src/domains/stack/list-stack.test.ts`: PASS, Vitest config ran the full suite (`31` files, `103` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3232`: PASS, preview listed Notion env bindings and served through Wrangler
+- `curl --max-time 90 -s -o /tmp/blog-clean-home.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3232/' && rg -n 'Profile hero|Overview feed' /tmp/blog-clean-home.html && ! rg -n 'demo-modern-astro|Cloudflare shell|Notion pipeline|Building the new blog shell' /tmp/blog-clean-home.html`: PASS, returned `200 text/html; charset=utf-8`, rendered home surfaces, and did not contain removed synthetic records
+- `curl --max-time 30 -s -o /tmp/blog-clean-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3232/?type=projects' && rg -n 'Project|免息分期值多少钱' /tmp/blog-clean-projects.html`: PASS, returned `200 text/html; charset=utf-8` and rendered real Notion project content
+- `curl --max-time 30 -s -o /tmp/blog-clean-sitemap.xml -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3232/sitemap.xml' && rg -n '<loc>' /tmp/blog-clean-sitemap.xml`: PASS, returned `200 application/xml; charset=utf-8` with real article URLs
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Open Source Release Readiness
+
+Status: done
+
+Summary:
+
+- checked the large local OpenNext migration working tree for push readiness
+- added open-source project metadata before publishing the standalone repository
+- confirmed ignored local secret and generated artifact paths are not part of the commit set
+
+Files:
+
+- `README.md`
+- `LICENSE`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- use the MIT license for the public repository
+- keep setup instructions focused on local development, verification, and Cloudflare deployment
+- document that `.dev.vars` and generated build outputs must remain uncommitted
+
+Verification:
+
+- `git diff --check`: PASS
+- `git check-ignore -v .dev.vars .next .open-next .wrangler tsconfig.tsbuildinfo node_modules`: PASS, all local secret/generated paths are ignored
+- `pnpm test`: PASS (`31` files, `103` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing warnings for experimental Wrangler `secrets` and Next's deprecated `middleware` file convention
+
+Follow-up:
+
+- push the prepared commit to `origin/main`
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Wrangler Projects Notion Env
+
+Status: done
+
+Summary:
+
+- moved the Projects Notion database id into `wrangler.jsonc` as `NOTION_PROJECTS_DATABASE_ID`
+- regenerated Wrangler env types so `Cloudflare.Env` and `NodeJS.ProcessEnv` include the projects database id
+- changed the Notion projects adapter to read `NOTION_PROJECTS_DATABASE_ID` from Worker env instead of a source constant
+- later cleanup removed the temporary non-production synthetic fallback behavior from the projects adapter
+
+Files:
+
+- `wrangler.jsonc`
+- `cloudflare-env.d.ts`
+- `src/integrations/notion/projects.ts`
+- `src/integrations/notion/projects.test.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Treat the projects database id the same as the blog database and intro page ids: non-secret runtime configuration owned by Wrangler vars.
+- Production should fail fast when `NOTION_SECRET` is present but `NOTION_PROJECTS_DATABASE_ID` is missing; a later cleanup changed non-production to return empty project content instead of synthetic project records.
+
+Verification:
+
+- `pnpm cf-typegen`: PASS, generated `cloudflare-env.d.ts` includes `NOTION_PROJECTS_DATABASE_ID`; Wrangler emitted the existing experimental `secrets` warning
+- `pnpm test -- src/integrations/notion/projects.test.ts`: PASS, Vitest config ran the full suite (`31` files, `103` tests); projects test asserts the env-owned database id is passed into `getPrimaryDataSourceId`
+- `rg -n "const PROJECTS_DATABASE_ID|63605072597640c4b666cd334b428aee|NOTION_PROJECTS_DATABASE_ID" src/integrations/notion/projects.ts wrangler.jsonc cloudflare-env.d.ts docs/specs docs/plans docs/roadmap.md docs/verification.md -S`: PASS, the only raw id is in Wrangler/generated type output and docs/source use `NOTION_PROJECTS_DATABASE_ID`
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3231`: PASS, preview listed `env.NOTION_PROJECTS_DATABASE_ID`
+- `curl --max-time 30 -s -o /tmp/blog-projects-env.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3231/?type=projects' && rg -n 'Project|data-overview-filter-link|type=projects|Overview feed' /tmp/blog-projects-env.html`: PASS, returned `200 text/html; charset=utf-8` and rendered real project cards
+- `curl --max-time 20 -i 'http://127.0.0.1:3231/api/health'`: PASS, returned `200 OK` with production runtime JSON
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Telegram Public Page Runtime Ingestion
+
+Status: done
+
+Summary:
+
+- replaced the old Telegram sync/snapshot/client path with render-time public crawling for `tech_bb`
+- added a DOM parser and crawler for Telegram public `t.me/s` pages with pagination, dedupe, newest-first sorting, rich text, reply/forward/reaction metadata, direct photos, and link previews
+- wired `listThoughts()` into server rendering with a ten minute Next revalidation window instead of a checked-in snapshot
+- changed Overview Feed media to an array so Telegram posts render every parsed direct photo plus link-preview photo
+- kept volatile Telegram media display stable by routing canonical `cdn*.telesco.pe` images through `/media/[id]`; stable non-canonical images still use the Cloudflare image loader transform path
+
+Files:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `image-loader.ts`
+- `src/app/page.tsx`
+- `src/domains/feed/types.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/thoughts/list-thoughts.ts`
+- `src/domains/thoughts/list-thoughts.test.ts`
+- `src/domains/thoughts/thoughts-page.tsx`
+- `src/domains/thoughts/thoughts-page.test.tsx`
+- `src/domains/thoughts/thoughts.snapshot.json`
+- `src/domains/thoughts/sync-thoughts.ts`
+- `src/domains/thoughts/sync-thoughts.test.ts`
+- `src/integrations/telegram/public-page.ts`
+- `src/integrations/telegram/public-page.test.ts`
+- `src/integrations/telegram/thoughts.ts`
+- `src/integrations/telegram/thoughts.test.ts`
+- `src/integrations/telegram/mtcute-thoughts.ts`
+- `scripts/sync-thoughts.mjs`
+- `src/lib/images/image-loader.test.ts`
+- `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md`
+- `docs/plans/2026-05-17-telegram-public-page-runtime-ingestion.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+- `TODOS.md`
+
+Decisions:
+
+- Do not use `TELEGRAM_SESSION`, Telegram Bot API, MTProto, `@mtcute/*`, or hosted RSSHub.
+- Treat "full crawl" as all public messages exposed by Telegram `t.me/s` pagination; deleted or unavailable ids remain normal gaps.
+- Fetch at render time with `next.revalidate = 600` rather than writing `thoughts.snapshot.json`.
+- Keep `ThoughtListItem` stable and adapt Overview Feed media to arrays to satisfy all-image rendering.
+- Do not wrap canonical `/media/[id]` Telegram images in local `/cdn-cgi/image`; Wrangler reserves that path and returns broken images for internal media URLs during local preview.
+
+Verification:
+
+- `rg -n "thoughts\\.snapshot|sync:thoughts|syncThoughts|createLiveThoughtLoader|@mtcute|TELEGRAM_SESSION|TelegramClient|mtcute-thoughts" package.json pnpm-lock.yaml src scripts || true`: PASS, no active source/config matches
+- `pnpm test`: PASS (`31` files, `103` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3225`: PASS
+- `curl --max-time 90 -s 'http://127.0.0.1:3225/?source=telegram' ...`: PASS, rendered `87` unique Telegram ids, first ids were `111, 107, 106, 104, 103`, newest-first check passed, `163` image tags were present, and rich text external links were present
+- `curl --max-time 30 ... first /media image`: PASS, returned `200 OK`, `Content-Type: image/jpeg`, and `X-Blog2-Canonical-Media: 1`
+- Headless Chrome verification at `http://127.0.0.1:3225/?source=telegram`: PASS, screenshot `/tmp/blog-telegram-runtime-fixed.png` showed rendered Telegram images and the active Telegram filter; DOM metrics showed `87` unique Telegram cards, newest-first order, `163` image elements, `/media/` paths, and rich text links
+
+Follow-up:
+
+- monitor cold-cache crawl latency as `tech_bb` history grows
+- deploy verification should confirm Cloudflare production image behavior for canonical Telegram media
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Overview Feed Filter Click Flash Fix
+
+Status: done
+
+Summary:
+
+- removed the transient black tab flash that appeared when clicking Overview Feed filters
+- replaced the Base UI Tabs-driven filter row with a URL/filter-state-driven anchor tablist
+- preserved `role="tablist"`, `role="tab"`, `aria-selected`, `data-slot` markers, and the existing visual active style
+- added regression coverage to ensure the rendered filter row no longer emits Base UI internal tab IDs
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- keep the filter row as real links for SSR/no-JavaScript fallback and shareable query URLs
+- avoid Base UI tab selection state here because it races with the URL-driven filter state and can briefly style the wrong tab
+- no roadmap update was needed because this is a UI bug fix, not a product or architecture scope change
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the broader suite (`32` files, `104` tests)
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `curl --max-time 20 -s 'https://blog.localhost/?type=projects' | rg -n "data-slot=\"tabs-trigger\"|role=\"tab\"|data-active=\"true\"|data-active=\"false\""`: PASS, filter links render as anchor-backed tabs with only the current tab active
+- Browser verification at `https://blog.localhost/?type=projects`: PASS, clicking Writing then Projects updated the URL/filter state and only the current tab had the active black pill; no stray black pill remained between tabs
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Overview Feed Badge Container Padding Alignment
+
+Status: done
+
+Summary:
+
+- corrected the Overview Feed badge alignment to match the card content container padding
+- removed the previous badge-internal padding override
+- removed the badge wrapper negative left margin so the badge left edge aligns with the title and body copy
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- keep the shared `Badge` primitive at its default internal `px-2`
+- align the badge by positioning its wrapper inside the card content grid instead of changing the badge's own padding
+- no roadmap update was needed because this is a reviewer visual correction, not a scope or architecture change
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the broader suite (`32` files, `104` tests)
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `curl --max-time 20 -s 'https://blog.localhost/?type=projects' | rg -n "justify-self-start|px-\\[1\\.15rem\\]|Project"`: PASS, project cards render `justify-self-start` wrappers and no badge `px-[1.15rem]` override
+- Browser verification at `https://blog.localhost/?type=projects`: PASS, Project badge aligns with the card content inset/title/body and no horizontal overflow was detected
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Overview Feed Badge Padding Alignment
+
+Status: done
+
+Summary:
+
+- aligned Overview Feed badge internal horizontal padding with the card body inset
+- kept the existing badge wrapper edge treatment, but overrode the shared shadcn `Badge` `px-2` at this feed call site
+- added a render regression assertion for the standard badge padding override
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- scope the change to Overview Feed badges instead of changing the shared `Badge` primitive globally
+- use module-size-specific padding overrides: standard `px-[1.15rem]`, compact `px-4`, feature `px-[1.35rem]`
+- no roadmap update was needed because this is a visual alignment fix, not a milestone or scope change
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the broader suite (`32` files, `104` tests)
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `curl --max-time 20 -s https://blog.localhost/ | rg -n "px-\\[1\\.15rem\\]|Project|Overview feed"`: PASS, rendered HTML includes Overview Feed badges with `px-[1.15rem]`
+- Browser verification at `https://blog.localhost/?type=projects`: PASS, project badge rendered with `px-[1.15rem]` and no horizontal overflow
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Enforce Next Link And Image Components
+
+Status: done
+
+Summary:
+
+- added a local ESLint rule that rejects raw JSX `<a>` and `<img>` elements
+- migrated public UI links to `NextLink` from `next/link`
+- migrated the header logo to `NextImage` from `next/image`
+- kept public media surfaces on the shared `ResponsiveRemoteImage` wrapper, now backed by `NextImage`
+- updated the site shell test for the NextImage-rendered logo markup
+
+Files:
+
+- `eslint.config.mjs`
+- `src/app/error.tsx`
+- `src/components/media/responsive-remote-image.tsx`
+- `src/domains/article/article-detail-view.tsx`
+- `src/domains/article/article-list.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/home/intro.tsx`
+- `src/domains/projects/projects-list.tsx`
+- `src/domains/shell/public-boundary.tsx`
+- `src/domains/shell/site-footer.tsx`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `src/domains/thoughts/thoughts-page.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- enforce the contract at JSX AST level so future raw `<a>` or `<img>` additions fail `pnpm lint`
+- allow rendered HTML output to still contain browser `<a>` and `<img>` tags because Next components compile to those elements
+- leave parser fixtures and regex strings containing literal HTML alone; the lint rule targets JSX elements only
+- no roadmap update was needed because this is an implementation guardrail, not a scope or milestone change
+
+Verification:
+
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `pnpm test -- src/domains/shell/site-shell.test.tsx src/domains/feed/overview-feed-view.test.tsx src/domains/article/article-detail-view.test.tsx src/domains/home/intro.test.tsx src/domains/thoughts/thoughts-page.test.tsx src/domains/projects/projects-list.test.tsx src/domains/stack/stack-list.test.tsx`: PASS, Vitest config ran the full suite (`32` files, `104` tests)
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `rg -n "<a\\b|<img\\b" src -S`: PASS, no JSX raw anchors/images remain; matches are Telegram parser regexes and test fixture strings only
+- `curl --max-time 30 -s 'http://127.0.0.1:4895/?type=writing' ...`: PASS, returned normal rendered links and images from the running dev server
+- Browser verification at `http://127.0.0.1:4895/?type=writing`: PASS, header logo rendered from `/favicon.svg`, Writing filter was active, first article link pointed to `/articles/stop-migrate-nextjs-to-astro`, `126` overview images rendered, and there was no horizontal overflow
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Overview Notion Emoji And Cloudflare Image Loader
+
+Status: done
+
+Summary:
+
+- carried Notion page emoji into Overview Feed items for writing and projects
+- rendered the emoji before non-Telegram overview titles
+- kept project badges as plain `Project` without duplicating the emoji
+- added the OpenNext/Next custom Cloudflare image loader and configured `next.config.ts` to use it
+- migrated the shared responsive remote image component to Next `<Image>` and reused it for overview feed media
+
+Files:
+
+- `image-loader.ts`
+- `next.config.ts`
+- `src/components/media/responsive-remote-image.tsx`
+- `src/domains/feed/types.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/lib/images/image-loader.test.ts`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Use the OpenNext custom loader shape from `https://opennext.js.org/cloudflare/howtos/image` instead of adding a Cloudflare Images binding for this slice.
+- Keep existing allowlist/canonical-media behavior by duplicating the small browser-safe loader rules in `image-loader.ts`.
+- In development, follow the OpenNext guidance and serve direct image URLs with width parameters; production/test loader output uses `/cdn-cgi/image/...`.
+- Preserve the existing CSS background helper path for URL icons; this change targets rendered image elements.
+- No roadmap update was needed because this does not change milestone scope.
+
+Verification:
+
+- `pnpm test -- src/lib/images/image-loader.test.ts src/domains/feed/overview-feed.test.ts src/domains/feed/overview-feed-view.test.tsx src/domains/article/article-list.test.tsx src/domains/article/article-detail-view.test.tsx src/domains/home/intro.test.tsx src/domains/thoughts/thoughts-page.test.tsx`: PASS, Vitest config ran the full suite (`32` files, `104` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `curl --max-time 30 -s 'http://127.0.0.1:4895/?type=writing' ...`: PASS, local dev HTML emitted loader `width=` image URLs
+- `curl --max-time 30 -s 'http://127.0.0.1:4895/?type=projects' ...`: PASS, project cards rendered badge text as `Project` and title emoji before title text
+- Browser verification at `http://127.0.0.1:4895/?type=projects`: PASS, first project card badge was `Project` and heading text started with the Notion emoji
+- Browser verification at `http://127.0.0.1:4895/?type=writing`: PASS, writing feed rendered `126` overview images, loader-generated width URLs, and no horizontal overflow
+
+Follow-up:
+
+- consider extracting shared allowlist/canonical helpers into a browser-safe module if more custom loader behavior is added
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Fix Base UI Tab Link Native Button Warning
+
+Status: done
+
+Summary:
+
+- fixed the homepage Overview Feed filter tabs warning from Base UI when `TabsTrigger` renders an anchor link
+- preserved the server-rendered `<a href>` fallback required by the feed filter design while declaring the trigger as non-native-button
+- verified the homepage and Writing filter hydrate without browser console warnings or errors
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep Overview Feed filters as anchor-backed tabs so no-JavaScript navigation and shareable filter URLs keep working.
+- Set `nativeButton={false}` only on the anchor-rendered `TabsTrigger` call site instead of weakening the shared tabs primitive for default button usage.
+- No roadmap update was needed because this is a bug fix with no milestone, scope, or architecture change.
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`31` files, `100` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm start --port 3219`: PASS, served the production build at `http://127.0.0.1:3219`
+- `curl --max-time 20 -s -o /tmp/blog-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3219/ && rg -n 'Overview feed|data-overview-filter-link|Base UI|nativeButton' /tmp/blog-home.html`: PASS, returned `200 text/html; charset=utf-8`; filter links rendered and no Base UI/nativeButton text appeared
+- Browser verification at `http://127.0.0.1:3219/`: PASS, Overview Feed rendered with four anchor-backed tabs (`All`, `Writing`, `Projects`, `Telegram`), each with `role="tab"`, and no console warnings or errors
+- Browser click verification on `Writing`: PASS, URL changed to `/?type=writing`, Writing became active, writing cards rendered, and no console warnings or errors appeared
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Wire Notion Blog Feed And Intro
+
+Status: done
+
+Summary:
+
+- wired article list/detail reads to `NOTION_BLOG_DATABASE_ID` from Wrangler env
+- wired homepage hero intro reads to `NOTION_INTRO_PAGE_ID` from Wrangler env
+- kept the public writing list on the homepage and `/?type=writing`, with no `/blog` route or redirect
+- preserved article detail routes under `/articles/[slug]`
+- rendered Notion page covers in writing feed cards, article detail hero, metadata, and structured data
+- removed stale internal `/blog` links from detail, error, not-found, route mapping, tests, specs, and plans
+- kept `.dev.vars` as the local secret source and replaced the `.dev.vars.example` secret with a placeholder
+- pinned `pnpm build` to `next build --webpack` after Turbopack failed on local Google font fetches
+
+Files:
+
+- `.dev.vars.example`
+- `package.json`
+- `cloudflare-env.d.ts`
+- `src/integrations/notion/articles.ts`
+- `src/integrations/notion/article-detail.ts`
+- `src/integrations/notion/home.ts`
+- `src/middleware.ts`
+- `src/app/articles/[slug]/page.tsx`
+- `src/app/error.tsx`
+- `src/app/not-found.tsx`
+- `src/app/media/[id]/route.ts`
+- `src/domains/article/article-detail-view.tsx`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/shell/site-links.ts`
+- `src/integrations/notion/articles.test.ts`
+- `src/integrations/notion/article-detail.test.ts`
+- `src/integrations/notion/home.test.ts`
+- `src/app/media/[id]/route.test.ts`
+- `src/middleware.test.ts`
+- `src/domains/article/article-detail-view.test.tsx`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/domains/seo/build-seo.test.ts`
+- `src/domains/seo/build-structured-data.test.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Treat Notion as the source of truth and keep database/page IDs in Wrangler vars rather than source constants.
+- Keep `/blog` absent: it should return `404`, not redirect to the writing filter.
+- Use `/?type=writing` as the user-facing writing list state.
+- In production, a configured Notion secret without the required Notion ID should fail fast; non-production can keep the demo fallback.
+- Keep Notion cover URLs as normalized media on app-native article models so the feed, detail, SEO, and structured data surfaces share one cover contract.
+
+Verification:
+
+- `awk -F= '/^(NOTION_SECRET|NOTION_BLOG_DATABASE_ID|NOTION_INTRO_PAGE_ID)=/ { printf "%s=<set>\n", $1 }' .dev.vars .dev.vars.example`: PASS, local secret file is present without printing values
+- `rg -n "NOTION_BLOG_DATABASE_ID|NOTION_INTRO_PAGE_ID" wrangler.jsonc`: PASS, both Notion IDs are configured as Wrangler vars
+- `pnpm cf-typegen`: PASS, generated `cloudflare-env.d.ts` includes both Notion ID vars
+- `pnpm test -- src/integrations/notion/articles.test.ts src/integrations/notion/article-detail.test.ts src/integrations/notion/home.test.ts src/domains/home/intro.test.tsx src/domains/feed/overview-feed.test.ts src/domains/feed/overview-feed-view.test.tsx src/domains/article/article-detail-view.test.tsx src/domains/shell/site-shell.test.tsx src/domains/seo/build-structured-data.test.ts src/domains/seo/build-seo.test.ts src/middleware.test.ts`: PASS (`31` files, `100` tests)
+- `rg -n "const BLOG_DATABASE_ID|const HOME_PAGE_ID" src/integrations/notion`: PASS, no hardcoded runtime Notion source constants remain
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS after switching the build script to `next build --webpack`
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3213`: PASS, preview reported `Using secrets defined in .dev.vars` and listed `NOTION_BLOG_DATABASE_ID`, `NOTION_INTRO_PAGE_ID`, and hidden `NOTION_SECRET`
+- `curl -s http://127.0.0.1:3213/`: PASS, returned the Notion intro and real `source:"notion"` writing items with cover image URLs
+- `curl -s http://127.0.0.1:3213/?type=writing`: PASS, returned Writing filter content with real `/articles/...` links and cover images
+- `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://127.0.0.1:3213/articles/stop-migrate-nextjs-to-astro`: `200`
+- `curl -s http://127.0.0.1:3213/articles/stop-migrate-nextjs-to-astro | rg -n "放弃从 Next\\.js|og:image|Back to writing|/cdn-cgi/image|images.unsplash|<article|<img"`: PASS, detail page includes title, Notion body, detail cover, `og:image`, and return link to `/?type=writing`
+- `curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' http://127.0.0.1:3213/blog`: `404`, no redirect URL
+- `curl -I http://127.0.0.1:3213/articles/not-exist-slug`: `404 Not Found`
+- `curl -s http://127.0.0.1:3213/sitemap.xml | rg -n '<loc>|/blog|/projects|/thoughts|\?type='`: PASS, sitemap lists `/` and real `/articles/...` URLs only
+- In-app browser verification on `http://127.0.0.1:3213/`: PASS, rendered Notion intro, Overview feed, `126` article links, first cover image, and no horizontal overflow
+- In-app browser verification on `http://127.0.0.1:3213/?type=writing`: PASS, Writing filter active, `126` article links, `126` article images, and no horizontal overflow
+- In-app browser verification on `http://127.0.0.1:3213/articles/stop-migrate-nextjs-to-astro`: PASS, rendered article title/body, detail cover, `og:image`, `Back to writing`, and no horizontal overflow
+- In-app browser verification on `http://127.0.0.1:3213/blog`: PASS, stayed on `/blog`, rendered not-found content, exposed `/?type=writing`, and had no horizontal overflow
+- Browser screenshots were captured at `/tmp/blog-notion-writing.png`, `/tmp/blog-notion-detail.png`, and `/tmp/blog-notion-404.png`.
+
+Follow-up:
+
+- Consider replacing historical content links inside the Notion intro/projects data that still point at `https://sorcererxw.com/blog`; these are CMS content values, not app routes.
+- Consider a future Next 16 middleware-to-proxy migration; this slice intentionally preserved the existing middleware file shape.
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Replace Font Links With Next Font
+
+Status: done
+
+Summary:
+
+- replaced hand-authored Google Fonts preconnect and stylesheet tags with `next/font/google`
+- attached `Outfit`, `Instrument Sans`, `Newsreader`, and `Roboto Slab` as Next Font CSS variables on `<html>`
+- removed handwritten sans/UI/editorial/heading font-family definitions from global CSS while keeping the monospace fallback
+- documented Next Font ownership in the OpenNext spec, plan, and verification guide
+
+Files:
+
+- `src/app/layout.tsx`
+- `src/app/globals.css`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep the existing public visual font families, but let Next.js own loading and local generated font assets.
+- Keep Tailwind font tokens stable so component markup does not need to change.
+- Keep `--font-mono-system` as the explicit local monospace stack because this slice only replaces the Google font loading scheme.
+
+Verification:
+
+- `rg -n "fonts\\.googleapis|fonts\\.gstatic|family=Instrument|family=Newsreader|--font-sans-system:|--font-ui-system:|--font-editorial-system:|Roboto Slab" src/app src/domains -S`: PASS, no active source references to the old font loading scheme remain
+- `pnpm test -- src/domains/shell/site-shell.test.tsx src/domains/home/intro.test.tsx`: PASS (`29` files, `96` tests; Vitest config ran the broad suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing local warnings for experimental Wrangler `secrets`, missing local `NOTION_SECRET`, and Next's deprecated `middleware` file convention
+- `pnpm start --port 3211` + `curl --max-time 20 -s http://127.0.0.1:3211/ | rg -n "fonts\\.googleapis|fonts\\.gstatic|__className|__variable|_next/static/media|font-sans|sorcererxw|Profile|Overview" -S`: PASS, HTML renders Next Font variable classes and no Google Fonts external links
+- `find .next/static/media -maxdepth 1 -type f`: PASS, local `.woff2` font assets were generated
+- `rm -rf .next .open-next .wrangler tsconfig.tsbuildinfo && pnpm typecheck`: PASS after cleaning generated build artifacts
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Clean Global CSS To Shadcn Baseline
+
+Status: done
+
+Summary:
+
+- reduced `src/app/globals.css` to Tailwind/shadcn imports, custom variants, design tokens, theme mapping, and minimal base layer
+- removed business global classes from `globals.css`
+- moved the `shell-eyebrow` and `publication-page` styling to component-local Tailwind utilities
+- updated `components.json` to point shadcn at `src/app/globals.css`
+
+Files:
+
+- `src/app/globals.css`
+- `components.json`
+- `src/app/error.tsx`
+- `src/domains/shell/public-boundary.tsx`
+- `src/domains/projects/projects-list.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `src/domains/thoughts/thoughts-page.tsx`
+- `src/domains/home/intro.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep `.dark` in `globals.css` because it is part of the shadcn token baseline.
+- Keep CSS module selectors under domain files; this cleanup only targets global CSS.
+
+Verification:
+
+- `bun /Users/sorcererxw/.agents/skills/tailwindcss-clean/scripts/audit-arbitrary-values.ts /Users/sorcererxw/repo/sorcererxw/blog --limit 0 --json`: PASS, `src/app/globals.css` reports only `.dark` as a global class
+- `rg -n "shell-eyebrow|shell-code|publication-page|no-scrollbar|src/styles/globals\\.css|styles/globals\\.css" src components.json docs/specs docs/plans docs/roadmap.md docs/verification.md -S`: PASS, no active references remain
+- `pnpm test -- src/domains/home/intro.test.tsx src/domains/projects/projects-list.test.tsx src/domains/stack/stack-list.test.tsx src/domains/thoughts/thoughts-page.test.tsx src/domains/shell/site-shell.test.tsx`: PASS (`29` files, `96` tests; Vitest config ran the broad suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing local warnings for experimental Wrangler `secrets`, missing local `NOTION_SECRET`, and Next's deprecated `middleware` file convention
+- `pnpm start --port 3210` + `curl --max-time 20 -s http://127.0.0.1:3210/ | rg -n "<main|sorcererxw|bg-background|text-foreground|_next/static/css|Profile|Overview|The home page content is empty"`: PASS, HTML renders the application shell, generated CSS asset, body baseline classes, and home content
+- `rm -rf .next .open-next .wrangler tsconfig.tsbuildinfo && pnpm typecheck`: PASS after cleaning generated build artifacts
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- Playwright is not installed in this project, so the render check used HTTP/HTML inspection instead of a screenshot.
+
+## 2026-05-17 - Move Global Styles Under App
+
+Status: done
+
+Summary:
+
+- moved the global stylesheet from `src/styles/globals.css` to `src/app/globals.css`
+- updated the root layout to import the app-local global stylesheet
+
+Files:
+
+- `src/app/globals.css`
+- deleted `src/styles/globals.css`
+- `src/app/layout.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep the existing Tailwind `@source` directives unchanged because `../` still resolves to `src` from `src/app/globals.css`.
+
+Verification:
+
+- `rg -n "styles/globals\\.css|src/styles/globals\\.css|@/styles/globals|\\.\\./styles/globals" src docs/specs docs/plans docs/roadmap.md docs/verification.md -S`: PASS, no active references remain
+- `test -f src/app/globals.css && test ! -e src/styles/globals.css`: PASS
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing local warnings for experimental Wrangler `secrets`, missing local `NOTION_SECRET`, and Next's deprecated `middleware` file convention
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Remove Duplicate Classname Helper
+
+Status: done
+
+Summary:
+
+- removed duplicate `src/lib/classnames.ts`
+- switched domain component imports to the existing shadcn-style `cn` helper in `src/lib/utils.ts`
+- updated the active Tailwind convergence spec to name `src/lib/utils.ts` as the canonical `cn` source
+
+Files:
+
+- deleted `src/lib/classnames.ts`
+- `src/lib/utils.ts`
+- `src/domains/article/article-detail-view.tsx`
+- `src/domains/article/article-list.tsx`
+- `src/domains/feed/masonry-feed.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/home/intro.tsx`
+- `src/domains/projects/projects-list.tsx`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `docs/specs/2026-05-13-tailwind-inline-style-convergence-design.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Keep `src/lib/utils.ts` as the single `cn` helper because local UI primitives already use it.
+
+Verification:
+
+- `rg -n "@/lib/classnames|src/lib/classnames|from ['\"].*classnames" src docs -S`: PASS, no current source references remain; only archived/historical docs mention the old helper
+- `pnpm test -- src/domains/article/article-detail-view.test.tsx src/domains/article/article-list.test.tsx src/domains/feed/overview-feed-view.test.tsx src/domains/projects/projects-list.test.tsx src/domains/shell/site-shell.test.tsx src/domains/stack/stack-list.test.tsx src/domains/home/intro.test.tsx`: PASS (`29` files, `96` tests; Vitest config ran the broad suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Wrangler Env Consolidation
+
+Status: done
+
+Summary:
+
+- removed the repo-local `src/config` package
+- moved runtime variable definitions into `wrangler.jsonc`
+- regenerated `cloudflare-env.d.ts` from Wrangler config
+- switched Notion, SEO, shell, layout, and health code to read Worker env through `src/lib/cloudflare-env.ts`
+
+Files:
+
+- `wrangler.jsonc`
+- `.dev.vars.example`
+- `cloudflare-env.d.ts`
+- `package.json`
+- `src/lib/cloudflare-env.ts`
+- deleted `src/config/env.ts`
+- deleted `src/config/runtime.ts`
+- deleted `src/config/server.ts`
+- deleted `src/config/env.test.ts`
+- `src/app/api/health/route.ts`
+- `src/app/layout.tsx`
+- `src/domains/seo/site.ts`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/shell/site-footer.tsx`
+- `src/integrations/notion/articles.ts`
+- `src/integrations/notion/article-detail.ts`
+- `src/integrations/notion/home.ts`
+- `src/integrations/notion/projects.ts`
+- `src/integrations/notion/stack.ts`
+- `src/integrations/notion/article-detail.test.ts`
+- `src/integrations/notion/projects.test.ts`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Use Wrangler `vars` for non-secret runtime variables: `APP_ENV` and `PUBLIC_SITE_URL`.
+- Use Wrangler `secrets.required` for `NOTION_SECRET`; actual secret values remain outside the repository.
+- Keep `src/lib/cloudflare-env.ts` as a thin OpenNext/Worker env reader, not a config definition package.
+- Default to production behavior if Worker env is unavailable during static/build-time evaluation.
+
+Verification:
+
+- `pnpm cf-typegen`: PASS, generated `cloudflare-env.d.ts` from `wrangler.jsonc`; Wrangler warned that `secrets` is experimental
+- `pnpm test -- src/lib/cloudflare-env.ts src/app/api/health/route.test.ts src/integrations/notion/projects.test.ts src/integrations/notion/article-detail.test.ts`: PASS (`29` files, `96` tests; Vitest config ran the broad suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with expected local warnings for experimental Wrangler `secrets`, missing local `NOTION_SECRET`, and Next's deprecated `middleware` file convention
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; same expected local warnings plus existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information`
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3208`: PASS, preview listed `env.APP_ENV` and `env.PUBLIC_SITE_URL` as environment variables
+- `curl --max-time 20 -I http://127.0.0.1:3208/`: `200 OK`, `x-opennext: 1`
+- `curl --max-time 20 -i http://127.0.0.1:3208/api/health`: `200 OK`, runtime mode `production`
+- `curl --max-time 20 -s http://127.0.0.1:3208/sitemap.xml | rg -n 'https://sorcererxw.com|<loc>'`: PASS, sitemap URLs use the Wrangler `PUBLIC_SITE_URL` value
+- `curl --max-time 20 -I http://127.0.0.1:3208/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `rg -n "@/config|src/config|config/runtime|config/server|config/env|getRuntimeConfig|NotionSecret|getRequiredEnv|getOptionalEnv|process\\.env" src package.json wrangler.jsonc cloudflare-env.d.ts -S`: PASS, no current source/config references remain
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo`: PASS, generated artifacts removed after verification
+- `pnpm typecheck`: PASS after generated artifacts were removed
+
+Follow-up:
+
+- provision `NOTION_SECRET` through Wrangler secrets or local `.dev.vars` for real Notion-backed content; without it, local builds warn and use demo content
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Middleware Redirect Consolidation
+
+Status: done
+
+Summary:
+
+- moved legacy archive and locale redirects from route handlers into `src/middleware.ts`
+- deleted pure redirect route handlers under `src/app/blog`, `src/app/projects`, `src/app/thoughts`, `src/app/en`, and `src/app/zh`
+- added direct middleware tests and removed the separate `src/lib/legacy-redirects.ts` helper
+- updated the active OpenNext docs and verification guide
+
+Files:
+
+- `src/middleware.ts`
+- `src/middleware.test.ts`
+- deleted `src/lib/legacy-redirects.ts`
+- deleted `src/lib/legacy-redirects.test.ts`
+- deleted `src/app/blog/route.ts`
+- deleted `src/app/projects/route.ts`
+- deleted `src/app/thoughts/route.ts`
+- deleted `src/app/en/route.ts`
+- deleted `src/app/en/[...path]/route.ts`
+- deleted `src/app/zh/route.ts`
+- deleted `src/app/zh/[...path]/route.ts`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Compatibility redirects are routing policy and should live in middleware, not page or route-handler files.
+- Keep the redirect mapping directly in `src/middleware.ts` because it is middleware-only routing policy.
+- Keep `src/middleware.ts` despite the Next `16.2.6` deprecation warning because this slice was explicitly requested as middleware; Next recommends `proxy` as the future file convention.
+
+Verification:
+
+- `pnpm test -- src/middleware.test.ts`: PASS (`31` files, `99` tests; Vitest config ran the full suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, route table no longer lists `/blog`, `/projects`, `/thoughts`, `/en`, or `/zh`; it lists `Proxy (Middleware)`
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3207`: PASS
+- `curl --max-time 20 -I http://127.0.0.1:3207/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 20 -I http://127.0.0.1:3207/projects`: `308 Permanent Redirect` to `/?type=projects`
+- `curl --max-time 20 -I http://127.0.0.1:3207/thoughts`: `308 Permanent Redirect` to `/?type=social`
+- `curl --max-time 20 -I http://127.0.0.1:3207/en`: `308 Permanent Redirect` to `/`
+- `curl --max-time 20 -I http://127.0.0.1:3207/zh/articles/modern-astro`: `308 Permanent Redirect` to `/articles/modern-astro`
+- `curl --max-time 20 -I http://127.0.0.1:3207/articles/modern-astro`: `200 OK`, `x-opennext: 1`
+- `find src/app/blog src/app/projects src/app/thoughts src/app/en src/app/zh -type f 2>/dev/null | sort`: PASS, no redirect route files remain
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo`: PASS, generated artifacts removed after verification
+- `pnpm typecheck`: PASS after generated artifacts were removed
+
+Follow-up:
+
+- consider renaming `src/middleware.ts` to the Next 16 `proxy` convention in a separate slice if that becomes the preferred project wording
+
+Blockers:
+
+- none
+
+## 2026-05-17 - Custom Worker Entrypoint
+
+Status: done
+
+Summary:
+
+- added a checked-in Cloudflare Worker entrypoint at `src/worker.ts`
+- changed Wrangler `main` from OpenNext's generated worker path to `src/worker.ts`
+- kept runtime behavior unchanged by delegating fetch handling to OpenNext-generated `.open-next/worker.js`
+- documented the entrypoint shape in the OpenNext rebuild spec, plan, roadmap, and verification guide
+
+Files:
+
+- `src/worker.ts`
+- `wrangler.jsonc`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Put the custom Worker module under `src/worker.ts`, not at the repository root.
+- Keep the first custom Worker as a fetch-only wrapper so future Worker-level handlers can be added without changing current public behavior.
+- Use a local lint exception for `@ts-ignore` because `.open-next/worker.js` may be absent before OpenNext build and present afterward; `@ts-expect-error` is not stable across both states.
+
+Verification:
+
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm test`: PASS (`31` files, `100` tests)
+- `pnpm build`: PASS
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3205`: PASS, preview started with `env.BLOG_CACHE` and `env.ASSETS`
+- `curl --max-time 20 -I http://127.0.0.1:3205/`: `200 OK`, `x-opennext: 1`
+- `curl --max-time 20 -I http://127.0.0.1:3205/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 20 -i http://127.0.0.1:3205/api/health`: `200 OK`
+- `curl --max-time 20 -s http://127.0.0.1:3205/robots.txt`: PASS, includes `Sitemap: https://sorcererxw.com/sitemap.xml`
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo`: PASS, generated artifacts removed after verification
+- `pnpm typecheck`: PASS after generated artifacts were removed, proving `src/worker.ts` also typechecks before `.open-next/worker.js` exists
+
+Follow-up:
+
+- add scheduled, Durable Object, or other Worker-level exports only when a concrete runtime feature requires them
+
+Blockers:
+
+- none
+
+## 2026-05-15 - Wrangler Binding Cleanup
+
+Status: done
+
+Summary:
+
+- removed the unused `SESSION` KV binding from `wrangler.jsonc`
+- removed unused Telegram Worker secret examples and generated binding types
+- narrowed `src/config/server.ts` to the only current string secret used at runtime: `NOTION_SECRET`
+- regenerated `cloudflare-env.d.ts`
+- removed `src/proxy.ts` after OpenNext proved Next 16 proxy output is Node middleware; restored compatibility redirects as thin route handlers instead of standalone pages
+
+Files:
+
+- `wrangler.jsonc`
+- `.dev.vars.example`
+- `cloudflare-env.d.ts`
+- `src/config/server.ts`
+- deleted `src/proxy.ts`
+- `src/lib/legacy-redirects.ts`
+- `src/app/blog/route.ts`
+- `src/app/projects/route.ts`
+- `src/app/thoughts/route.ts`
+- `src/app/en/route.ts`
+- `src/app/en/[...path]/route.ts`
+- `src/app/zh/route.ts`
+- `src/app/zh/[...path]/route.ts`
+- deleted `src/proxy.test.ts`
+- `src/lib/legacy-redirects.test.ts`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Keep `BLOG_CACHE` because `/media/[id]` uses it for canonical media KV caching.
+- Keep `ASSETS` because OpenNext/Cloudflare uses it to serve generated static assets.
+- Remove `SESSION` because current source has no session runtime path.
+- Remove Telegram Worker secret bindings because thoughts now use a checked-in snapshot and the cron route is gone.
+- Do not keep `src/proxy.ts`: OpenNext Cloudflare rejects the Next 16 proxy output as Node middleware.
+
+Verification:
+
+- `pnpm cf-typegen`: PASS, generated `cloudflare-env.d.ts` with `BLOG_CACHE`, `ASSETS`, and `NOTION_SECRET`
+- `rg -n "SESSION|TELEGRAM_APP_ID|TELEGRAM_APP_SECRET|TELEGRAM_BOT|TELEGRAM_TOKEN|TelegramAppID|TelegramAppSecret|TelegramBot|TelegramToken" wrangler.jsonc .dev.vars.example cloudflare-env.d.ts src docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md docs/plans/2026-05-13-opennext-nextjs-rebuild.md`: PASS, no current config or source references remain
+- `pnpm test -- src/lib/legacy-redirects.test.ts 'src/app/media/[id]/route.test.ts' src/config/env.test.ts`: PASS (`31` files, `100` tests; Vitest config ran the full suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3204`: PASS, preview listed only `env.BLOG_CACHE` and `env.ASSETS` bindings
+- `curl --max-time 20 -I http://127.0.0.1:3204/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 20 -I http://127.0.0.1:3204/projects`: `308 Permanent Redirect` to `/?type=projects`
+- `curl --max-time 20 -I http://127.0.0.1:3204/thoughts`: `308 Permanent Redirect` to `/?type=social`
+- `curl --max-time 20 -I http://127.0.0.1:3204/zh/articles/modern-astro`: `308 Permanent Redirect` to `/articles/modern-astro`
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo`: PASS, generated artifacts removed after verification
+
+Follow-up:
+
+- if OpenNext adds safe support for Next 16 proxy output, reconsider replacing the thin redirect route handlers with middleware/proxy routing again
+
+Blockers:
+
+- none
+
+## 2026-05-15 - shadcn Feed UI Primitives
+
+Status: done
+
+Summary:
+
+- replaced the remaining HeroUI feed primitives with local shadcn components
+- added the shadcn Tabs component and reused the existing shadcn Badge and Card components
+- removed the HeroUI stylesheet import and package dependencies
+- updated the feed view tests and active Personal Site docs to make shadcn the feed UI primitive source
+
+Files:
+
+- `src/components/ui/tabs.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/styles/globals.css`
+- `package.json`
+- `pnpm-lock.yaml`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Feed filters should use shadcn Tabs while preserving anchor navigation for shareable `/?type=...` and `/?source=...` URLs.
+- Feed cards and labels should use the local shadcn Card and Badge primitives instead of package-level HeroUI components.
+- Historical task-ledger mentions of HeroUI were left intact as historical evidence.
+
+Verification:
+
+- `rg -n "@heroui|from ['\"]@heroui|@import ['\"]@heroui|Surface|Tabs\\.List|Tabs\\.Tab|Badge\\.Label" src package.json pnpm-lock.yaml`: PASS, no source or dependency references remain
+- `pnpm install --lockfile-only`: PASS
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx src/proxy.test.ts src/app/sitemap.xml/route.test.ts`: PASS (`31` files, `99` tests; Vitest config ran the full suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS
+- `pnpm exec next start --hostname 127.0.0.1 --port 3100`: PASS, server ready at `http://127.0.0.1:3100`
+- `curl -I http://127.0.0.1:3100/`: `200 OK`
+- `curl -I http://127.0.0.1:3100/blog`: `308 Permanent Redirect` to `/?type=writing`
+- Chrome browser verification at `http://127.0.0.1:3100/?type=writing`: PASS, shadcn tab group rendered, Writing tab selected, feed region showed writing entries only
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo`: PASS, generated artifacts removed after verification
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-15 - Static Robots Asset
+
+Status: done
+
+Summary:
+
+- replaced the `src/app/robots.txt` route handler with a single static `public/robots.txt` file
+- deleted the route-level robots test because the content is now a static asset
+- updated the OpenNext spec and plan to describe robots as static public content, not an app route
+
+Files:
+
+- `public/robots.txt`
+- deleted `src/app/robots.txt/route.ts`
+- deleted `src/app/robots.txt/route.test.ts`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- `robots.txt` is static crawler policy and should not occupy a route handler unless it needs runtime data.
+
+Verification:
+
+- `find src/app -maxdepth 3 -type f | sort`: PASS, no `src/app/robots.txt` route remains
+- `pnpm test -- src/proxy.test.ts src/app/sitemap.xml/route.test.ts src/app/api/health/route.test.ts 'src/app/media/[id]/route.test.ts'`: PASS (`31` files, `99` tests; Vitest config ran the full suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, route table no longer lists `/robots.txt`; static public asset remains served
+- `pnpm exec next start --hostname 127.0.0.1 --port 3218`: PASS, server ready at `http://127.0.0.1:3218`
+- `curl --max-time 15 -i http://127.0.0.1:3218/robots.txt`: `200 OK`, `Content-Type: text/plain; charset=UTF-8`, includes `Sitemap: https://sorcererxw.com/sitemap.xml`
+- `curl --max-time 15 -I http://127.0.0.1:3218/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 15 -s http://127.0.0.1:3218/sitemap.xml | rg -n '<loc>|robots|/blog|/topics|/en|/zh'`: PASS, sitemap listed only `/` and article URLs in the checked output
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-15 - Proxy-Owned Redirect Routes
+
+Status: done
+
+Summary:
+
+- moved pure compatibility redirects out of `src/app/**/page.tsx` route files and into `src/proxy.ts`
+- deleted the route directories for `/blog`, `/projects`, `/thoughts`, `/en/**`, and `/zh/**`
+- kept `/media/[id]` as a route handler because it owns canonical media behavior and cannot be represented as a redirect
+- deleted the stale `/topics/astro-cloudflare-publishing` page and removed it from the sitemap
+- deleted the obsolete `query-wedge` domain helper and tests
+- archived the old thoughts-page snapshot docs and search-native SEO wedge docs because they described removed route surfaces
+- updated the active Personal Site/OpenNext docs to state that compatibility redirects belong in `src/proxy.ts`
+
+Files:
+
+- `src/proxy.ts`
+- `src/proxy.test.ts`
+- `src/app/sitemap.xml/route.ts`
+- `src/app/sitemap.xml/route.test.ts`
+- deleted `src/app/blog/page.tsx`
+- deleted `src/app/projects/page.tsx`
+- deleted `src/app/thoughts/page.tsx`
+- deleted `src/app/en/**`
+- deleted `src/app/zh/**`
+- deleted `src/app/topics/astro-cloudflare-publishing/page.tsx`
+- deleted `src/lib/legacy-locale-redirect.ts`
+- deleted `src/lib/legacy-locale-redirect.test.ts`
+- deleted `src/domains/seo/query-wedge.ts`
+- deleted `src/domains/seo/query-wedge.test.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/archive/specs/**`
+- `docs/archive/plans/**`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Compatibility redirects are routing policy, not page surfaces.
+- `/media/[id]` remains a route because it validates canonical media sources, reads/writes cache, and proxies or redirects volatile image URLs.
+- The Astro/Cloudflare query wedge no longer matches the active OpenNext Personal Site direction, so it is removed instead of migrated.
+
+Verification:
+
+- `find src/app -maxdepth 3 -type f | sort`: PASS, route files now only cover home, article detail, APIs, media, sitemap, and boundaries
+- `pnpm test -- src/proxy.test.ts src/app/sitemap.xml/route.test.ts src/app/api/health/route.test.ts 'src/app/media/[id]/route.test.ts'`: PASS (`32` files, `100` tests; Vitest config ran the full suite)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, route table no longer includes `/blog`, `/projects`, `/thoughts`, `/en`, `/zh`, or `/topics`; build reports `Proxy (Middleware)`
+- `pnpm exec next start --hostname 127.0.0.1 --port 3217`: PASS, server ready at `http://127.0.0.1:3217`
+- `curl --max-time 15 -I http://127.0.0.1:3217/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 15 -I http://127.0.0.1:3217/projects`: `308 Permanent Redirect` to `/?type=projects`
+- `curl --max-time 15 -I http://127.0.0.1:3217/thoughts`: `308 Permanent Redirect` to `/?type=social`
+- `curl --max-time 15 -I http://127.0.0.1:3217/en/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 15 -I http://127.0.0.1:3217/zh/articles/modern-astro`: `308 Permanent Redirect` to `/articles/modern-astro`
+- `curl --max-time 15 -I http://127.0.0.1:3217/topics/astro-cloudflare-publishing`: `404 Not Found`
+- `curl --max-time 15 -s http://127.0.0.1:3217/sitemap.xml | rg -n '<loc>|/blog|/projects|/thoughts|/topics|/en|/zh'`: PASS, sitemap only listed `/` and article URLs in the checked output
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-15 - Project Cleanup
+
+Status: done
+
+Summary:
+
+- added a project cleanup spec and plan for the post-OpenNext repository shape
+- archived superseded foundation, archive-page, UI-redesign, direct-Telegram, and Astro runtime docs under `docs/archive/`
+- kept still-applicable thoughts snapshot, Cloudflare image delivery, search-native SEO, Personal Site overview, OpenNext, Tailwind, and cleanup docs in the active specs/plans directories
+- removed local generated or editor state from the working tree: `.next/`, `.open-next/`, `.wrangler/`, `tsconfig.tsbuildinfo`, `.idea/`, and empty retired `src/pages/**` directories
+- added `.idea/` to `.gitignore`
+- removed unused dependencies that had no source or script imports after the OpenNext rebuild
+
+Files:
+
+- `.gitignore`
+- `package.json`
+- `pnpm-lock.yaml`
+- `docs/specs/2026-05-15-project-cleanup-design.md`
+- `docs/plans/2026-05-15-project-cleanup.md`
+- `docs/archive/specs/**`
+- `docs/archive/plans/**`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- Active docs should stay focused on current work; archived docs preserve history but are not part of the default read path.
+- Dependency cleanup only removed packages with no current imports in `src` or `scripts`.
+- `node_modules/` was intentionally kept locally for verification speed, while generated build outputs remain ignored.
+
+Removed dependencies:
+
+- `cmdk`
+- `embla-carousel-react`
+- `grammy`
+- `input-otp`
+- `react-day-picker`
+- `react-resizable-panels`
+- `recharts`
+- `sonner`
+- `tailwind-variants`
+- `vaul`
+
+Verification:
+
+- `find docs/specs docs/plans -maxdepth 1 -type f | sort`: PASS, active docs list is reduced to still-applicable design and plan docs
+- `find docs/archive -maxdepth 2 -type f | sort`: PASS, archived docs are present under `docs/archive/specs/` and `docs/archive/plans/`
+- `test ! -e src/pages && echo 'src/pages absent'`: PASS, `src/pages` no longer exists after empty retired route directories were removed
+- `test ! -e .idea && echo '.idea absent'; test ! -e .open-next && echo '.open-next absent'`: PASS, removed local IDE state and OpenNext generated output
+- `rg -n "from ['\"](cmdk|embla-carousel-react|grammy|input-otp|react-day-picker|react-resizable-panels|recharts|sonner|vaul|tailwind-variants)" src scripts package.json components.json`: PASS, no source or script imports for removed dependencies
+- `pnpm remove cmdk embla-carousel-react grammy input-otp react-day-picker react-resizable-panels recharts sonner vaul tailwind-variants`: PASS, removed `68` packages
+- `pnpm install --lockfile-only`: PASS
+- `pnpm test`: PASS (`33` files, `101` tests)
+- `pnpm typecheck`: PASS
+- `pnpm build`: PASS, Next.js `16.2.6` App Router build completed and generated the expected route table
+- `pnpm lint`: PASS
+- `rm -rf .next .wrangler .open-next tsconfig.tsbuildinfo && test ! -e .next && test ! -e .wrangler && test ! -e .open-next && test ! -e tsconfig.tsbuildinfo && echo 'generated artifacts absent'`: PASS, final generated artifacts were removed after verification
+
+Follow-up:
+
+- none for this cleanup slice
+
+Blockers:
+
+- none
+
+## 2026-05-13 - OpenNext Next.js Rebuild
+
+Status: done
+
+Summary:
+
+- rebuilt the active runtime from Astro + Cloudflare adapter to Next.js App Router + `@opennextjs/cloudflare`
+- ported public pages and endpoints into `src/app/**`
+- removed active Astro route/layout entrypoints and Astro config/dependencies
+- kept the Personal Site overview product model, domain use cases, React views, Notion adapters, Telegram snapshot, and KV abstractions
+- switched server secret reads away from `cloudflare:workers` so `next dev`, `next build`, and OpenNext preview share the same environment path
+
+Files:
+
+- `AGENTS.md`
+- `package.json`
+- `pnpm-lock.yaml`
+- `tsconfig.json`
+- `next-env.d.ts`
+- `next.config.ts`
+- `open-next.config.ts`
+- `wrangler.jsonc`
+- `public/_headers`
+- `src/app/**`
+- `src/config/server.ts`
+- `src/domains/feed/overview-feed-serialization.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/styles/scroll-behavior.test.ts`
+- deleted `astro.config.mjs`
+- deleted `src/pages/**`
+- deleted `src/layouts/**`
+- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`
+- `docs/plans/2026-05-13-opennext-nextjs-rebuild.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- OpenNext + Next.js is now the active framework direction; the Astro migration docs are historical context.
+- Next.js uses the Node.js runtime path supported by OpenNext Cloudflare; no route uses `runtime = "edge"`.
+- `wrangler.jsonc` now points at `.open-next/worker.js` and `.open-next/assets`.
+- `OverviewFeed` remains a client component, while feed-item serialization moved to a server-safe module.
+- OpenNext build output directories are generated artifacts and must stay ignored by lint.
+
+Verification:
+
+- `pnpm test`: PASS (`33` files, `101` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, Next.js `16.2.6` App Router build produced dynamic `/`, `/articles/[slug]`, `/api/health`, `/api/cron/thoughts`, `/media/[id]`, and locale redirect routes
+- `rm -rf .wrangler dist .open-next && pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; OpenNext logged non-fatal copy errors for three pnpm package directories but exited `0`
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3203`: PASS, Wrangler ready at `http://127.0.0.1:3203`
+- `curl --max-time 20 -I http://127.0.0.1:3203/`: `200 OK`, `x-opennext: 1`, `x-powered-by: Next.js`, `cache-control: public, max-age=0, s-maxage=600`
+- `curl --max-time 20 -I http://127.0.0.1:3203/blog`: `308 Permanent Redirect` to `/?type=writing`
+- `curl --max-time 20 -I http://127.0.0.1:3203/projects`: `308 Permanent Redirect` to `/?type=projects`
+- `curl --max-time 20 -I http://127.0.0.1:3203/thoughts`: `308 Permanent Redirect` to `/?type=social`
+- `curl --max-time 20 -I http://127.0.0.1:3203/articles/modern-astro`: `200 OK`, `x-opennext: 1`, `cache-control: public, max-age=0, s-maxage=600`
+- `curl --max-time 20 -I http://127.0.0.1:3203/articles/not-a-real-slug`: `404 Not Found`
+- `curl --max-time 20 -i http://127.0.0.1:3203/api/health`: `200 OK`, healthy JSON payload
+- `curl --max-time 20 -i http://127.0.0.1:3203/api/cron/thoughts`: `410 Gone`, disabled snapshot cron payload
+- `curl --max-time 20 -s http://127.0.0.1:3203/sitemap.xml | rg -n "<loc>|/blog|/projects|/thoughts|/stack|\\?type="`: PASS, sitemap includes `/`, topic page, and article details only
+- `curl --max-time 20 -s http://127.0.0.1:3203/robots.txt`: PASS, points to `https://sorcererxw.com/sitemap.xml`
+- Chrome browser verification at `http://127.0.0.1:3203/`: PASS, Profile Hero, Overview Feed filters, masonry cards, and Next asset output rendered; response no longer contained Astro islands
+
+Follow-up:
+
+- investigate the non-fatal OpenNext pnpm package copy errors if they appear in CI or deploy logs
+- consider renaming the historical `ASTRO_CLOUDFLARE_WEDGE` topic once the content strategy catches up with the new runtime direction
+
+Blockers:
+
+- none
+
+## 2026-05-13 - Tailwind Inline Style Convergence
+
+Status: done
+
+Summary:
+
+- converted low-complexity CSS module styling to inline Tailwind utilities across route boundary, profile hero, projects, stack, article listing, and overview feed surfaces
+- deleted now-unused CSS module files for those surfaces
+- kept CSS modules only for rich text / generated markup selectors and masonry animation/layout state
+- added ESLint guardrails requiring documented CSS module allowlist usage and `cn(...)` for conditional/template/binary `className` composition
+
+Files:
+
+- `eslint.config.mjs`
+- `package.json`
+- `pnpm-lock.yaml`
+- `src/domains/article/article-list.tsx`
+- `src/domains/article/article-detail-view.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/home/profile-hero.tsx`
+- `src/domains/home/intro.tsx`
+- `src/domains/home/intro.module.css`
+- `src/domains/projects/projects-list.tsx`
+- `src/domains/projects/projects-list.test.tsx`
+- `src/domains/shell/public-boundary.tsx`
+- `src/domains/shell/site-footer.tsx`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `src/pages/500.astro`
+- deleted `src/domains/article/article-list.module.css`
+- deleted `src/domains/feed/overview-feed-view.module.css`
+- deleted `src/domains/home/profile-hero.module.css`
+- deleted `src/domains/projects/projects-list.module.css`
+- deleted `src/domains/stack/stack-list.module.css`
+- deleted `src/styles/route-boundary.module.css`
+- `docs/specs/2026-05-13-tailwind-inline-style-convergence-design.md`
+- `docs/plans/2026-05-13-tailwind-inline-style-convergence.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- `src/domains/article/article-detail-view.module.css`, `src/domains/home/intro.module.css`, and `src/domains/feed/masonry-feed.module.css` remain as the explicit CSS module allowlist.
+- `cn(...)` is the local class composition entrypoint because it wraps `twMerge`.
+- Replaced the stale Next ESLint config with runnable ESLint 9 + `typescript-eslint`; the app is now Astro and no longer has the Next parser dependency.
+- Mobile profile text and feed filter styling were tightened during browser verification to avoid visible clipping.
+
+Verification:
+
+- `bun /Users/sorcererxw/.agents/skills/tailwindcss-clean/scripts/audit-arbitrary-values.ts /Users/sorcererxw/repo/sorcererxw/blog --limit 0 --json > /tmp/blog-tailwind-audit.json`: PASS, used as the style migration worklist
+- `rg -n 'module\.css|styles\.' src --glob '!**/*.test.*'`: PASS, only the three documented CSS module exceptions remain
+- `pnpm test -- src/domains/home/intro.test.tsx src/domains/feed/overview-feed-view.test.tsx`: PASS (`33` files, `101` tests; Vitest config still ran the full suite)
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS after rerunning alone; one earlier parallel run failed from Vite inspector port `9231` already being in use
+- `curl --max-time 15 -I http://127.0.0.1:3203/`: `200 OK`, `cache-control: public, max-age=0, s-maxage=600`
+- `curl --max-time 15 -I http://127.0.0.1:3203/stack`: `200 OK`, `cache-control: public, max-age=0, s-maxage=600`
+- headless Chrome screenshot for `/` mobile: PASS, saved `/tmp/blog-inline-tailwind-home-mobile-final3.png`; checked profile hero, overview filters, and feed cards render without the earlier filter indicator artifact
+- headless Chrome screenshot for `/stack`: PASS, saved `/tmp/blog-inline-tailwind-stack-final2.png`; checked stack filters and cards render
+
+Follow-up:
+
+- consider replacing the remaining `publication-*` global classes with components in a separate slice
+- consider whether `masonry-feed.module.css` should move to a dedicated component-level animation stylesheet if future lint needs a narrower exception model
+
+Blockers:
+
+- none
+
+## 2026-05-13 - HeroUI Surface Default Styling
+
+Status: done
+
+Summary:
+
+- removed custom Feed Module border, border radius, box shadow, and hover lift styles
+- left Feed Modules on HeroUI `Surface` with `variant="transparent"` so the component's default styling owns the surface frame
+
+Files:
+
+- `src/domains/feed/overview-feed-view.module.css`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- Feed Module layout classes may still set sizing and content flow, but visual frame styling should not override HeroUI Surface defaults
+- focus-visible keeps a plain outline for keyboard accessibility without reintroducing custom border or shadow styling
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_styles.mjs Surface`: PASS, confirmed HeroUI `Surface` default styles before editing
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS (`33` files, `101` tests; Vitest config still ran the full suite)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- `curl --max-time 15 -I 'https://blog.localhost/'`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- local CSS inspection of `.module`: PASS, confirmed no `border`, `border-radius`, `box-shadow`, or `transform` declarations remain on the Feed Module frame
+- headless Chrome screenshot for `https://blog.localhost/`: PASS, saved `/tmp/blog-heroui-default-border.png`; confirmed Feed Modules render without the previous custom heavy border treatment
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-04 - Standalone Repository Extraction
 
 Status: done
@@ -70,6 +1477,445 @@ Blockers:
 
 - none
 
+## 2026-05-12 - Personal Site Overview Product Pivot
+
+Status: planned
+
+Summary:
+
+- clarified that the product is now a Personal Site rather than a public-blog-only app
+- created root domain language for Profile Hero, Overview Feed, Feed Item, Feed Module, Social Source, and Compatibility Route
+- documented the overview-first design direction and staged implementation plan
+- updated roadmap language so future work starts from the Personal Site spec instead of the older archive-first blog mission
+
+Files:
+
+- `CONTEXT.md`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- `/` is the only primary public entry surface
+- the homepage has a Notion-backed Profile Hero with a one hour freshness target
+- the homepage reads an app-owned Overview Feed Index with a ten minute freshness target
+- Feed Items are Blog Entries, Projects, and Social Posts
+- Social Posts are grouped by Social Source but share the same Feed Module presentation system
+- Feed Modules support compact, standard, and feature Module Sizes
+- Module Size may be provided by a Content Source; invalid or missing values fall back to defaults, and feature is manual-only
+- Feed Items keep Displayed Time separate from Source Published Time; Displayed Time controls sorting, then Source Published Time, and items without either appear at the bottom
+- `/blog`, `/projects`, and `/thoughts` become Compatibility Routes to homepage filters
+- Feed Filters are server-rendered Filter Queries on `/`, not client-only tab state
+- Overview Feed renders all matching Feed Items in one server-rendered response; no v1 pagination or infinite scroll
+- Feed Module media is limited to lightweight Feed Media Previews using existing media delivery where possible
+- v1 Social Source implementation starts with the existing Telegram snapshot; Twitter/X is reserved but not implemented in the first slice
+- `/articles/[slug]` remains a deep-linked Content Detail
+- sitemap should expose `/` and Content Detail URLs, not legacy archive routes or Filter Query URLs
+- Stack Inventory remains hidden from the primary product structure
+- Profile Source is one fixed Notion Profile Page, not a profile database
+- Profile Hero renders the full Notion Profile Page content, not only a fixed whitelist of fields
+- long Profile Hero content may be height-constrained by default and expanded on the same page
+- Hero Expansion should use native HTML/CSS in v1 before introducing client-side hydration
+
+Verification:
+
+- `sed -n '1,220p' AGENTS.md`: reviewed repository operating contract
+- `sed -n '1,260p' docs/specs/2026-04-14-blog2-astro-migration-design.md`: reviewed current Astro migration boundary
+- `sed -n '1,220p' docs/roadmap.md`: reviewed and updated roadmap direction
+- `sed -n '1,220p' docs/verification.md`: reviewed verification expectations
+- no runtime verification was run because this slice changed product docs only
+
+Follow-up:
+
+- define the exact Notion Profile Source schema
+- define the Overview Feed Index model and sorting tests
+- choose the first Social Sources for implementation beyond the existing Telegram snapshot
+- implement Compatibility Route redirects after the feed filter contract exists
+
+Blockers:
+
+- none
+
+## 2026-05-12 - Personal Site Overview PRD
+
+Status: done
+
+Summary:
+
+- synthesized the Personal Site overview decisions into a PRD
+- saved the PRD in repo docs for durable local reference
+- published the PRD to GitHub Issues with the `ready-for-agent` label
+
+Files:
+
+- `docs/prds/2026-05-12-personal-site-overview.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- GitHub Issues is the issue tracker for this PRD because the repo remote is `git@github.com:sorcererxw/blog.git`
+- `ready-for-agent` is the triage label for the published PRD issue
+- the PRD uses domain language from `CONTEXT.md` and avoids specific implementation file paths in the issue body
+
+Verification:
+
+- `git remote -v`: confirmed GitHub remote `sorcererxw/blog`
+- `gh auth status`: PASS, authenticated as `sorcererxw`
+- `gh label list --limit 200`: confirmed `ready-for-agent` was missing before creation
+- `gh label create ready-for-agent --description "Fully specified and ready for an agent to implement" --color 0e8a16`: PASS
+- `gh issue create --title "PRD: Personal Site overview homepage" --label ready-for-agent --body-file docs/prds/2026-05-12-personal-site-overview.md`: PASS, created `https://github.com/sorcererxw/blog/issues/56`
+
+Follow-up:
+
+- if the repo later needs canonical agent-skill tracker config, run `setup-matt-pocock-skills` as its own setup task
+
+Blockers:
+
+- none
+
+## 2026-05-12 - Personal Site Overview Implementation
+
+Status: done
+
+Summary:
+
+- implemented `/` as the primary Personal Site overview surface with a Notion-backed Profile Hero and unified Overview Feed
+- normalized articles, projects, and social posts into one server-rendered Feed Item model with source-aware filters
+- converted `/blog`, `/projects`, and `/thoughts` from archive pages into compatibility redirects to homepage filters
+- updated sitemap and public shell navigation so archive routes and filter query URLs are not primary public surfaces
+
+Files:
+
+- `src/domains/feed/types.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.module.css`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/home/profile-hero.tsx`
+- `src/domains/home/profile-hero.module.css`
+- `src/domains/home/profile-hero.test.tsx`
+- `src/pages/index.astro`
+- `src/pages/blog/index.astro`
+- `src/pages/projects/index.astro`
+- `src/pages/thoughts/index.astro`
+- `src/pages/sitemap.xml.ts`
+- `src/pages/sitemap.xml.test.ts`
+- `src/domains/shell/site-links.ts`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/domains/article/types.ts`
+- `src/domains/projects/types.ts`
+- `src/domains/projects/list-projects.ts`
+- `src/domains/thoughts/types.ts`
+- `src/integrations/notion/projects.ts`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- homepage rendering stays server-side and uses `Cache-Control: public, max-age=0, s-maxage=600`
+- Feed Items sort by Displayed Time first, then Source Published Time, with untimed items at the bottom
+- Feed Filters remain server-rendered query states on `/` through `type` and `source`
+- article detail pages remain canonical deep links, while archive pages redirect to filtered overview states
+- feed media previews use direct source image URLs in the local Astro app so Cloudflare image transforms are not required for preview verification
+
+Verification:
+
+- `pnpm test`: PASS (`33` files, `98` tests)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- `pnpm preview --host 127.0.0.1 --port 3203`: PASS, served on `http://127.0.0.1:3203/`
+- `curl --max-time 15 -I http://127.0.0.1:3203/`: `200 OK`, `cache-control: public, max-age=0, s-maxage=600`
+- `curl --max-time 15 -I http://127.0.0.1:3203/blog`: `301 Moved Permanently` to `/?type=writing`
+- `curl --max-time 15 -I http://127.0.0.1:3203/projects`: `301 Moved Permanently` to `/?type=projects`
+- `curl --max-time 15 -I http://127.0.0.1:3203/thoughts`: `301 Moved Permanently` to `/?type=social`
+- `curl --max-time 20 -s http://127.0.0.1:3203/ | rg -n "Profile hero|Overview feed filters|data-active=\"true\"|Telegram|Project ☁|src=\"https://images.unsplash.com"`: PASS, confirmed hero, filters, mixed feed content, and direct media preview URLs
+- `curl --max-time 15 -s http://127.0.0.1:3203/sitemap.xml | rg -n "<loc>|/blog|/projects|/thoughts|/stack|\\?type="`: PASS, sitemap exposes `/`, topic, and article detail URLs only
+- headless Chrome DOM check for `http://127.0.0.1:3203/?type=social`: PASS, confirmed Profile Hero, Overview, active Social filter, and Telegram social content
+- headless Chrome screenshot for `http://127.0.0.1:3203/`: PASS, saved `/tmp/blog-personal-site-overview-final.png` and visually confirmed hero, single Home nav, filters, masonry feed, and media previews
+
+Follow-up:
+
+- deploy and repeat HTTP/browser smoke checks against the production domain
+- replace fixture-backed Notion/social content with production source IDs once deployment configuration is finalized
+- design the next Social Source adapters beyond the current Telegram snapshot
+
+Blockers:
+
+- none
+
+## 2026-05-12 - Portless Dev URL
+
+Status: done
+
+Summary:
+
+- changed the local `dev` command to run Astro through Portless
+- made `https://blog.localhost/` the stable local development URL while letting Portless assign and proxy the underlying Astro port
+- added Portless as a project dev dependency so the script does not depend on a global install
+
+Files:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- use `portless blog astro dev` instead of binding Astro directly to a named host
+- keep preview verification on explicit `astro preview` ports because preview is still the production-build smoke path
+
+Verification:
+
+- reviewed Portless docs at `https://portless.sh/`; the explicit command form is `portless myapp next dev`, and Portless auto-injects `--port`/`--host` for Astro-style servers
+- `pnpm add -D portless`: PASS, installed `portless 0.13.0`
+- `pnpm dev`: PASS, Portless registered `https://blog.localhost` and started Astro on assigned port `4558`
+- `curl --max-time 15 -I https://blog.localhost/`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- `curl --max-time 15 -s https://blog.localhost/ | rg -n "Profile hero|Overview feed filters|sorcererxw&#x27;s blog"`: PASS, confirmed rendered home content through the Portless URL
+- headless Chrome screenshot for `https://blog.localhost/`: PASS, saved `/tmp/blog-portless-dev.png` and visually confirmed the homepage renders through Portless
+- unit tests were not rerun because this slice only changes the dev command and lockfile dependency; the relevant behavior is local server startup, proxy routing, HTTP response, and browser rendering
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-13 - Client Feed Filter Animations
+
+Status: done
+
+Summary:
+
+- migrated Overview Feed tab filtering to a hydrated client-side React island while preserving URL query state and SSR fallback
+- added Feed Module insertion and removal animation states for filter changes
+- kept the shared Masonry Feed presentation generic by passing optional per-item transition state instead of introducing source-specific module variants
+
+Files:
+
+- `src/pages/index.astro`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/feed/masonry-feed.tsx`
+- `src/domains/feed/masonry-feed.module.css`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- the homepage still renders the initial query state on the server so shared filter URLs remain meaningful
+- after hydration, tab clicks update `history.pushState` and filter the already-loaded feed in the browser
+- `enter` and `exit` animation states are applied to masonry cells, not to source-specific card components
+- animation respects `prefers-reduced-motion`
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS (`33` files, `99` tests; Vitest config still ran the full suite)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- first parallel `pnpm typecheck` attempt failed with `EADDRINUSE 127.0.0.1:9230` because it was run concurrently with other Vite/Astro checks; rerunning it alone passed
+- `pnpm dev`: PASS through Portless at `https://blog.localhost/`
+- `curl --max-time 15 -I https://blog.localhost/`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- `curl --max-time 15 -s 'https://blog.localhost/?type=social' | rg -n 'Profile hero|Overview feed filters|data-active="true"|social:telegram|article:modern-astro'`: PASS, confirmed SSR query state still renders
+- Chrome DevTools Protocol browser check on `https://blog.localhost/`: PASS, clicking Social updated the URL to `/?type=social`, active tab changed to Social, and removal animation exposed `12` `data-feed-transition="exit"` cells; clicking All updated the URL to `/`, active tab changed to All, and insertion animation exposed `12` `data-feed-transition="enter"` cells
+
+Follow-up:
+
+- consider a dedicated jsdom interaction test if the repo later adds a browser-like unit test environment
+
+Blockers:
+
+- none
+
+## 2026-05-13 - Feed Card Hover Treatment
+
+Status: done
+
+Summary:
+
+- strengthened the default Feed Module border
+- removed the masonry hover dimming that changed non-hovered cards' apparent color
+- changed Feed Module hover feedback to ring plus drop shadow while preserving card text and background colors
+
+Files:
+
+- `src/domains/feed/overview-feed-view.module.css`
+- `src/domains/feed/masonry-feed.module.css`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- hover treatment belongs on the hovered Feed Module itself, not on the whole masonry group
+- hover adds visual depth through `box-shadow` and a one-pixel lift instead of color changes
+- focus-visible keeps an explicit ring for keyboard navigation
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS (`33` files, `99` tests; Vitest config still ran the full suite)
+- `pnpm build`: PASS
+- `pnpm dev`: PASS through Portless at `https://blog.localhost/`
+- Chrome DevTools Protocol style inspection: PASS, confirmed the loaded CSS contains the updated module border and `:hover` ring/drop-shadow rules, and the old `.root:hover .cell` opacity-dimming rule is absent
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-13 - Browser Diff Comment Cleanup
+
+Status: done
+
+Summary:
+
+- addressed the browser diff comments on the homepage shell, hero, overview heading, footer, and feed modules
+- removed the Home links from the header and footer while keeping the brand link
+- removed header/footer divider lines
+- removed Profile Hero folding and its More/Less controls
+- removed the visible Overview title and summary block
+- made every feed item visibly card-like with a stronger border and inset ring
+- preserved the header brand text as `sorcererxw's blog`
+
+Files:
+
+- `src/domains/home/profile-hero.tsx`
+- `src/domains/home/profile-hero.module.css`
+- `src/domains/home/profile-hero.test.tsx`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/shell/site-footer.tsx`
+- `src/domains/shell/site-links.ts`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.module.css`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/layouts/SiteLayout.astro`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- the brand remains the only header navigation affordance
+- the footer keeps only external links plus the copyright line
+- feed-card color variables use direct OKLCH custom properties instead of invalid `hsl(var(...))` wrapping
+
+Verification:
+
+- `pnpm test -- src/domains/shell/site-shell.test.tsx src/domains/home/profile-hero.test.tsx src/domains/feed/overview-feed-view.test.tsx`: PASS (`33` files, `99` tests; Vitest config still ran the full suite)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- `curl --max-time 15 -I https://blog.localhost/`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- headless Chrome screenshot for `https://blog.localhost/`: PASS, saved `/tmp/blog-diff-comments-final-3.png`; confirmed no header Home link, no header divider, no visible Overview title block, no Profile Hero fold controls, and visible feed item borders
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-13 - HeroUI Feed Modules
+
+Status: done
+
+Summary:
+
+- replaced the custom Overview Feed filter row with HeroUI `Tabs`
+- replaced Feed Module shells with HeroUI `Surface` using the `transparent` variant
+- replaced source labels with HeroUI `Badge`
+- preserved Telegram rich text in Overview Feed rendering instead of flattening it to plain text
+- moved the feed item date to the bottom of the card
+- removed Telegram card headlines so Telegram cards render body text only
+
+Files:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `src/styles/globals.css`
+- `src/domains/feed/types.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.module.css`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- HeroUI v3 is used directly without a provider, following the v3 component model
+- `@heroui/styles` is imported after Tailwind in the global stylesheet
+- Telegram rich text is carried through the Feed Item model as structured segments
+- Feed Modules that contain inline rich-text links do not wrap the entire card in an outer anchor; their bottom date links to the original item to avoid invalid nested anchors
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Tabs Badge Surface`: PASS, reviewed current HeroUI v3 docs before implementation
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx src/domains/feed/overview-feed.test.ts`: PASS (`33` files, `101` tests; Vitest config still ran the full suite)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- `curl --max-time 15 -I https://blog.localhost/`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- headless Chrome screenshot for `https://blog.localhost/`: PASS, saved `/tmp/blog-heroui-comments-final-2.png`; confirmed horizontal HeroUI tabs, bordered transparent Surface modules, Badge source labels, bottom dates, Telegram cards without titles, and rich-text links
+- headless Chrome DOM dump for `https://blog.localhost/?type=social`: PASS, confirmed `surface--transparent`, `badge__label`, rich-text links, bottom original-post date links, and no empty browser-repaired module anchors in the checked output
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-13 - Filter And Brand Label Cleanup
+
+Status: done
+
+Summary:
+
+- removed the visible `Social` tab from the Overview Feed filters
+- kept `Telegram` as the source-specific social entry point
+- changed the visible header brand from `sorcererxw's blog` to `sorcererxw`
+- changed the default layout title fallback to `sorcererxw`
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/layouts/SiteLayout.astro`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- `/?type=social` remains parseable for compatibility, but it is no longer exposed as a first-class filter tab
+- source-specific social browsing should use `/?source=telegram` in the visible UI
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx src/domains/shell/site-shell.test.tsx`: PASS (`33` files, `101` tests; Vitest config still ran the full suite)
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints in locale redirect pages
+- `pnpm build`: PASS
+- `curl --max-time 15 -I 'https://blog.localhost/?type=writing'`: `200 OK`, `HTTP/2`, `x-portless: 1`
+- `curl --max-time 20 -s 'https://blog.localhost/?type=writing'` negative content check: PASS, confirmed no `Social` tab href/text and no `sorcererxw's blog` brand text
+- headless Chrome screenshot for `https://blog.localhost/?type=writing`: PASS, saved `/tmp/blog-filter-brand-comments.png`; confirmed header brand is `sorcererxw` and filters show `All`, `Writing`, `Projects`, and `Telegram`
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-04 - Standalone GitHub Main Publication
 
 Status: done
@@ -111,6 +1957,66 @@ Follow-up:
 
 - configure the required runtime credentials in Cloudflare/GitHub deployment environments before any secret-dependent content refresh runs
 - rotate the previously committed Notion and Telegram credentials if they have not already been rotated
+
+Blockers:
+
+- none
+
+## 2026-05-04 - Wrangler-Generated Runtime Binding Types
+
+Status: done
+
+Summary:
+
+- replaced direct `process.env` reads in `src/config/server.ts` with `cloudflare:workers` runtime binding reads
+- added a checked-in Wrangler-generated `cloudflare-env.d.ts` for Cloudflare Worker binding names
+- added `.dev.vars.example` so `wrangler types` can generate secret binding names without committing real secret values
+- updated Vitest to resolve the `cloudflare:workers` virtual module through a test shim
+
+Files:
+
+- `.dev.vars.example`
+- `.gitignore`
+- `cloudflare-env.d.ts`
+- `env.d.ts`
+- `package.json`
+- `src/config/server.ts`
+- `src/test/cloudflare-workers.ts`
+- `src/types/cloudflare-workers.d.ts`
+- `src/types/cloudflare.ts`
+- `vitest.config.ts`
+- `docs/specs/2026-04-14-blog2-astro-migration-design.md`
+- `docs/plans/2026-04-14-blog2-astro-migration.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep real `.dev.vars*` files ignored, but allow `.dev.vars.example` as the non-secret source for Wrangler type generation
+- generate env-only Cloudflare types with `--include-runtime false` to avoid committing the full Worker runtime declaration bundle
+- keep a lightweight `cloudflare:workers` ambient module declaration locally, typed against the generated `Cloudflare.Env`
+- keep Node scripts such as `sync:thoughts` on their existing CLI environment contract; this slice only changes app runtime server config
+
+Verification:
+
+- `pnpm cf-typegen`: PASS, generated `cloudflare-env.d.ts` with `SESSION`, `BLOG_CACHE`, `ASSETS`, `NOTION_SECRET`, `TELEGRAM_APP_ID`, `TELEGRAM_APP_SECRET`, `TELEGRAM_BOT`, and `TELEGRAM_TOKEN`
+- `pnpm exec wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --env-file .dev.vars.example --include-runtime false --check`: FAIL in Wrangler `4.87.0` immediately after regeneration with `Types at cloudflare-env.d.ts are out of date`; treated as a Wrangler check false-negative and not used as completion evidence
+- `pnpm typecheck`: PASS with `0` errors and the existing `2` unused `target` hints
+- `pnpm test`: PASS (`30` files, `89` tests)
+- `pnpm build`: PASS
+- `pnpm preview --host 127.0.0.1 --port 3203`: PASS, served on `http://127.0.0.1:3203/`
+- `curl --max-time 15 -I http://127.0.0.1:3203/`: `200 OK`
+- `curl --max-time 15 -I http://127.0.0.1:3203/blog`: `200 OK`
+- `curl --max-time 15 -i http://127.0.0.1:3203/api/health`: `200 OK`, returned `service: "blog2"`
+- `curl --max-time 15 -I http://127.0.0.1:3203/thoughts`: `200 OK`
+- `curl --max-time 15 -I http://127.0.0.1:3203/projects`: `200 OK`
+- `curl --max-time 15 -I http://127.0.0.1:3203/articles/modern-astro`: `200 OK`
+- `curl --max-time 15 -I http://127.0.0.1:3203/articles/stop-migrate-nextjs-to-astro`: `404 Not Found` in local preview because no real Notion Worker binding is present, so the app uses demo article data
+
+Follow-up:
+
+- provision `NOTION_SECRET`, `TELEGRAM_APP_ID`, `TELEGRAM_APP_SECRET`, `TELEGRAM_BOT`, and `TELEGRAM_TOKEN` as Worker secrets or local `.dev.vars` values for real content refresh/runtime parity
+- revisit the Wrangler `types --check` behavior after the next Wrangler upgrade
 
 Blockers:
 

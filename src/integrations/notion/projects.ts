@@ -1,7 +1,6 @@
 import { Client } from "@notionhq/client";
-import { NotionSecret } from "@/config/server";
-import { getRuntimeConfig } from "@/config/runtime";
 import { getPrimaryDataSourceId } from "@/integrations/notion/data-source";
+import { getRuntimeInfo, getWorkerEnv } from "@/lib/cloudflare-env";
 import type {
   NotionProjectRecord,
   ProjectListItem,
@@ -24,27 +23,6 @@ export const createNotionProjectSource = (
 ): NotionProjectSource => ({
   listProjects,
 });
-
-const PROJECTS_DATABASE_ID = "63605072597640c4b666cd334b428aee";
-
-const demoProjects: NotionProjectRecord[] = [
-  {
-    id: "demo-cloudflare-shell",
-    title: "Cloudflare shell",
-    description: "A compact public shell for the blog2 migration.",
-    url: "https://example.com/projects/cloudflare-shell",
-    emoji: "☁",
-    period: new Date("2026-02-15T00:00:00.000Z"),
-  },
-  {
-    id: "demo-notion-pipeline",
-    title: "Notion pipeline",
-    description: "Normalize content from Notion into app-native models.",
-    url: "https://example.com/projects/notion-pipeline",
-    emoji: "◌",
-    period: new Date("2026-01-20T00:00:00.000Z"),
-  },
-];
 
 const readPlainText = (value: unknown): string => {
   if (!Array.isArray(value)) {
@@ -165,17 +143,34 @@ export const normalizeNotionProjectRecord = (
   description: record.description,
   url: record.url,
   emoji: record.emoji,
+  period: record.period,
 });
 
 const fetchNotionProjects = async (): Promise<NotionProjectRecord[]> => {
-  if (!NotionSecret) {
-    return demoProjects;
+  const workerEnv = await getWorkerEnv();
+  const notionSecret = workerEnv.NOTION_SECRET;
+  const projectsDatabaseId = workerEnv.NOTION_PROJECTS_DATABASE_ID;
+
+  if (!notionSecret) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
+    }
+
+    throw new Error("Missing NOTION_SECRET.");
   }
 
-  const notion = new Client({ auth: NotionSecret });
+  if (!projectsDatabaseId) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
+    }
+
+    throw new Error("Missing NOTION_PROJECTS_DATABASE_ID.");
+  }
+
+  const notion = new Client({ auth: notionSecret });
 
   try {
-    const dataSourceId = await getPrimaryDataSourceId(notion, PROJECTS_DATABASE_ID);
+    const dataSourceId = await getPrimaryDataSourceId(notion, projectsDatabaseId);
     const data = await notion.dataSources.query({
       data_source_id: dataSourceId,
       page_size: 100,
@@ -194,8 +189,8 @@ const fetchNotionProjects = async (): Promise<NotionProjectRecord[]> => {
       icon?: unknown;
     }>).map(toProjectRecord);
   } catch (error) {
-    if (!getRuntimeConfig().isProduction) {
-      return demoProjects;
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
     }
 
     if (error instanceof Error) {

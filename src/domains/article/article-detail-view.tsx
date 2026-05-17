@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import NextLink from "next/link";
 
 import {
   Card,
@@ -15,7 +16,7 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/classnames";
+import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 
@@ -106,14 +107,14 @@ function renderRichText(richText?: ArticleDetailRichText[], fallback?: string): 
 
     if (segment.href) {
       content = (
-        <a
+        <NextLink
           className="break-all text-primary underline underline-offset-4"
           href={segment.href}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </a>
+        </NextLink>
       );
     }
 
@@ -156,9 +157,9 @@ const renderCaption = (richText?: ArticleDetailRichText[], fallback?: string | n
 function renderToc(nodes: ArticleDetailTocNode[]): ReactNode {
   return nodes.map((node) => (
     <Fragment key={node.id}>
-      <a className={styles.tocLink} href={`#${node.id}`}>
+      <NextLink className={styles.tocLink} href={`#${node.id}`}>
         {node.title}
-      </a>
+      </NextLink>
       {node.nodes.length > 0 ? <div className={styles.tocChildren}>{renderToc(node.nodes)}</div> : null}
     </Fragment>
   ));
@@ -197,20 +198,20 @@ function renderBlock(block: ArticleDetailBlock) {
       return (
         <>
           <Tag
-            className={
+            className={cn(
               block.level === 1
                 ? "font-serif text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
                 : block.level === 2
                   ? "font-serif text-2xl font-semibold tracking-tight text-foreground md:text-3xl"
-                  : "font-serif text-xl font-semibold tracking-tight text-foreground md:text-2xl"
-            }
+                  : "font-serif text-xl font-semibold tracking-tight text-foreground md:text-2xl",
+            )}
             id={block.id}
           >
             <span>{renderRichText(block.richText, block.text)}</span>
             {block.id ? (
-              <a className={styles.headingAnchor} href={`#${block.id}`}>
+              <NextLink className={styles.headingAnchor} href={`#${block.id}`}>
                 ¶
-              </a>
+              </NextLink>
             ) : null}
           </Tag>
           {renderChildren(block.children)}
@@ -279,7 +280,7 @@ function renderBlock(block: ArticleDetailBlock) {
     case "bookmark":
       return (
         <figure className="space-y-3">
-          <a className={styles.bookmarkLink} href={block.url} rel="noreferrer" target="_blank">
+          <NextLink className={styles.bookmarkLink} href={block.url} rel="noreferrer" target="_blank">
             <Card className={styles.bookmark}>
               {block.imageUrl ? (
                 <div className={styles.bookmarkImageWrap}>
@@ -306,7 +307,7 @@ function renderBlock(block: ArticleDetailBlock) {
                 <p className="break-all text-sm text-muted-foreground">{block.url}</p>
               </CardContent>
             </Card>
-          </a>
+          </NextLink>
           {renderCaption(block.captionRichText, block.caption)}
         </figure>
       );
@@ -468,7 +469,7 @@ function renderBlockList(blocks: ArticleDetailBlock[]) {
 }
 
 export function ArticleDetailView({ article, className }: ArticleDetailViewProps) {
-  const archiveHref = "/blog";
+  const archiveHref = "/?type=writing";
   const authorHref = "/";
   const date = formatArticleDetailDate(article.date);
   const iconLabel = article.icon?.kind === "emoji" ? article.icon.value : null;
@@ -509,9 +510,9 @@ export function ArticleDetailView({ article, className }: ArticleDetailViewProps
                   <span className={styles.authorInitial}>S</span>
                 )}
               </span>
-              <a className={styles.authorLink} href={authorHref}>
+              <NextLink className={styles.authorLink} href={authorHref}>
                 sorcererxw
-              </a>
+              </NextLink>
               <span className={styles.separator} aria-hidden="true">
                 •
               </span>
@@ -532,9 +533,9 @@ export function ArticleDetailView({ article, className }: ArticleDetailViewProps
           </section>
 
           <footer className={styles.endMatter}>
-            <a className="publication-button" href={archiveHref}>
-              Back to the archive
-            </a>
+            <NextLink className="publication-button" href={archiveHref}>
+              Back to writing
+            </NextLink>
           </footer>
         </div>
       </div>

@@ -1,7 +1,6 @@
 import { Client } from "@notionhq/client";
-import { NotionSecret } from "@/config/server";
-import { getRuntimeConfig } from "@/config/runtime";
 import { getPrimaryDataSourceId } from "@/integrations/notion/data-source";
+import { getRuntimeInfo, getWorkerEnv } from "@/lib/cloudflare-env";
 import type { NotionStackRecord, StackIcon } from "@/domains/stack/types";
 
 export type NotionStackSource = {
@@ -21,27 +20,6 @@ export const createNotionStackSource = (
 });
 
 const STACKS_DATABASE_ID = "b27f9ded6f7c4c2ba5d34fbc48a7decb";
-
-const demoStacks: NotionStackRecord[] = [
-  {
-    id: "demo-cloudflare",
-    name: "Cloudflare Workers",
-    link: "https://workers.cloudflare.com/",
-    description: "A lightweight runtime for the blog2 rebuild.",
-    platforms: ["Web"],
-    tags: ["Runtime", "Edge"],
-    icon: { kind: "emoji", value: "☁" },
-  },
-  {
-    id: "demo-notion",
-    name: "Notion",
-    link: "https://www.notion.so/",
-    description: "The content source that powers the public site.",
-    platforms: ["Web", "Desktop"],
-    tags: ["Content", "CMS"],
-    icon: { kind: "emoji", value: "◌" },
-  },
-];
 
 const readPlainText = (value: unknown): string => {
   if (!Array.isArray(value)) {
@@ -167,11 +145,18 @@ const toStackRecord = (page: {
 };
 
 const fetchNotionStacks = async (): Promise<NotionStackRecord[]> => {
-  if (!NotionSecret) {
-    return demoStacks;
+  const workerEnv = await getWorkerEnv();
+  const notionSecret = workerEnv.NOTION_SECRET;
+
+  if (!notionSecret) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
+    }
+
+    throw new Error("Missing NOTION_SECRET.");
   }
 
-  const notion = new Client({ auth: NotionSecret });
+  const notion = new Client({ auth: notionSecret });
 
   try {
     const dataSourceId = await getPrimaryDataSourceId(notion, STACKS_DATABASE_ID);
@@ -192,8 +177,8 @@ const fetchNotionStacks = async (): Promise<NotionStackRecord[]> => {
       icon?: unknown;
     }>).map(toStackRecord);
   } catch (error) {
-    if (!getRuntimeConfig().isProduction) {
-      return demoStacks;
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
     }
 
     if (error instanceof Error) {

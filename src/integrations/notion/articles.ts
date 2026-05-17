@@ -1,7 +1,6 @@
 import { Client } from "@notionhq/client";
-import { NotionSecret } from "@/config/server";
-import { getRuntimeConfig } from "@/config/runtime";
 import { getPrimaryDataSourceId } from "@/integrations/notion/data-source";
+import { getRuntimeInfo, getWorkerEnv } from "@/lib/cloudflare-env";
 import type {
   ArticleIcon,
   NotionArticleRecord,
@@ -32,29 +31,6 @@ export const normalizeNotionArticleRecord = (
 ): NotionArticleRecord => ({
   ...record,
 });
-
-const BLOG_DATABASE_ID = "d6f20169e3b849059656e33a47e19003";
-
-const demoArticles: NotionArticleRecord[] = [
-  {
-    id: "demo-modern-astro",
-    slug: "modern-astro",
-    title: "Building the new blog shell",
-    summary: "A first pass at the public blog surface on Cloudflare.",
-    date: new Date("2026-02-01T00:00:00.000Z"),
-    cover: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?w=1600&q=80",
-    icon: { kind: "emoji", value: "✦" },
-  },
-  {
-    id: "demo-content-pipeline",
-    slug: "content-pipeline",
-    title: "Normalizing Notion content",
-    summary: "How public content moves from Notion into app-native models.",
-    date: new Date("2026-01-18T00:00:00.000Z"),
-    cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1600&q=80",
-    icon: { kind: "emoji", value: "◇" },
-  },
-];
 
 const readPlainText = (value: unknown): string => {
   if (!Array.isArray(value)) {
@@ -207,16 +183,30 @@ const fetchNotionArticles = async ({
 }: {
   includeWip?: boolean;
 } = {}): Promise<NotionArticleRecord[]> => {
-  const notionToken = NotionSecret;
+  const workerEnv = await getWorkerEnv();
+  const notionToken = workerEnv.NOTION_SECRET;
+  const blogDatabaseId = workerEnv.NOTION_BLOG_DATABASE_ID;
 
   if (!notionToken) {
-    return includeWip ? demoArticles : demoArticles.filter((article) => !article.wip);
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
+    }
+
+    throw new Error("Missing NOTION_SECRET.");
+  }
+
+  if (!blogDatabaseId) {
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
+    }
+
+    throw new Error("Missing NOTION_BLOG_DATABASE_ID.");
   }
 
   const notion = new Client({ auth: notionToken });
 
   try {
-    const dataSourceId = await getPrimaryDataSourceId(notion, BLOG_DATABASE_ID);
+    const dataSourceId = await getPrimaryDataSourceId(notion, blogDatabaseId);
     const data = await notion.dataSources.query({
       data_source_id: dataSourceId,
       page_size: 100,
@@ -243,8 +233,8 @@ const fetchNotionArticles = async ({
       cover?: unknown;
     }>).map(toArticleRecord);
   } catch (error) {
-    if (!getRuntimeConfig().isProduction) {
-      return includeWip ? demoArticles : demoArticles.filter((article) => !article.wip);
+    if (!getRuntimeInfo(workerEnv).isProduction) {
+      return [];
     }
 
     throw error;

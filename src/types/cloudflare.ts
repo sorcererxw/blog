@@ -41,7 +41,4 @@ export interface KVNamespace {
   ): Promise<void>;
 }
 
-export interface CloudflareEnv {
-  BLOG_CACHE: KVNamespace;
-  NOTION_TOKEN: string;
-}
+export type CloudflareEnv = Cloudflare.Env;

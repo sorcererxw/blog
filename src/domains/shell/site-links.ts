@@ -23,7 +23,7 @@ export function getCurrentPublicRoute(pathname: string | null): PublicRouteKey |
     return null;
   }
 
-  if (/^\/(blog|articles)(?:\/|$)/.test(pathname)) {
+  if (/^\/articles(?:\/|$)/.test(pathname)) {
     return "blog";
   }
 
@@ -48,81 +48,16 @@ export function getCurrentPublicRoute(pathname: string | null): PublicRouteKey |
 
 export function getPublicRoutes(
   currentRoute: PublicRouteKey | null = null,
-  options: { includeStack?: boolean } = {},
+  _options: { includeStack?: boolean } = {},
 ): PublicRoute[] {
-  const routes: PublicRoute[] = [
-    {
-      key: "home",
-      label: "Home",
-      href: "/",
-      active: currentRoute === "home",
-    },
-    {
-      key: "blog",
-      label: "Blog",
-      href: "/blog",
-      active: currentRoute === "blog",
-    },
-    {
-      key: "thoughts",
-      label: "Thoughts",
-      href: "/thoughts",
-      active: currentRoute === "thoughts",
-    },
-    {
-      key: "projects",
-      label: "Projects",
-      href: "/projects",
-      active: currentRoute === "projects",
-    },
-  ];
-
-  if (options.includeStack ?? true) {
-    routes.push({
-      key: "stack",
-      label: "Stack",
-      href: "/stack",
-      active: currentRoute === "stack",
-    });
-  }
-
-  return routes;
+  void currentRoute;
+  return [];
 }
 
 export function getFooterLinks(
-  options: { includeStack?: boolean } = {},
+  _options: { includeStack?: boolean } = {},
 ): FooterLinkGroup[] {
-  const routeLinks: FooterLink[] = [
-    {
-      label: "Home",
-      href: "/",
-    },
-    {
-      label: "Blog",
-      href: "/blog",
-    },
-    {
-      label: "Thoughts",
-      href: "/thoughts",
-    },
-    {
-      label: "Projects",
-      href: "/projects",
-    },
-  ];
-
-  if (options.includeStack ?? true) {
-    routeLinks.push({
-      label: "Stack",
-      href: "/stack",
-    });
-  }
-
   return [
-    {
-      title: "站内",
-      links: routeLinks,
-    },
     {
       title: "站外",
       links: [

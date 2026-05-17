@@ -14,7 +14,9 @@ export type ArticleListItem = {
   summary: string;
   date: Date;
   cover?: string | null;
+  displayedAt?: Date | null;
   icon?: ArticleIcon | null;
+  moduleSize?: string | null;
 };
 
 export type NotionArticleRecord = {
@@ -27,4 +29,3 @@ export type NotionArticleRecord = {
   icon?: ArticleIcon | null;
   wip?: boolean;
 };
-

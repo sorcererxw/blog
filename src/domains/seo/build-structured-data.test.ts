@@ -29,14 +29,14 @@ describe("build-structured-data", () => {
     const [page, list] = buildCollectionPageStructuredData({
       description: "Archive description",
       items: [{ name: "Newest Post", url: "/articles/newest-post" }],
-      pathname: "/blog",
-      title: "Engineering archive",
+      pathname: "/",
+      title: "Writing overview",
     });
 
     expect(page).toMatchObject({
       "@type": "CollectionPage",
       description: "Archive description",
-      url: "https://sorcererxw.com/blog",
+      url: "https://sorcererxw.com/",
     });
 
     expect(list).toMatchObject({
@@ -74,7 +74,7 @@ describe("build-structured-data", () => {
     expect(
       buildBreadcrumbStructuredData([
         { name: "Home", path: "/" },
-        { name: "Engineering archive", path: "/blog" },
+        { name: "Writing", path: "/?type=writing" },
       ]),
     ).toMatchObject({
       "@type": "BreadcrumbList",
@@ -87,8 +87,8 @@ describe("build-structured-data", () => {
         },
         {
           "@type": "ListItem",
-          item: "https://sorcererxw.com/blog",
-          name: "Engineering archive",
+          item: "https://sorcererxw.com/?type=writing",
+          name: "Writing",
           position: 2,
         },
       ],

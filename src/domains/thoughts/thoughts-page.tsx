@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import NextLink from "next/link";
 import React from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -87,14 +88,14 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
 
     if (segment.url) {
       content = (
-        <a
+        <NextLink
           className="pointer-events-auto break-all font-medium text-primary hover:underline"
           href={segment.url}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </a>
+        </NextLink>
       );
     }
 
@@ -165,12 +166,12 @@ function ReplyPreview({
   }
 
   return (
-    <a
+    <NextLink
       className="pointer-events-auto relative z-10 flex flex-row border-l-2 pl-2 hover:opacity-100"
       href={preview.href}
     >
       {body}
-    </a>
+    </NextLink>
   );
 }
 
@@ -179,8 +180,20 @@ function WebpagePreview({ item }: { item: ThoughtItem }) {
     return null;
   }
 
+  const photoSrc = item.webpage.photo?.originalUrl ?? item.webpage.photo?.thumbnailUrl ?? null;
+
   return (
     <Card className="my-4 gap-3 border-none bg-muted/40 py-3 ring-1 ring-foreground/8">
+      {photoSrc ? (
+        <ResponsiveRemoteImage
+          alt=""
+          className="aspect-[16/9] w-full rounded-t-lg object-cover"
+          height={item.webpage.photo?.height ?? 720}
+          preset="thought-photo"
+          src={photoSrc}
+          width={item.webpage.photo?.width ?? 1280}
+        />
+      ) : null}
       <CardHeader className="gap-1 px-3 pb-0 pt-0">
         <div className="text-sm opacity-60">{item.webpage.sitename}</div>
         <CardTitle className="font-medium">{item.webpage.title}</CardTitle>
@@ -216,7 +229,7 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
             id={localMessageAnchor(item.id)}
             className="group relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:shadow-md"
           >
-            <a
+            <NextLink
               aria-label={`Open thought from ${dateLabel} in Telegram`}
               className="absolute inset-0 z-0"
               href={item.link}
@@ -285,11 +298,11 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
   );
 }
 
-export function ThoughtsPage() {
-  const items = listThoughts();
+export async function ThoughtsPage() {
+  const items = await listThoughts();
 
   return (
-    <section className="publication-page space-y-6">
+    <section className="mx-auto w-[min(100%-2.5rem,66rem)] space-y-6">
       <ThoughtsPageBody items={items} />
     </section>
   );

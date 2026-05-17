@@ -1,4 +1,4 @@
 declare module "cloudflare:workers" {
-  const env: Partial<CloudflareEnv>;
+  const env: Cloudflare.Env;
   export { env };
 }

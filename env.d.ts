@@ -1,24 +1,14 @@
-import type { KVNamespace } from "@/types/cloudflare";
-
 declare global {
-  interface CloudflareEnv {
-    BLOG_CACHE: KVNamespace;
-  }
-
-  interface Env {
-    BLOG_CACHE: KVNamespace;
-    NOTION_TOKEN: string;
-  }
+  type KVNamespace = import("@/types/cloudflare").KVNamespace;
 
   interface ExecutionContext {
     passThroughOnException(): void;
     waitUntil(promise: Promise<unknown>): void;
   }
-}
 
-declare module "cloudflare:workers" {
-  const env: Partial<CloudflareEnv>;
-  export { env };
+  interface Fetcher {
+    fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  }
 }
 
 export {};

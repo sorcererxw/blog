@@ -37,7 +37,9 @@ export type ThoughtReaction = {
 export type ThoughtListItem = {
   id: string;
   date: Date;
+  displayedAt?: Date | null;
   link: string;
+  moduleSize?: string | null;
   richText: ThoughtRichTextSegment[];
   photos: ThoughtPhoto[];
   replyTo: string | null;
@@ -45,4 +47,3 @@ export type ThoughtListItem = {
   webpage: ThoughtWebpage | null;
   reactions: ThoughtReaction[];
 };
-

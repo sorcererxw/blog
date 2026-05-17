@@ -1,9 +1,10 @@
-import { cn } from "@/lib/classnames";
+import NextLink from "next/link";
+
+import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 
 import type { ArticleListItem } from "./types";
-import styles from "./article-list.module.css";
 
 type ArticleListProps = {
   items: ArticleListItem[];
@@ -27,14 +28,18 @@ function getIconLabel(item: ArticleListItem) {
 
 function IconMark({ item }: { item: ArticleListItem }) {
   if (item.icon?.kind === "emoji") {
-    return <span className={styles.mark}>{item.icon.value}</span>;
+    return (
+      <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+        {item.icon.value}
+      </span>
+    );
   }
 
   if (item.icon?.kind === "url") {
     return (
       <span
         aria-label={`${item.title} icon`}
-        className={styles.iconImage}
+        className="h-7 w-7 flex-none rounded-full border border-border bg-card bg-cover bg-center bg-no-repeat"
         role="img"
         style={{
           backgroundImage: `url(${buildCloudflareImageUrl(item.icon.value, "icon")})`,
@@ -48,21 +53,26 @@ function IconMark({ item }: { item: ArticleListItem }) {
 
 export function ArticleList({ items, className }: ArticleListProps) {
   return (
-    <section aria-labelledby="blog-archive-title" className={cn(styles.archive, className)}>
+    <section
+      aria-labelledby="blog-archive-title"
+      className={cn("mx-auto grid w-[min(100%_-_2.5rem,64rem)] gap-9 max-sm:w-[min(100%_-_2rem,64rem)]", className)}
+    >
       <h1 className="sr-only" id="blog-archive-title">
         Blog
       </h1>
 
       {items.length === 0 ? (
-        <div className={styles.emptyState} aria-label="Article list empty state">
-          <h2 className={styles.emptyTitle}>No articles published yet.</h2>
-          <p className={styles.summary}>
+        <div className="grid w-full max-w-[38rem] gap-3 pt-2" aria-label="Article list empty state">
+          <h2 className="m-0 font-serif text-[clamp(1.8rem,4vw,2.6rem)] font-medium leading-none tracking-[-0.05em]">
+            No articles published yet.
+          </h2>
+          <p className="m-0 max-w-[38rem] text-base leading-7 text-muted-foreground">
             The archive is ready. As writing lands in Notion, published entries will
             appear here in reverse chronological order.
           </p>
         </div>
       ) : (
-        <div className={styles.grid} aria-label="Article list">
+        <div className="grid items-start gap-10 sm:grid-cols-2 sm:gap-x-8 sm:gap-y-9" aria-label="Article list">
           {items.map((item, index) => {
             const href = `/articles/${item.slug}`;
             const iconLabel = getIconLabel(item);
@@ -70,36 +80,63 @@ export function ArticleList({ items, className }: ArticleListProps) {
             return (
               <article
                 key={item.slug}
-                className={cn(styles.entry, index === 0 && styles.featured)}
+                className={cn("min-w-0", index === 0 && "sm:col-span-2")}
               >
-                <a className={styles.link} href={href}>
+                <NextLink
+                  className={cn(
+                    "grid gap-4 text-inherit no-underline transition-[opacity,transform] duration-150 hover:-translate-y-0.5",
+                    index === 0 && "sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] sm:items-start",
+                  )}
+                  href={href}
+                >
                   {item.cover ? (
-                    <div className={cn(styles.coverWrap, index === 0 && styles.featuredCover)}>
+                    <div
+                      className={cn(
+                        "relative h-72 w-full overflow-hidden rounded-2xl bg-muted",
+                        index === 0 && "h-[22rem] sm:row-span-3 sm:h-full sm:min-h-[22rem]",
+                      )}
+                    >
                       <ResponsiveRemoteImage
                         alt=""
-                        className={styles.cover}
+                        className="block h-full w-full object-cover"
                         preset="article-card"
                         src={item.cover}
                       />
                     </div>
                   ) : null}
 
-                  <div className={styles.meta}>
-                    <time className={styles.date} dateTime={item.date.toISOString()}>
+                  <div className="grid gap-2.5">
+                    <time
+                      className="text-[0.82rem] uppercase leading-normal tracking-[0.08em] text-muted-foreground"
+                      dateTime={item.date.toISOString()}
+                    >
                       {formatArticleDate(item.date)}
                     </time>
 
-                    <div className={styles.heading}>
-                      <h2 className={cn(styles.articleTitle, item.cover && styles.coveredTitle)}>
+                    <div className="flex min-w-0 items-start justify-between gap-4">
+                      <h2
+                        className={cn(
+                          "m-0 text-pretty font-serif text-[clamp(1.4rem,2vw,2rem)] font-medium leading-[1.02] tracking-[-0.04em]",
+                          item.cover && "text-[clamp(1.6rem,2.4vw,2.25rem)]",
+                        )}
+                      >
                         {item.title}
                       </h2>
-                      {iconLabel ? <span className={styles.mark}>{iconLabel}</span> : null}
+                      {iconLabel ? (
+                        <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+                          {iconLabel}
+                        </span>
+                      ) : null}
                       {!iconLabel ? <IconMark item={item} /> : null}
                     </div>
                   </div>
 
-                  {item.summary ? <p className={styles.summaryText}>{item.summary}</p> : null}
-                </a>
+                  {item.summary ? (
+                    <p className="m-0 max-w-[44rem] text-base leading-7 text-muted-foreground">
+                      {item.summary}
+                    </p>
+                  ) : null}
+                </NextLink>
               </article>
             );
           })}
