@@ -16,6 +16,59 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-17 - Article Detail Next Image Loader 500
+
+Status: done
+
+Summary:
+
+- reproduced the production failure for `https://sorcererxw.com/articles/go-struct-embed-unmarshal`, which returned `HTTP/2 500`
+- traced the response body to a React Server Components error digest attached to the article cover image loader
+- removed the per-component `loader` function prop from `ResponsiveRemoteImage` so App Router server components no longer serialize a function into the client boundary
+- kept Cloudflare image URL behavior owned by the checked-in Next `images.loaderFile` configuration and `image-loader.ts`
+- updated component tests so they assert image semantics instead of duplicating image-loader URL behavior
+
+Files:
+
+- `src/components/media/responsive-remote-image.tsx`
+- `src/domains/article/article-detail-view.test.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/home/intro.test.tsx`
+- `src/domains/thoughts/thoughts-page.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- `ResponsiveRemoteImage` should rely on `next.config.ts` `images.loaderFile = "./image-loader.ts"` instead of passing an imported loader function as a prop.
+- Component tests should not require Cloudflare loader output in pure React static rendering, because that environment does not apply Next image config.
+- Roadmap impact: no milestone change; this is an M2a/M3 production article detail regression fix.
+
+Verification:
+
+- `curl -I -L https://sorcererxw.com/articles/go-struct-embed-unmarshal`: reproduced production `HTTP/2 500`
+- `curl --max-time 20 -s -L https://sorcererxw.com/articles/go-struct-embed-unmarshal`: PASS for diagnosis, response contained article metadata/content plus a server component error digest on the image loader
+- `pnpm test -- src/domains/article/article-detail-view.test.tsx src/domains/article/article-list.test.tsx src/domains/feed/overview-feed-view.test.tsx src/domains/home/intro.test.tsx src/domains/thoughts/thoughts-page.test.tsx src/lib/images/image-loader.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, route table keeps `/articles/[slug]` dynamic
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3236`: PASS
+- `curl --max-time 60 -s -o /tmp/blog-article-fixed.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3236/articles/go-struct-embed-unmarshal && rg -n '__next_error__|digest|Go 类型内嵌|/cdn-cgi/image|Back to writing' /tmp/blog-article-fixed.html`: PASS, returned `200 text/html; charset=utf-8`, rendered the article title/content, used `/cdn-cgi/image`, and did not expose `__next_error__`
+- `curl --max-time 20 -I http://127.0.0.1:3236/articles/go-struct-embed-unmarshal`: PASS, returned `200 OK`, `Cache-Control: public, max-age=0, s-maxage=600`, and `x-opennext: 1`
+- Browser verification with Playwright against `http://127.0.0.1:3236/articles/go-struct-embed-unmarshal`: PASS, status `200`, title rendered, `2` Shiki code blocks rendered, writing return link rendered, `#__next_error__` count was `0`, and there were no console errors; screenshot saved to `/tmp/blog-go-struct-embed-unmarshal-fixed.png`
+- `pnpm deploy`: failed before running the script because pnpm reserved `deploy` for workspace deploys outside this package context
+- `pnpm run deploy`: PASS, deployed Cloudflare Worker version `5227b5c8-53ae-4701-ab87-a160a869a8e5` to custom domain `sorcererxw.com`
+- `curl --max-time 60 -s -o /tmp/blog-prod-article-fixed.html -w '%{http_code} %{content_type}\n' https://sorcererxw.com/articles/go-struct-embed-unmarshal && rg -n '__next_error__|digest|Go 类型内嵌|/cdn-cgi/image|Back to writing' /tmp/blog-prod-article-fixed.html`: PASS, production returned `200 text/html; charset=utf-8`, rendered the article, and used `/cdn-cgi/image`
+- `curl --max-time 20 -I https://sorcererxw.com/articles/go-struct-embed-unmarshal`: PASS, production returned `HTTP/2 200`, `Cache-Control: public, max-age=0, s-maxage=600`, and `x-opennext: 1`
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-17 - Cloudflare Sitemap Build Secret Guard
 
 Status: done

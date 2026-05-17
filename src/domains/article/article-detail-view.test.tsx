@@ -46,7 +46,6 @@ describe("ArticleDetailView", () => {
     expect(markup).toContain("Hello World");
     expect(markup).toContain("sorcererxw");
     expect(markup).toContain("Feb 11, 2026");
-    expect(markup).toContain("/cdn-cgi/image/");
     expect(markup).not.toContain("A short introduction");
     expect(markup).not.toContain("Back to archive");
     expect(markup).not.toContain(">Article<");
@@ -61,7 +60,7 @@ describe("ArticleDetailView", () => {
     expect(markup).toContain("<ul>");
     expect(markup).toContain("First bullet");
     expect(markup).not.toContain(">1.");
-    expect(markup).toContain("/media/");
+    expect(markup).toContain("secure.notion-static.com");
     expect(markup).toContain("An image caption");
     expect(markup).toContain("Bookmark title");
     expect(markup).not.toContain("Continue the thread");
@@ -95,7 +94,7 @@ describe("ArticleDetailView", () => {
       />,
     );
 
-    expect(markup).toContain('/media/');
+    expect(markup).toContain("secure.notion-static.com");
     expect(markup).toContain('alt=""');
     expect(markup).not.toContain("Article illustration");
   });

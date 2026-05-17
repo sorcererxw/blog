@@ -155,7 +155,7 @@ describe("HomePageContent", () => {
 
     const html = renderToStaticMarkup(<HomePageContent blocks={blocks} />);
 
-    expect(html).toContain("/media/");
+    expect(html).toContain("secure.notion-static.com");
     expect(html).toContain('alt="Generic image"');
     expect(html).not.toContain('width="1600"');
     expect(html).not.toContain('height="900"');

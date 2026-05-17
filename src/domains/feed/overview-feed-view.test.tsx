@@ -65,7 +65,7 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain("px-[1.15rem]");
     expect(markup).not.toContain("badge--soft");
     expect(markup).toContain('href="/articles/one"');
-    expect(markup).toContain('src="https://example.com/article-cover.jpg?width=');
+    expect(markup).toContain("https%3A%2F%2Fexample.com%2Farticle-cover.jpg");
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain('data-size="standard"');
     expect(markup).not.toContain('data-size="compact"');
@@ -168,8 +168,8 @@ describe("OverviewFeed", () => {
       />,
     );
 
-    expect(markup).toContain('src="https://example.com/photo-1.jpg?width=');
-    expect(markup).toContain('src="https://example.com/photo-2.jpg?width=');
+    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-1.jpg");
+    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-2.jpg");
     expect(markup).toContain("grid-cols-2");
   });
 

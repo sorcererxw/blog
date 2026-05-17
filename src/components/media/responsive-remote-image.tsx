@@ -1,6 +1,5 @@
 import NextImage from "next/image";
 
-import cloudflareImageLoader from "../../../image-loader";
 import {
   getDefaultImageSizes,
   getCloudflareImagePreset,
@@ -40,7 +39,6 @@ export function ResponsiveRemoteImage({
       className={className}
       fetchPriority={fetchPriority}
       height={imageHeight}
-      loader={cloudflareImageLoader}
       loading={loading ?? (fetchPriority === "high" ? "eager" : "lazy")}
       sizes={sizes ?? getDefaultImageSizes(preset)}
       src={src}

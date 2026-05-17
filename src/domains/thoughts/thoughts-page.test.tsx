@@ -64,7 +64,7 @@ describe("ThoughtsPage", () => {
     expect(markup).toContain('href="https://t.me/s/tech_bb/5"');
     expect(markup).toContain("Forwarded from Forward Source");
     expect(markup).toContain("Preview title");
-    expect(markup).toContain("/media/");
+    expect(markup).toContain("cdn5.telesco.pe");
     expect(markup).toContain('href="#1_5"');
   });
 
