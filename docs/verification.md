@@ -1,5 +1,24 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Feed Card Link Priority State
+
+Current feed card link shape:
+
+- Any Overview Feed item with a non-`none` destination renders a whole-card outer link.
+- Telegram rich-text URLs remain real nested anchors inside that whole-card link.
+- Items with `destination.kind === "none"` still render without a card link.
+
+Current evidence:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `113` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm typecheck`: PASS after `pnpm build`.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3279`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-feed-two-layer-links.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3279/ && rg -n 'class="block text-inherit no-underline" href="https://t\.me/s/tech_bb/[0-9]+"|class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https?://' /tmp/blog-feed-two-layer-links.html | head -40`: PASS, returned `200 text/html; charset=utf-8` and showed Telegram whole-card permalinks plus nested rich-text anchors in the rendered HTML.
+- `git diff --check`: PASS.
+- Browser click verification was not run; HTML-level production verification covered the SEO-visible anchor structure for this slice.
+
 ## 2026-05-18 Header Theme Toggle State
 
 Current theme toggle shape:

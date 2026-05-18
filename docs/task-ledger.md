@@ -16,6 +16,40 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Feed Card Outer Link Priority
+
+Status: done locally
+
+Summary:
+
+- changed Overview Feed card linking so any item with a destination keeps the whole-card outer link
+- stopped disabling the outer card link for Telegram posts that contain inline rich-text links
+- kept inline rich-text URLs as real anchors inside the card so both the Telegram permalink and embedded URLs remain crawlable
+- added a regression assertion that a Telegram card permalink wraps content before the inline rich-text link appears
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- prioritize whole-card permalink behavior and SEO-visible anchors over avoiding nested anchors in this feed card case
+- only keep non-clickable rendering for items whose destination is `kind: "none"`
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `113` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm typecheck`: PASS after `pnpm build`.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3279`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-feed-two-layer-links.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3279/ && rg -n 'class="block text-inherit no-underline" href="https://t\.me/s/tech_bb/[0-9]+"|class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https?://' /tmp/blog-feed-two-layer-links.html | head -40`: PASS, returned `200 text/html; charset=utf-8` and showed Telegram whole-card permalinks plus nested rich-text anchors in the rendered HTML.
+- `git diff --check`: PASS.
+- Browser click verification was not run; HTML-level production verification covered the SEO-visible anchor structure for this slice.
+
 ## 2026-05-18 - Header Light Dark Theme Toggle
 
 Status: done locally

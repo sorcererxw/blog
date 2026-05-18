@@ -193,10 +193,6 @@ function FeedText({ item }: { item: OverviewFeedViewItem }) {
   ) : null;
 }
 
-function hasInlineLinks(item: OverviewFeedViewItem) {
-  return item.summaryRichText?.some((segment) => segment.url) ?? false;
-}
-
 function MediaGrid({
   eager,
   item,
@@ -333,8 +329,7 @@ function FeedModule({
   item: OverviewFeedViewItem;
 }) {
   const moduleSize = getFeedModuleSize(item);
-  const shouldUseOuterLink =
-    item.destination.kind !== "none" && !hasInlineLinks(item);
+  const shouldUseOuterLink = item.destination.kind !== "none";
   const surface = (
     <Card
       className="block gap-0 overflow-hidden border border-separator px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"

@@ -179,6 +179,9 @@ describe("OverviewFeed", () => {
     expect(markup).toMatch(
       /<a class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https:\/\/example\.com\/rich"/,
     );
+    expect(markup).toMatch(
+      /<a class="block text-inherit no-underline"[^>]+href="https:\/\/t\.me\/s\/example\/1"[\s\S]+<a class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https:\/\/example\.com\/rich"/,
+    );
     expect(markup).toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain("Telegram");
     expect(markup.indexOf("Telegram ")).toBeLessThan(markup.indexOf("May 1, 2026"));
