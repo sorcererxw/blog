@@ -16,6 +16,45 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Brand Favicon Metadata
+
+Status: done locally
+
+Summary:
+
+- wired the existing `/favicon.svg` brand icon into the shared route SEO metadata
+- added a regression test so generated route metadata keeps `rel="icon"` and `rel="shortcut icon"` pointed at the SVG brand asset
+
+Files:
+
+- `src/app/seo.tsx`
+- `src/app/seo.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- keep the favicon source as the existing SVG brand asset instead of introducing a second icon file in this slice
+- attach favicon metadata in `seoToMetadata` so homepage, article detail, and boundary pages share the same icon contract
+
+Verification:
+
+- `pnpm test -- src/app/seo.test.tsx src/domains/seo/build-seo.test.ts`: PASS, Vitest config ran the full suite (`35` files, `115` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec next start --hostname 127.0.0.1 -p 3250`: PASS, local production server started at `http://127.0.0.1:3250`
+- `curl --max-time 90 -s -o /tmp/blog-favicon-home-3250.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3250/ && rg -n 'rel="(icon|shortcut icon)"|href="/favicon.svg"|favicon' /tmp/blog-favicon-home-3250.html`: PASS, homepage head included `/favicon.svg` as both `shortcut icon` and `icon`
+- `curl --max-time 20 -s -I http://127.0.0.1:3250/favicon.svg`: PASS, returned `200 OK` with `Content-Type: image/svg+xml`
+- Browser verification at `http://127.0.0.1:3250/`: PASS, document head exposed both favicon links, header logo still rendered from `/favicon.svg`, and the homepage rendered normally
+
+Follow-up:
+
+- add a PNG or ICO fallback only if a target browser or deploy environment still ignores the SVG favicon link
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Tailwind Arbitrary Token Lint Guard
 
 Status: done locally, pending deploy verification

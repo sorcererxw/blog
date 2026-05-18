@@ -8,6 +8,20 @@ export function seoToMetadata(seo: SeoDocument): Metadata {
       canonical: seo.canonicalUrl,
     },
     description: seo.description,
+    icons: {
+      icon: [
+        {
+          type: "image/svg+xml",
+          url: "/favicon.svg",
+        },
+      ],
+      shortcut: [
+        {
+          type: "image/svg+xml",
+          url: "/favicon.svg",
+        },
+      ],
+    },
     openGraph: {
       description: seo.openGraph.description,
       images: seo.openGraph.image

@@ -1,5 +1,22 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Brand Favicon State
+
+Current favicon shape:
+
+- route metadata produced through `src/app/seo.tsx` emits `/favicon.svg` as both `rel="shortcut icon"` and `rel="icon"`
+- the header brand image continues to use the same `/favicon.svg` asset
+
+Current evidence:
+
+- `pnpm test -- src/app/seo.test.tsx src/domains/seo/build-seo.test.ts`: PASS, Vitest config ran the full suite (`35` files, `115` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `curl --max-time 90 -s -o /tmp/blog-favicon-home-3250.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3250/ && rg -n 'rel="(icon|shortcut icon)"|href="/favicon.svg"|favicon' /tmp/blog-favicon-home-3250.html`: PASS, homepage head included `/favicon.svg` as both favicon links
+- `curl --max-time 20 -s -I http://127.0.0.1:3250/favicon.svg`: PASS, returned `200 OK` with `Content-Type: image/svg+xml`
+- Browser verification at `http://127.0.0.1:3250/`: PASS, document head exposed both favicon links, header logo still rendered from `/favicon.svg`, and the homepage rendered normally
+
 ## 2026-05-18 Tailwind Token Lint State
 
 Current styling guardrail:
