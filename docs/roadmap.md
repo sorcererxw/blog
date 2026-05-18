@@ -133,7 +133,7 @@ Exit criteria:
 
 ### M3: Secondary Public Features
 
-Status: In progress, with Telegram public-page runtime ingestion and the narrow search-native SEO wedge implemented locally and pending deploy verification
+Status: In progress, with Telegram public-page runtime ingestion and sitewide SEO/GEO discovery hygiene implemented locally and pending deploy verification
 
 Goals:
 
@@ -142,6 +142,7 @@ Goals:
 - add image metadata support
 - restore required SEO, comments, and route compatibility details
 - land the approved search-native SEO slice with one narrow engineer-facing query wedge before any broader content-taxonomy expansion
+- keep current Personal Site discovery explicit for search crawlers and AI answer engines through structured data, robots, sitemap, and `llms.txt`
 
 Exit criteria:
 
@@ -184,6 +185,7 @@ Exit criteria:
 - feed UI primitives should come from the local shadcn component set, not HeroUI
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
 - ordinary component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions
+- current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
 
 ## Active Priorities
 

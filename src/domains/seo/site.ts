@@ -6,6 +6,11 @@ export const SITE_NAME = "sorcererxw'blog";
 export const SITE_AUTHOR_NAME = "sorcererxw";
 export const DEFAULT_SITE_ORIGIN = "https://sorcererxw.com";
 export const DEFAULT_SOCIAL_IMAGE_PATH = "/favicon.svg";
+export const SITE_EXTERNAL_PROFILES = [
+  "https://github.com/sorcererxw",
+  "https://jike.sorcererxw.com",
+  "https://t.me/s/tech_bb",
+] as const;
 
 function stripTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -48,6 +53,7 @@ export function getDefaultAuthor() {
   return {
     "@type": "Person" as const,
     name: SITE_AUTHOR_NAME,
+    sameAs: [...SITE_EXTERNAL_PROFILES],
     url: getSiteOrigin(),
   };
 }

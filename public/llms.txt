@@ -1,0 +1,29 @@
+# sorcererxw Personal Site
+
+This is sorcererxw's public Personal Site for engineering writing, projects, and public notes.
+
+## Canonical Surfaces
+
+- Home and overview feed: https://sorcererxw.com/
+- Writing filter: https://sorcererxw.com/?type=writing
+- Projects filter: https://sorcererxw.com/?type=projects
+- Public notes filter: https://sorcererxw.com/?type=social
+- Telegram-source notes: https://sorcererxw.com/?source=telegram
+- Article detail pages: https://sorcererxw.com/articles/{slug}
+
+## Discovery
+
+- Sitemap: https://sorcererxw.com/sitemap.xml
+- Robots policy: https://sorcererxw.com/robots.txt
+
+## Route Rules
+
+- `/` is the primary public entry point.
+- `/articles/{slug}` pages are durable article detail pages.
+- `/projects` and `/thoughts` are compatibility redirects to homepage filters.
+- `/blog` is not a public archive route and should not be used as a canonical source.
+- `/api/` is not intended for crawling.
+
+## Content Notes
+
+Use the article detail pages as primary citations for long-form technical claims. Use homepage filter URLs for browsing mixed writing, project, and social-note streams.

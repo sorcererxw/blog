@@ -1,5 +1,34 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Sitewide SEO/GEO State
+
+Current route shape:
+
+- `/` emits `WebSite`, `Person`, `CollectionPage`, and capped `ItemList` JSON-LD for the Personal Site overview.
+- `Person` and website publisher structured data include the public GitHub, Jike, and Telegram identity links.
+- `/sitemap.xml` remains runtime-generated and lists `/` plus article detail URLs only; article entries include Notion article dates as `<lastmod>`.
+- `public/robots.txt` keeps `/api/` disallowed and explicitly names common AI crawlers with the same policy.
+- `public/llms.txt` provides a concise AI-readable guide to canonical surfaces and route rules.
+- SEO/GEO route checks are recorded as direct HTTP metadata and JSON-LD inspection commands instead of a persistent repo script.
+
+Current evidence:
+
+- `pnpm test -- src/domains/seo/build-structured-data.test.ts src/domains/seo/build-seo.test.ts src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm test -- src/domains/seo/build-structured-data.test.ts src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3241`: PASS
+- `curl --max-time 90 -s -o /tmp/blog-seo-home-3241.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/` plus JSON-LD parsing: PASS, returned `200 text/html; charset=utf-8`, JSON-LD types were `WebSite`, `Person`, `CollectionPage`, and `ItemList`, `ItemList` length was `50`, and `sameAs` listed GitHub, Jike, and Telegram.
+- `curl --max-time 20 -s -o /tmp/blog-seo-robots-3241.txt -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/robots.txt && rg -n 'GPTBot|ChatGPT-User|ClaudeBot|anthropic-ai|PerplexityBot|CCBot|Sitemap:' /tmp/blog-seo-robots-3241.txt`: PASS
+- `curl --max-time 20 -s -o /tmp/blog-llms-3241.txt -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/llms.txt && rg -n 'Canonical Surfaces|sitemap.xml|robots.txt|/blog|/api/' /tmp/blog-llms-3241.txt`: PASS
+- `curl --max-time 90 -s -o /tmp/blog-sitemap-3241.xml -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/sitemap.xml && rg -n '<loc>|<lastmod>' /tmp/blog-sitemap-3241.xml`: PASS, returned `200 application/xml; charset=utf-8` with article `<lastmod>` values.
+- `! rg -n '/blog|/projects|/thoughts|/topics|\?type=' /tmp/blog-sitemap-3241.xml && echo 'sitemap exclusions PASS'`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-boundary-3241.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/blog`: PASS, returned `404 text/html; charset=utf-8` with `noindex` robots and not-found content.
+- Direct metadata checks for `/`, `/?type=writing`, `/?type=projects`, `/?source=telegram`, `/blog`, and `/articles/stop-migrate-nextjs-to-astro`: PASS, homepage filter states canonicalized to `/`, `/blog` returned `404` with `noindex`, and the article detail exposed canonical indexable metadata.
+- Browser verification at `http://127.0.0.1:3241/`: PASS, rendered homepage and Overview Feed, JSON-LD types matched the HTTP parse, ItemList length was `50`, no horizontal overflow, and no console errors; screenshot saved to `/tmp/blog-sitewide-seo-home.png`.
+
 ## 2026-05-17 Sitemap Runtime Build Guard State
 
 Current route shape:
@@ -638,7 +667,7 @@ Recommended implementation evidence set for this slice:
 - `curl --max-time 20 -s <sitemap-route>`
 - `curl --max-time 20 -s <robots-route>`
 - browser verification for one article page and the query-entry page
-- run the snippet-preview command and record the output summary in `docs/task-ledger.md`
+- inspect route metadata directly with `curl` and record the output summary in `docs/task-ledger.md`
 
 ## 2026-04-15 Search-Native SEO Implementation Verification
 
@@ -658,7 +687,7 @@ Minimum evidence for this implementation slice:
 - browser verification for:
   - `/blog`
   - `/topics/astro-cloudflare-publishing`
-- run `pnpm --dir web/apps/blog2 run seo:preview` against the local preview server and record whether any route is still flagged with `weakCopy`
+- inspect route metadata directly with `curl` against the local preview server and record title, description, canonical, robots, and JSON-LD outcomes
 - `pnpm --dir web --filter blog2 exec astro preview --host 127.0.0.1 --port <port>`
 - `curl --max-time 20 -L -s http://127.0.0.1:<port>/ | rg -n "/cdn-cgi/image/"`
 - `curl --max-time 20 -L -s http://127.0.0.1:<port>/blog | rg -n "/cdn-cgi/image/"`

@@ -15,7 +15,6 @@
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
-    "seo:preview": "node ./scripts/seo-preview.mjs",
     "cf-typegen": "wrangler types cloudflare-env.d.ts --env-interface CloudflareEnv --include-runtime false",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests --config vitest.config.ts",

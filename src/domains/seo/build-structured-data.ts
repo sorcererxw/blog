@@ -1,4 +1,10 @@
-import { buildAbsoluteUrl, getDefaultAuthor, SITE_AUTHOR_NAME, SITE_NAME } from "./site";
+import {
+  buildAbsoluteUrl,
+  getDefaultAuthor,
+  SITE_AUTHOR_NAME,
+  SITE_EXTERNAL_PROFILES,
+  SITE_NAME,
+} from "./site";
 
 import type { SeoImage, StructuredData } from "./model";
 
@@ -54,6 +60,7 @@ export function buildWebsiteStructuredData(description: string): StructuredData 
     name: SITE_NAME,
     url: buildAbsoluteUrl("/"),
     description,
+    publisher: getDefaultAuthor(),
   });
 }
 
@@ -64,6 +71,7 @@ export function buildPersonStructuredData(description: string): StructuredData {
     name: SITE_AUTHOR_NAME,
     url: buildAbsoluteUrl("/"),
     description,
+    sameAs: [...SITE_EXTERNAL_PROFILES],
   });
 }
 

@@ -6,6 +6,11 @@ import { createBlogArticleSource } from "@/integrations/notion/articles";
 export const dynamic = "force-dynamic";
 export const revalidate = 600;
 
+type SitemapUrl = {
+  lastmod?: string;
+  loc: string;
+};
+
 function escapeXml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -21,9 +26,12 @@ export async function GET() {
     cache: articleListMemoryCache,
   });
 
-  const urls = [
-    buildAbsoluteUrl("/"),
-    ...articles.map((item) => buildAbsoluteUrl(`/articles/${item.slug}`)),
+  const urls: SitemapUrl[] = [
+    { loc: buildAbsoluteUrl("/") },
+    ...articles.map((item) => ({
+      lastmod: item.date.toISOString(),
+      loc: buildAbsoluteUrl(`/articles/${item.slug}`),
+    })),
   ];
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>
@@ -31,7 +39,8 @@ export async function GET() {
 ${urls
   .map(
     (url) => `  <url>
-    <loc>${escapeXml(url)}</loc>
+    <loc>${escapeXml(url.loc)}</loc>${url.lastmod ? `
+    <lastmod>${escapeXml(url.lastmod)}</lastmod>` : ""}
   </url>`,
   )
   .join("\n")}

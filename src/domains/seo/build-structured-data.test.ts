@@ -15,6 +15,10 @@ describe("build-structured-data", () => {
       "@type": "WebSite",
       description: "Site description",
       name: "sorcererxw'blog",
+      publisher: {
+        "@type": "Person",
+        name: "sorcererxw",
+      },
     });
 
     expect(buildPersonStructuredData("Author description")).toMatchObject({
@@ -22,6 +26,11 @@ describe("build-structured-data", () => {
       "@type": "Person",
       description: "Author description",
       name: "sorcererxw",
+      sameAs: [
+        "https://github.com/sorcererxw",
+        "https://jike.sorcererxw.com",
+        "https://t.me/s/tech_bb",
+      ],
     });
   });
 

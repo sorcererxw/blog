@@ -9,6 +9,7 @@ import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-seriali
 import { OverviewFeed } from "@/domains/feed/overview-feed-view";
 import { ProfileHero } from "@/domains/home/profile-hero";
 import {
+  buildCollectionPageStructuredData,
   buildPersonStructuredData,
   buildWebsiteStructuredData,
 } from "@/domains/seo/build-structured-data";
@@ -61,6 +62,25 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     description === "sorcererxw blog"
       ? "A personal site overview with writing, projects, and public notes from sorcererxw."
       : description;
+  const overviewFeedItems = buildOverviewFeedIndex({
+    articles,
+    projects,
+    thoughts,
+  });
+  const feedStructuredDataItems = overviewFeedItems
+    .flatMap((item) => {
+      if (item.destination.kind === "none") {
+        return [];
+      }
+
+      return [
+        {
+          name: item.title,
+          url: item.destination.href,
+        },
+      ];
+    })
+    .slice(0, 50);
   const seo = buildSeo({
     description: seoDescription,
     kind: "home",
@@ -68,18 +88,18 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     structuredData: [
       buildWebsiteStructuredData(seoDescription),
       buildPersonStructuredData(seoDescription),
+      ...buildCollectionPageStructuredData({
+        description: seoDescription,
+        items: feedStructuredDataItems,
+        pathname: "/",
+        title: "Personal Site overview feed",
+      }),
     ],
     title: "Engineering notes on Astro, Cloudflare, Notion, and systems",
   });
 
   return {
-    feedItems: serializeOverviewFeedItems(
-      buildOverviewFeedIndex({
-        articles,
-        projects,
-        thoughts,
-      }),
-    ),
+    feedItems: serializeOverviewFeedItems(overviewFeedItems),
     filter: parseFeedFilter(url),
     homePage,
     seo,

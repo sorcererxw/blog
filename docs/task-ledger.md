@@ -16,6 +16,70 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Sitewide SEO/GEO Discovery Hygiene
+
+Status: done locally, pending deploy verification
+
+Summary:
+
+- added a narrow sitewide SEO/GEO spec and implementation plan for the current Personal Site route model
+- expanded homepage structured data from `WebSite` and `Person` only to include `CollectionPage` and a capped 50-entry `ItemList` generated from the normalized Overview Feed Index
+- added public identity `sameAs` links to Person and website publisher structured data
+- made `robots.txt` explicitly list common AI crawlers while preserving the `/api/` disallow rule
+- added a static `llms.txt` guide for AI-oriented discovery
+- added article `<lastmod>` values to the runtime sitemap without adding removed archive/filter routes
+- removed the temporary `seo:preview` script path and kept active route SEO checks as direct HTTP metadata and JSON-LD verification
+
+Files:
+
+- `docs/specs/2026-05-18-sitewide-seo-geo-design.md`
+- `docs/plans/2026-05-18-sitewide-seo-geo.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+- `public/robots.txt`
+- `public/llms.txt`
+- `src/app/page.tsx`
+- `src/app/sitemap.xml/route.ts`
+- `src/app/sitemap.xml/route.test.ts`
+- `src/domains/seo/build-structured-data.ts`
+- `src/domains/seo/build-structured-data.test.ts`
+- `src/domains/seo/site.ts`
+
+Decisions:
+
+- Filter URLs are useful browse states but still canonicalize to `/` and stay out of the sitemap.
+- The homepage ItemList should be representative rather than mirroring the full feed, so it is capped at 50 destination-backed items.
+- `/blog` is a valid 404/noindex boundary in direct metadata checks, not a weak-copy failure.
+- `llms.txt` is static guidance and does not create a new product route or storage dependency.
+- Roadmap impact: M3 remains in progress; this completes local SEO/GEO discovery hygiene pending deploy verification.
+
+Verification:
+
+- `pnpm test -- src/domains/seo/build-structured-data.test.ts src/domains/seo/build-seo.test.ts src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm test -- src/domains/seo/build-structured-data.test.ts src/app/sitemap.xml/route.test.ts`: PASS, Vitest config ran the full suite (`32` files, `108` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3241`: PASS
+- `curl --max-time 90 -s -o /tmp/blog-seo-home-3241.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/` plus JSON-LD parsing: PASS, returned `200 text/html; charset=utf-8`, JSON-LD types were `WebSite`, `Person`, `CollectionPage`, and `ItemList`, `ItemList` length was `50`, and `sameAs` listed GitHub, Jike, and Telegram.
+- `curl --max-time 20 -s -o /tmp/blog-seo-robots-3241.txt -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/robots.txt && rg -n 'GPTBot|ChatGPT-User|ClaudeBot|anthropic-ai|PerplexityBot|CCBot|Sitemap:' /tmp/blog-seo-robots-3241.txt`: PASS
+- `curl --max-time 20 -s -o /tmp/blog-llms-3241.txt -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/llms.txt && rg -n 'Canonical Surfaces|sitemap.xml|robots.txt|/blog|/api/' /tmp/blog-llms-3241.txt`: PASS
+- `curl --max-time 90 -s -o /tmp/blog-sitemap-3241.xml -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/sitemap.xml && rg -n '<loc>|<lastmod>' /tmp/blog-sitemap-3241.xml`: PASS, returned `200 application/xml; charset=utf-8` with article `<lastmod>` values.
+- `! rg -n '/blog|/projects|/thoughts|/topics|\?type=' /tmp/blog-sitemap-3241.xml && echo 'sitemap exclusions PASS'`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-boundary-3241.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3241/blog`: PASS, returned `404 text/html; charset=utf-8` with `noindex` robots and not-found content.
+- Direct metadata checks for `/`, `/?type=writing`, `/?type=projects`, `/?source=telegram`, `/blog`, and `/articles/stop-migrate-nextjs-to-astro`: PASS, homepage filter states canonicalized to `/`, `/blog` returned `404` with `noindex`, and the article detail exposed canonical indexable metadata.
+- Browser verification at `http://127.0.0.1:3241/`: PASS, rendered homepage and Overview Feed, JSON-LD types matched the HTTP parse, ItemList length was `50`, no horizontal overflow, and no console errors; screenshot saved to `/tmp/blog-sitewide-seo-home.png`.
+
+Follow-up:
+
+- Run deploy verification for `/`, `/robots.txt`, `/llms.txt`, `/sitemap.xml`, and one article after this slice is deployed.
+
+Blockers:
+
+- none
+
 ## 2026-05-17 - Article Detail Next Image Loader 500
 
 Status: done
