@@ -11,6 +11,7 @@ The product direction is now overview-first: one public homepage with a Profile 
 - `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md` supersedes the Astro runtime direction and makes OpenNext + Next.js the active platform target
 - the rebuild keeps the Personal Site product model from `docs/specs/2026-05-12-personal-site-overview-design.md`
 - `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md` replaces the checked-in Telegram snapshot flow with runtime public-page crawling plus Next revalidation
+- `docs/specs/2026-05-18-provider-kv-cache-design.md` keeps external provider caching at the route assembly boundary through thin `BLOG_CACHE` wrappers instead of embedding cache policy inside Notion or Telegram providers
 - repository extraction from `tempura/web/apps/blog2` to standalone `/Users/sorcererxw/repo/sorcererxw/blog` happened on 2026-05-04 with `blog2` history preserved
 - the previous Astro migration remains historical context, not the target architecture
 
@@ -51,6 +52,7 @@ Excluded:
 - Source of truth for Blog Entries and Projects: Notion through Wrangler-owned database id vars unless a later source-specific spec changes this
 - Source of truth for Social Posts: their external Social Sources; Telegram currently uses public `t.me/s/tech_bb` pages
 - App-owned derived storage: Cloudflare KV or the existing storage abstraction
+- Public route provider acceleration: Cloudflare KV wraps external providers at assembly time with a ten minute TTL
 - Overview Feed Index freshness target: ten minutes
 - Telegram public-page crawl freshness target: ten minutes through Next fetch revalidation
 - Future escape hatch: optional partial migration to D1 if KV-only storage becomes too awkward for async workflows

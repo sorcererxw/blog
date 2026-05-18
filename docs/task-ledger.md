@@ -16,6 +16,65 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Provider KV Cache Wrappers
+
+Status: done locally, pending deploy verification
+
+Summary:
+
+- added a narrow provider KV cache design and implementation plan
+- introduced a shared provider cache helper with no-op, memory, and `BLOG_CACHE` implementations
+- added thin outer wrappers for Notion home, article list, project list, article detail, stack, and Telegram thoughts providers
+- wired homepage, article detail, sitemap, and the legacy `ThoughtsPage` component through the provider wrappers
+- removed route assembly use of per-request/project memory caches in favor of one provider wrapper boundary
+
+Files:
+
+- `docs/specs/2026-05-18-provider-kv-cache-design.md`
+- `docs/plans/2026-05-18-provider-kv-cache.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+- `src/integrations/kv/provider-cache.ts`
+- `src/integrations/kv/provider-cache.test.ts`
+- `src/integrations/kv/provider-wrappers.ts`
+- `src/integrations/kv/provider-wrappers.test.ts`
+- `src/app/page.tsx`
+- `src/app/articles/[slug]/page.tsx`
+- `src/app/sitemap.xml/route.ts`
+- `src/domains/thoughts/thoughts-page.tsx`
+
+Decisions:
+
+- cache policy lives at route/provider assembly, not inside Notion or Telegram provider internals
+- provider cache TTL is `600` seconds to match the current public route freshness target
+- malformed cache JSON is treated as a miss; the wrapper does not add stale-on-error behavior in this slice
+- cached provider JSON revives `Date` values so domain sorting and rendering keep the same shape
+
+Verification:
+
+- `pnpm test -- src/integrations/kv/provider-cache.test.ts src/integrations/kv/provider-wrappers.test.ts`: PASS, Vitest config ran the full suite (`34` files, `114` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3252`: PASS
+- `curl --max-time 120 -s -o /tmp/blog-provider-cache-home-cold.html -w 'home-cold http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/ && curl --max-time 120 -s -o /tmp/blog-provider-cache-home-warm.html -w 'home-warm http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/`: PASS, returned `200`; local timings were `0.466s` then `0.062s`
+- `curl --max-time 120 -s -o /tmp/blog-provider-cache-writing.html -w 'writing http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' 'http://127.0.0.1:3252/?type=writing'`: PASS, returned `200` in `0.464s`
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-sitemap.xml -w 'sitemap http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/sitemap.xml`: PASS, returned `200` in `0.326s`
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-article.html -w 'article http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/articles/stop-migrate-nextjs-to-astro`: PASS, returned `200` in `2.690s`
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-article-warm.html -w 'article-warm http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/articles/stop-migrate-nextjs-to-astro`: PASS, returned `200` in `0.014s`
+- Browser verification was not run because this slice changed server/provider assembly only and did not change rendered UI behavior.
+
+Follow-up:
+
+- deploy and compare production cold/warm route timings after Cloudflare KV is populated
+- consider a separate overview-index truncation or pagination slice if the remaining large homepage HTML remains the next bottleneck
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Sitewide SEO/GEO Discovery Hygiene
 
 Status: done locally, pending deploy verification

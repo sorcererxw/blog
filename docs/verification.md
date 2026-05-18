@@ -1,5 +1,30 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Provider KV Cache State
+
+Current provider cache shape:
+
+- Public route assembly wraps external providers with `BLOG_CACHE` provider wrappers.
+- Notion home, article list, project list, article detail, stack, and Telegram thoughts wrappers use explicit provider cache keys.
+- Provider wrappers use a `600` second TTL and revive cached `Date` values from JSON.
+- Provider internals remain responsible only for source fetch and normalization; they do not own KV policy.
+- Missing `BLOG_CACHE` falls back to direct provider calls.
+
+Current evidence:
+
+- `pnpm test -- src/integrations/kv/provider-cache.test.ts src/integrations/kv/provider-wrappers.test.ts`: PASS, Vitest config ran the full suite (`34` files, `114` tests).
+- `pnpm typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, worker saved to `.open-next/worker.js`; existing non-fatal copy logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information` remain.
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3252`: PASS.
+- `curl --max-time 120 -s -o /tmp/blog-provider-cache-home-cold.html -w 'home-cold http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/ && curl --max-time 120 -s -o /tmp/blog-provider-cache-home-warm.html -w 'home-warm http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/`: PASS, returned `200`; measured `0.466s` then `0.062s` locally.
+- `curl --max-time 120 -s -o /tmp/blog-provider-cache-writing.html -w 'writing http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' 'http://127.0.0.1:3252/?type=writing'`: PASS, returned `200` in `0.464s` locally.
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-sitemap.xml -w 'sitemap http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/sitemap.xml`: PASS, returned `200` in `0.326s` locally.
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-article.html -w 'article http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/articles/stop-migrate-nextjs-to-astro`: PASS, returned `200` in `2.690s` locally.
+- `curl --max-time 60 -s -o /tmp/blog-provider-cache-article-warm.html -w 'article-warm http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3252/articles/stop-migrate-nextjs-to-astro`: PASS, returned `200` in `0.014s` locally.
+- Browser verification: not run for this slice because no user-visible UI behavior changed; route behavior was checked with HTTP requests.
+
 ## 2026-05-18 Sitewide SEO/GEO State
 
 Current route shape:

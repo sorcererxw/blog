@@ -14,6 +14,10 @@ import {
 import { MasonryFeed } from "@/domains/feed/masonry-feed";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import { listThoughts } from "@/domains/thoughts/list-thoughts";
+import {
+  createPublicProviderCache,
+  withCachedThoughtProvider,
+} from "@/integrations/kv/provider-wrappers";
 import type { ThoughtListItem, ThoughtRichTextSegment } from "@/domains/thoughts/types";
 import { cn } from "@/lib/utils";
 
@@ -299,7 +303,9 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
 }
 
 export async function ThoughtsPage() {
-  const items = await listThoughts();
+  const providerCache = await createPublicProviderCache();
+  const cachedListThoughts = withCachedThoughtProvider(listThoughts, providerCache);
+  const items = await cachedListThoughts();
 
   return (
     <section className="mx-auto w-[min(100%-2.5rem,66rem)] space-y-6">

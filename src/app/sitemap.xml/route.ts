@@ -1,6 +1,9 @@
 import { buildAbsoluteUrl } from "@/domains/seo/site";
 import { listArticles } from "@/domains/article/list-articles";
-import { articleListMemoryCache } from "@/integrations/kv/article-cache";
+import {
+  createPublicProviderCache,
+  withCachedArticleSource,
+} from "@/integrations/kv/provider-wrappers";
 import { createBlogArticleSource } from "@/integrations/notion/articles";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +24,9 @@ function escapeXml(value: string) {
 }
 
 export async function GET() {
+  const providerCache = await createPublicProviderCache();
   const articles = await listArticles({
-    source: createBlogArticleSource(),
-    cache: articleListMemoryCache,
+    source: withCachedArticleSource(createBlogArticleSource(), providerCache),
   });
 
   const urls: SitemapUrl[] = [

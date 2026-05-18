@@ -8,7 +8,10 @@ import {
   buildTechArticleStructuredData,
 } from "@/domains/seo/build-structured-data";
 import { buildSeo } from "@/domains/seo/build-seo";
-import { articleDetailMemoryCache } from "@/integrations/kv/article-detail-cache";
+import {
+  createPublicProviderCache,
+  withCachedArticleDetailSource,
+} from "@/integrations/kv/provider-wrappers";
 import { createNotionArticleDetailSource } from "@/integrations/notion/article-detail";
 
 import { seoToMetadata, StructuredDataScripts } from "../../seo";
@@ -18,9 +21,13 @@ export const revalidate = 600;
 type ArticleParams = Promise<{ slug: string }>;
 
 async function loadArticle(slug: string) {
+  const providerCache = await createPublicProviderCache();
+
   return getArticleBySlug({
-    source: createNotionArticleDetailSource(),
-    cache: articleDetailMemoryCache,
+    source: withCachedArticleDetailSource(
+      createNotionArticleDetailSource(),
+      providerCache,
+    ),
     slug,
   });
 }

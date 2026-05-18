@@ -16,8 +16,13 @@ import {
 import { buildSeo } from "@/domains/seo/build-seo";
 import { listProjects } from "@/domains/projects/list-projects";
 import { listThoughts } from "@/domains/thoughts/list-thoughts";
-import { articleListMemoryCache } from "@/integrations/kv/article-cache";
-import { createMemoryProjectListCache } from "@/integrations/kv/projects-cache";
+import {
+  createPublicProviderCache,
+  withCachedArticleSource,
+  withCachedHomeSource,
+  withCachedProjectSource,
+  withCachedThoughtProvider,
+} from "@/integrations/kv/provider-wrappers";
 import { createBlogArticleSource } from "@/integrations/notion/articles";
 import {
   createNotionHomeSource,
@@ -36,18 +41,22 @@ export const revalidate = 600;
 type HomeSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 async function loadHomeData(searchParams?: Record<string, string | string[] | undefined>) {
-  const homeSource = createNotionHomeSource(loadNotionHomePage);
+  const providerCache = await createPublicProviderCache();
+  const homeSource = withCachedHomeSource(
+    createNotionHomeSource(loadNotionHomePage),
+    providerCache,
+  );
+  const articleSource = withCachedArticleSource(createBlogArticleSource(), providerCache);
+  const projectSource = withCachedProjectSource(
+    createNotionProjectSource(listProjectsFromNotion),
+    providerCache,
+  );
+  const thoughtProvider = withCachedThoughtProvider(listThoughts, providerCache);
   const [homePage, articles, projects, thoughts] = await Promise.all([
     homeSource.loadHomePage(),
-    listArticles({
-      source: createBlogArticleSource(),
-      cache: articleListMemoryCache,
-    }),
-    listProjects({
-      source: createNotionProjectSource(listProjectsFromNotion),
-      cache: createMemoryProjectListCache(),
-    }),
-    listThoughts(),
+    listArticles({ source: articleSource }),
+    listProjects({ source: projectSource }),
+    thoughtProvider(),
   ]);
   const url = new URL("https://sorcererxw.com/");
 
