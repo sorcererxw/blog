@@ -14,6 +14,8 @@
 }
 
 .cell {
+  contain-intrinsic-size: 24rem;
+  content-visibility: auto;
   transition: opacity 180ms ease;
 }
 

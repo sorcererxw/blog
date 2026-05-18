@@ -58,6 +58,10 @@ const filterLinks = [
   { href: "/?source=telegram", key: "telegram", label: "Telegram", matches: (filter: FeedFilter) => filter.source === "telegram" },
 ];
 
+function getEagerMediaLimit(filter: FeedFilter) {
+  return filter.type ? 3 : 2;
+}
+
 function normalizeFilter(filter: FeedFilter): FeedFilter {
   return {
     source: filter.source || null,
@@ -179,7 +183,13 @@ function hasInlineLinks(item: OverviewFeedViewItem) {
   return item.summaryRichText?.some((segment) => segment.url) ?? false;
 }
 
-function MediaGrid({ item }: { item: OverviewFeedViewItem }) {
+function MediaGrid({
+  eager,
+  item,
+}: {
+  eager: boolean;
+  item: OverviewFeedViewItem;
+}) {
   if (item.media.length === 0) {
     return null;
   }
@@ -192,9 +202,10 @@ function MediaGrid({ item }: { item: OverviewFeedViewItem }) {
         <ResponsiveRemoteImage
           alt={media.alt}
           className="h-full w-full object-cover"
+          fetchPriority={eager ? "high" : undefined}
           height={media.height ?? 720}
           preset={item.source === "telegram" ? "thought-photo" : "article-card"}
-          loading="lazy"
+          loading={eager ? "eager" : "lazy"}
           src={media.src}
           width={media.width ?? 1280}
         />
@@ -215,9 +226,10 @@ function MediaGrid({ item }: { item: OverviewFeedViewItem }) {
           <ResponsiveRemoteImage
             alt={media.alt}
             className="h-full w-full object-cover"
+            fetchPriority={eager && index === 0 ? "high" : undefined}
             height={media.height ?? 720}
             preset={item.source === "telegram" ? "thought-photo" : "article-card"}
-            loading="lazy"
+            loading={eager && index === 0 ? "eager" : "lazy"}
             src={media.src}
             width={media.width ?? 1280}
           />
@@ -228,10 +240,12 @@ function MediaGrid({ item }: { item: OverviewFeedViewItem }) {
 }
 
 function ModuleInner({
-  item,
+  eagerMedia,
   footerDestination,
+  item,
   moduleSize,
 }: {
+  eagerMedia: boolean;
   footerDestination?: FeedDestination | null;
   item: OverviewFeedViewItem;
   moduleSize: ModuleSize;
@@ -248,7 +262,7 @@ function ModuleInner({
 
   return (
     <>
-      <MediaGrid item={item} />
+      <MediaGrid eager={eagerMedia} item={item} />
       <div
         className={cn(
           "grid gap-3 p-5",
@@ -295,7 +309,13 @@ function ModuleInner({
   );
 }
 
-function FeedModule({ item }: { item: OverviewFeedViewItem }) {
+function FeedModule({
+  eagerMedia,
+  item,
+}: {
+  eagerMedia: boolean;
+  item: OverviewFeedViewItem;
+}) {
   const moduleSize = getFeedModuleSize(item);
   const shouldUseOuterLink = item.destination.kind !== "none" && !hasInlineLinks(item);
   const surface = (
@@ -304,6 +324,7 @@ function FeedModule({ item }: { item: OverviewFeedViewItem }) {
       data-size={moduleSize}
     >
       <ModuleInner
+        eagerMedia={eagerMedia}
         footerDestination={shouldUseOuterLink ? null : item.destination}
         item={item}
         moduleSize={moduleSize}
@@ -367,6 +388,16 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const filteredItems = useMemo(
     () => items.filter((item) => matchesFilter(item, filter)),
     [filter, items],
+  );
+  const eagerMediaIds = useMemo(
+    () =>
+      new Set(
+        filteredItems
+          .filter((item) => item.media.length > 0)
+          .slice(0, getEagerMediaLimit(filter))
+          .map((item) => item.id),
+      ),
+    [filter, filteredItems],
   );
   const [renderedItems, setRenderedItems] = useState(() => filteredItems);
   const [transitionStates, setTransitionStates] = useState<Record<string, TransitionState>>(() =>
@@ -537,7 +568,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                         data-feed-transition={transitionStates[item.id]}
                         key={item.id}
                       >
-                        <FeedModule item={item} />
+                        <FeedModule eagerMedia={eagerMediaIds.has(item.id)} item={item} />
                       </div>
                     ))}
                   </div>
@@ -551,7 +582,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                     data-feed-transition={transitionStates[item.id]}
                     key={item.id}
                   >
-                    <FeedModule item={item} />
+                    <FeedModule eagerMedia={eagerMediaIds.has(item.id)} item={item} />
                   </div>
                 ))}
               </div>

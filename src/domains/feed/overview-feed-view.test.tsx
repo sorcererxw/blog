@@ -51,6 +51,8 @@ describe("OverviewFeed", () => {
     expect(markup).toContain('aria-label="Overview feed"');
     expect(markup).toContain('aria-label="Overview feed filters"');
     expect(markup).not.toContain('id="overview-title"');
+    expect(markup).not.toContain("Field notes");
+    expect(markup).not.toContain("1 entry");
     expect(markup).not.toContain("Writing, projects, and public notes in one stream.");
     expect(markup).toContain('href="/?type=writing"');
     expect(markup).not.toContain('href="/?type=social"');
@@ -66,6 +68,8 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain("badge--soft");
     expect(markup).toContain('href="/articles/one"');
     expect(markup).toContain("https%3A%2F%2Fexample.com%2Farticle-cover.jpg");
+    expect(markup).toContain('loading="eager"');
+    expect(markup).toContain('fetchPriority="high"');
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain('data-size="standard"');
     expect(markup).not.toContain('data-size="compact"');
@@ -104,6 +108,32 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain("-ml-" + "[1.15rem]");
     expect(markup).not.toMatch(/Project\s*◇/);
     expect(markup).toContain('href="https://example.com/project"');
+  });
+
+  it("limits eager media on the unfiltered homepage", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed
+        initialFilter={{}}
+        items={serializeOverviewFeedItems([
+          item({
+            id: "article:one",
+            media: [{ alt: "First", src: "https://example.com/first.jpg" }],
+          }),
+          item({
+            id: "article:two",
+            media: [{ alt: "Second", src: "https://example.com/second.jpg" }],
+          }),
+          item({
+            id: "article:three",
+            media: [{ alt: "Third", src: "https://example.com/third.jpg" }],
+          }),
+        ])}
+      />,
+    );
+
+    expect(markup.match(/loading="eager"/g)).toHaveLength(2);
+    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fthird.jpg");
+    expect(markup).toMatch(/loading="lazy"[^>]+srcSet="[^"]*third\.jpg/);
   });
 
   it("renders Telegram modules with rich text and no duplicate title", () => {

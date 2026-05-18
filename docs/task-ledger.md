@@ -16,6 +16,49 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Impeccable Homepage Optimize
+
+Status: done locally
+
+Summary:
+
+- optimized the homepage Overview Feed without changing the one-page product model or removing feed content
+- added `content-visibility: auto` plus a stable intrinsic size to feed cells so below-viewport modules can skip initial rendering work
+- reduced default homepage eager media from three media-bearing feed items to two while preserving three eager media candidates for explicit type filters such as Writing
+
+Files:
+
+- `src/domains/feed/masonry-feed.module.css`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- keep v1's "render all matching feed items" behavior from the Personal Site Overview spec
+- optimize rendering and image priority first rather than introducing pagination, infinite scroll, or content truncation
+- keep explicit type filters more aggressive with eager media because their desktop first row commonly contains three image cards
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `116` tests)
+- `pnpm lint`: PASS
+- `pnpm typecheck`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-opt-home.html -w 'home http=%{http_code} type=%{content_type} size=%{size_download} total=%{time_total} starttransfer=%{time_starttransfer}\n' http://localhost:4069/`: PASS, returned `200 text/html; charset=utf-8`, `873601` bytes, `2` image preloads, `97` image nodes, and `2` eager images
+- `curl --max-time 30 -s -o /tmp/blog-opt-writing.html -w 'writing http=%{http_code} type=%{content_type} size=%{size_download} total=%{time_total} starttransfer=%{time_starttransfer}\n' 'http://localhost:4069/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`, `418598` bytes, and `3` image preloads
+- Browser plugin (`@浏览器`, Chrome target) at `http://localhost:4069/`: PASS, rendered `58` feed articles, no horizontal overflow, no lazy images above the fold, `2` eager/high-priority images, and computed `content-visibility: auto` with `contain-intrinsic-size: auto 384px`
+- Browser plugin Writing filter interaction: PASS, selected `Writing`, URL became `/?type=writing`, no horizontal overflow, and `3` eager/high-priority images remained in the first row
+- Browser plugin recent app console logs: PASS, no warnings/errors
+
+Follow-up:
+
+- rerun `impeccable audit` after any additional hardening/adapt work
+- if homepage payload size remains a practical issue, the next product-level decision is whether to revise the v1 "render all matching feed items" rule
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Brand Favicon Metadata
 
 Status: done locally
@@ -50,6 +93,152 @@ Verification:
 Follow-up:
 
 - add a PNG or ICO fallback only if a target browser or deploy environment still ignores the SVG favicon link
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Impeccable Homepage Audit
+
+Status: report-only audit complete
+
+Summary:
+
+- ran `impeccable audit` against the current homepage and Overview Feed implementation
+- reviewed the audit through brand/product context, browser-rendered DOM, HTTP checks, lint, code scans, and console logs
+- produced a report-only finding set; no fixes were made in this slice
+
+Files:
+
+- `docs/task-ledger.md`
+
+Decisions:
+
+- do not change UI as part of audit; use the report to drive follow-up `impeccable adapt`, `optimize`, or `harden` work
+- treat the current homepage as a brand-register personal site surface
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/impeccable/scripts/load-context.mjs`: PASS, detected `PRODUCT.md` and `DESIGN.md`
+- `pnpm lint`: PASS
+- `curl --max-time 30 -s -o /tmp/blog-audit-home.html -w 'home http=%{http_code} type=%{content_type} size=%{size_download} total=%{time_total} starttransfer=%{time_starttransfer}\n' http://localhost:4487/`: PASS, returned `200 text/html; charset=utf-8`, `876504` bytes
+- `curl --max-time 30 -s -o /tmp/blog-audit-telegram.html -w 'telegram http=%{http_code} type=%{content_type} size=%{size_download} total=%{time_total} starttransfer=%{time_starttransfer}\n' 'http://localhost:4487/?source=telegram'`: PASS, returned `200 text/html; charset=utf-8`, `710987` bytes
+- Browser plugin (`@浏览器`, Chrome target) at `http://localhost:4487/`: PASS, no horizontal overflow, recent app console logs had no warnings/errors, `Field notes` was absent, and first media candidates were eager/high-priority
+- Browser plugin filter interaction for Telegram: PASS, selected tab changed and URL became `/?source=telegram`
+
+Follow-up:
+
+- address audit findings in priority order, then rerun `impeccable audit`
+
+Blockers:
+
+- Browser plugin did not expose a mobile viewport control in this session, so mobile conclusions were based on static responsive code review plus desktop overflow checks
+
+## 2026-05-18 - Homepage Overview Feed Polish
+
+Status: done locally
+
+Summary:
+
+- kept the homepage overview feed visually compact by leaving only the existing filter control above the feed
+- removed the proposed `Overview` / `Field notes` header and filtered entry count after review
+- marked the first three filtered media-bearing feed modules as eager/high-priority so the likely LCP image is no longer lazy-loaded
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- kept the existing feed data, routing, card system, and masonry behavior unchanged
+- do not add a visible Overview Feed header to the homepage
+- eager/high-priority image loading is scoped to the first three media-bearing items in the current filtered view to improve first viewport loading without making the whole feed eager
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, 114 tests passed through the configured Vitest suite
+- `pnpm lint`: PASS
+- `curl --max-time 20 -s -o /tmp/blog-polish-home.html -w '%{http_code} %{content_type}\n' http://localhost:4443/`: PASS, returned `200 text/html; charset=utf-8`, did not contain `Field notes`, and contained `loading="eager"` plus `fetchPriority="high"`
+- Browser plugin (`@浏览器`, Chrome target) at `http://localhost:4443/`: PASS, `Field notes` was absent, the overview section retained `aria-label="Overview feed"`, eager images had `fetchpriority="high"`, no horizontal overflow, and recent app console logs had no warnings/errors
+- Browser plugin filter interaction: PASS, clicking `Writing` changed the URL to `/?type=writing`, selected the Writing tab, kept the header absent, and preserved no horizontal overflow
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Impeccable Visual Design Context
+
+Status: done locally
+
+Summary:
+
+- added the root `DESIGN.md` required by the `impeccable document` workflow
+- extracted the current visual system from `src/app/globals.css`, `src/app/layout.tsx`, shadcn/Base UI components, Overview Feed, Profile Hero, and article detail surfaces
+- added `.impeccable/design.json` as the sidecar for motion, shadow, breakpoint, rule, and component preview metadata that does not fit the Stitch frontmatter schema
+
+Files:
+
+- `DESIGN.md`
+- `.impeccable/design.json`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- frontmatter keeps OKLCH values because the codebase already treats OKLCH semantic tokens as canonical
+- Creative North Star is `The Field Notebook`, derived from the confirmed `PRODUCT.md` language: exacting, technically literate, authored
+- document the current shipped typography stack rather than redesigning it: Outfit, Instrument Sans, Newsreader, Roboto Slab, and system mono
+- elevation is flat by default, using tonal layering and rings before shadows
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/impeccable/scripts/load-context.mjs`: PASS, detected both `PRODUCT.md` and `DESIGN.md`
+- `node -e "JSON.parse(require('fs').readFileSync('.impeccable/design.json','utf8')); console.log('design sidecar json ok')"`: PASS
+- automated tests were not run because this slice only adds design-context documentation and sidecar metadata; it does not change runtime code or rendered UI
+
+Follow-up:
+
+- use `/impeccable polish`, `/impeccable craft`, or `/impeccable shape` against this context before future visual implementation work
+- if the visual system changes materially, rerun `/impeccable document` to refresh `DESIGN.md` and `.impeccable/design.json`
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Impeccable Product Context
+
+Status: done locally
+
+Summary:
+
+- added the root `PRODUCT.md` required by the `impeccable` design workflow
+- captured the Personal Site as a brand-register public identity surface rather than a product-dashboard surface
+- recorded audience, purpose, brand personality, anti-references, design principles, and accessibility baseline for future UI work
+
+Files:
+
+- `PRODUCT.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- default register is `brand` because the public Personal Site uses design to communicate authored identity
+- the homepage remains the primary surface for writing, projects, and social posts; `/blog` remains excluded as a primary product surface
+- accessibility baseline is WCAG AA with reduced-motion support and non-color-only state communication
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/impeccable/scripts/load-context.mjs`: PASS, detected `PRODUCT.md` and no `DESIGN.md`
+- automated tests were not run because this slice only adds design-context documentation and does not change runtime code or rendered UI
+
+Follow-up:
+
+- run `/impeccable document` to generate `DESIGN.md` from the existing visual system before deeper visual redesign work
 
 Blockers:
 

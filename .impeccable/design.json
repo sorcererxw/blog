@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-18T02:44:55Z",
+  "title": "Design System: sorcererxw Personal Site",
+  "extensions": {
+    "colorMeta": {
+      "background": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": ["oklch(1 0 0)", "oklch(0.988 0.003 106.5)", "oklch(0.966 0.005 106.5)"]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Ink on Paper",
+        "canonical": "oklch(0.153 0.006 107.1)",
+        "tonalRamp": ["oklch(0.153 0.006 107.1)", "oklch(0.228 0.013 107.4)", "oklch(0.286 0.016 107.4)"]
+      },
+      "primary-ink": {
+        "role": "primary",
+        "displayName": "Olive Ink",
+        "canonical": "oklch(0.228 0.013 107.4)",
+        "tonalRamp": ["oklch(0.153 0.006 107.1)", "oklch(0.228 0.013 107.4)", "oklch(0.394 0.023 107.4)"]
+      },
+      "muted-surface": {
+        "role": "secondary",
+        "displayName": "Warm Ash Surface",
+        "canonical": "oklch(0.966 0.005 106.5)",
+        "tonalRamp": ["oklch(0.988 0.003 106.5)", "oklch(0.966 0.005 106.5)", "oklch(0.93 0.007 106.5)"]
+      },
+      "muted-foreground": {
+        "role": "secondary",
+        "displayName": "Ash Voice",
+        "canonical": "oklch(0.58 0.031 107.3)",
+        "tonalRamp": ["oklch(0.737 0.021 106.9)", "oklch(0.58 0.031 107.3)", "oklch(0.466 0.025 107.3)"]
+      },
+      "destructive": {
+        "role": "feedback",
+        "displayName": "Error Red",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": ["oklch(0.704 0.191 22.216)", "oklch(0.577 0.245 27.325)", "oklch(0.45 0.19 27)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Article Display",
+        "purpose": "Large image-led article heroes and rare identity moments."
+      },
+      "headline": {
+        "displayName": "Reading Headline",
+        "purpose": "Notion-rendered headings and major content sections."
+      },
+      "title": {
+        "displayName": "Component Title",
+        "purpose": "Compact card, component, and project headings."
+      },
+      "body": {
+        "displayName": "Reading Body",
+        "purpose": "Prose, feed summaries, and project descriptions."
+      },
+      "label": {
+        "displayName": "Source Label",
+        "purpose": "Dates, tags, filters, and compact metadata."
+      }
+    },
+    "shadows": [
+      {
+        "name": "surface-ring",
+        "value": "ring-1 ring-foreground/10",
+        "purpose": "Default card separation without visible lift."
+      },
+      {
+        "name": "popover-lift",
+        "value": "shadow-md ring-1 ring-foreground/10",
+        "purpose": "Floating select content and Base UI popups."
+      },
+      {
+        "name": "project-hover",
+        "value": "0 14px 32px -28px color-mix(in oklab, var(--foreground) 25%, transparent)",
+        "purpose": "Rare hover depth for project cards."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms ease",
+        "purpose": "Button, link, card, and border-color state transitions."
+      },
+      {
+        "name": "feed-enter",
+        "value": "220ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Overview Feed item insertion animation."
+      },
+      {
+        "name": "feed-exit",
+        "value": "180ms ease",
+        "purpose": "Overview Feed item removal animation."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "rules": [
+      "Use PRODUCT.md as the strategic source and DESIGN.md as the visual source.",
+      "Keep / as the primary surface; do not rebuild /blog as a primary archive.",
+      "Prefer tonal layering and rings before shadows.",
+      "Keep feed media real and traceable to content sources."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact primary action using Olive Ink and near-paper text.",
+      "html": "<button class=\"ds-btn-primary\">Open</button>",
+      "css": ".ds-btn-primary{height:2rem;padding:0 .625rem;border-radius:.625rem;border:1px solid transparent;background:oklch(0.228 0.013 107.4);color:oklch(0.988 0.003 106.5);font:500 .875rem/1 Instrument Sans,system-ui,sans-serif;transition:background-color 150ms ease,transform 150ms ease}.ds-btn-primary:active{transform:translateY(1px)}.ds-btn-primary:focus-visible{outline:2px solid oklch(0.737 0.021 106.9);outline-offset:2px}"
+    },
+    {
+      "name": "Overview Filter Chip",
+      "kind": "chip",
+      "refersTo": "badge-outline",
+      "description": "URL-backed feed filter with transparent default state and inverted active state.",
+      "html": "<a class=\"ds-filter-chip\" href=\"/?type=writing\">Writing</a>",
+      "css": ".ds-filter-chip{display:inline-flex;align-items:center;justify-content:center;border:1px solid oklch(0.93 0.007 106.5);border-radius:999px;padding:.375rem .75rem;color:oklch(0.153 0.006 107.1);font:500 .875rem/1 Instrument Sans,system-ui,sans-serif;text-decoration:none}.ds-filter-chip[data-active=true]{background:oklch(0.153 0.006 107.1);color:oklch(1 0 0)}"
+    },
+    {
+      "name": "Feed Card",
+      "kind": "card",
+      "refersTo": "card-feed",
+      "description": "Flat content module with ring separation, real media, and compact metadata.",
+      "html": "<article class=\"ds-feed-card\"><div class=\"ds-feed-media\"></div><div class=\"ds-feed-body\"><span class=\"ds-feed-badge\">writing</span><h2>Card title</h2><p>Summary text.</p></div></article>",
+      "css": ".ds-feed-card{overflow:hidden;border-radius:.875rem;background:oklch(1 0 0);color:oklch(0.153 0.006 107.1);box-shadow:0 0 0 1px color-mix(in oklab,oklch(0.153 0.006 107.1) 10%,transparent)}.ds-feed-media{aspect-ratio:16/10;background:oklch(0.966 0.005 106.5)}.ds-feed-body{display:grid;gap:.75rem;padding:1.25rem}.ds-feed-badge{justify-self:start;border:1px solid oklch(0.93 0.007 106.5);border-radius:999px;padding:.125rem .5rem;font:500 .75rem/1 Instrument Sans,system-ui,sans-serif}"
+    },
+    {
+      "name": "Article Hero",
+      "kind": "custom",
+      "refersTo": "article-detail",
+      "description": "Image-led detail hero with a dark overlay and large serif headline.",
+      "html": "<header class=\"ds-article-hero\"><div class=\"ds-article-head\"><h1>Article title</h1></div></header>",
+      "css": ".ds-article-hero{position:relative;display:flex;min-height:clamp(24rem,58vw,40rem);align-items:flex-end;overflow:hidden;border-radius:1.125rem;background:linear-gradient(180deg,rgb(10 10 10 / 20%) 0%,rgb(10 10 10 / 72%) 100%),oklch(0.966 0.005 106.5)}.ds-article-head{max-width:42rem;padding:clamp(1.5rem,4vw,3rem);color:white}.ds-article-head h1{margin:0;font:600 clamp(2.75rem,6vw,4.75rem)/.98 Newsreader,Georgia,serif;letter-spacing:-.04em;text-wrap:balance}"
+    }
+  ]
+}
