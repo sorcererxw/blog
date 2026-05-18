@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { ArticleDetailView } from "@/domains/article/article-detail-view";
+import { ArticleDetailView } from "@/components/article/article-detail-view";
 import { getArticleBySlug } from "@/domains/article/get-article-by-slug";
 import {
   buildBreadcrumbStructuredData,

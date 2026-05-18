@@ -6,7 +6,7 @@ export default function ErrorBoundary() {
   return (
     <section className="mx-auto grid w-[min(100%_-_2rem,40rem)] gap-5">
       <div className="space-y-5">
-        <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Publication boundary</p>
+        <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted">Publication boundary</p>
         <h1 className="publication-home-title text-4xl">
           The page hit an unexpected error.
         </h1>

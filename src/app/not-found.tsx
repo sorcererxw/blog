@@ -1,4 +1,4 @@
-import { PublicBoundary } from "@/domains/shell/public-boundary";
+import { PublicBoundary } from "@/components/shell/public-boundary";
 
 export default function NotFound() {
   return (

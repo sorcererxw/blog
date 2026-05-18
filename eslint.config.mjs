@@ -91,14 +91,8 @@ const localRules = {
       create(context) {
         const arbitraryUtilityPattern =
           /(?:^|:)(?:text|tracking|leading|rounded(?:-[trblse]|-[trbl][trbl]|-[xy])?|ring(?:-(?:offset|inset|[0-9]+|[xy]))?|-?(?:m[trblxy]?|p[trblxy]?|gap(?:-[xy])?))-\[[^\]]+\]/;
-        const filename = context.filename ?? context.getFilename();
-        const isUiComponent = filename.includes("/src/components/ui/");
 
         function checkText(value, node) {
-          if (isUiComponent) {
-            return;
-          }
-
           const tokens = value.split(/\s+/).filter(Boolean);
 
           if (tokens.some((token) => arbitraryUtilityPattern.test(token))) {

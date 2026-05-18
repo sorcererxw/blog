@@ -6,8 +6,8 @@ import {
   parseFeedFilter,
 } from "@/domains/feed/overview-feed";
 import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-serialization";
-import { OverviewFeed } from "@/domains/feed/overview-feed-view";
-import { ProfileHero } from "@/domains/home/profile-hero";
+import { OverviewFeed } from "@/components/feed/overview-feed-view";
+import { ProfileHero } from "@/components/home/profile-hero";
 import {
   buildCollectionPageStructuredData,
   buildPersonStructuredData,

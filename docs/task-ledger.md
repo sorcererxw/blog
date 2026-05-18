@@ -16,6 +16,658 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Header Light Dark Theme Toggle
+
+Status: done locally
+
+Summary:
+
+- added a light/dark theme icon button on the right side of the site header
+- used HeroUI `Button isIconOnly` with `lucide-react` `Sun` and `Moon` icons
+- added a small client component that persists the selected theme to `localStorage`
+- synchronized the selected theme onto `document.documentElement` with `.light` / `.dark` classes and `data-theme`
+- added an inline layout initialization script so the saved or system theme is applied before hydration
+- updated the shell render test to assert the accessible theme toggle is present
+
+Files:
+
+- `src/app/layout.tsx`
+- `src/components/shell/site-header.tsx`
+- `src/components/shell/theme-toggle.tsx`
+- `src/components/shell/site-shell.test.tsx`
+- `docs/specs/2026-05-18-heroui-design-system-migration-design.md`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- store the user preference under `blog-theme`
+- show `Moon` while the current theme is light and `Sun` while the current theme is dark
+- keep the theme behavior in the shell component layer, not in domain modules
+- use both class and `data-theme` updates because the active HeroUI token selectors support both
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Button Tooltip Switch`: PASS, reviewed HeroUI v3 Button, Tooltip, and Switch docs; implemented the icon-only Button pattern per the final direction.
+- `pnpm test -- src/components/shell/site-shell.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `113` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm typecheck`: PASS when rerun after `pnpm build`; an earlier parallel `typecheck` failed because `next build` was concurrently recreating `.next/types`.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3278`: PASS, local production server started at `http://127.0.0.1:3278`.
+- `curl --max-time 90 -s -o /tmp/blog-theme-toggle-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3278/ && rg -n 'Switch to dark theme|Switch to light theme|blog-theme|prefers-color-scheme|data-theme|button--icon-only|lucide-(moon|sun)' /tmp/blog-theme-toggle-home.html | head -80`: PASS, returned `200 text/html; charset=utf-8`; rendered the theme initialization script, HeroUI icon-only button markup, accessible label, and moon icon.
+- `curl --max-time 90 -s -o /tmp/blog-theme-toggle-article.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3278/articles/grpc-gateway-comparison && rg -n 'Switch to dark theme|Switch to light theme|blog-theme|prefers-color-scheme|data-theme|button--icon-only|lucide-(moon|sun)|A table must have at least one Column' /tmp/blog-theme-toggle-article.html | head -80`: PASS, returned `200 text/html; charset=utf-8`; rendered the header theme icon button and did not include the prior table runtime error string.
+- `git diff --check`: PASS.
+
+Blockers:
+
+- Browser click verification could not be completed because the Browser tool was not exposed and Node REPL reported `Module not found: playwright`.
+
+## 2026-05-18 - HeroUI Table Row Header Requirement
+
+Status: done locally
+
+Summary:
+
+- fixed the HeroUI/React Aria runtime error `A table must have at least one Column with the isRowHeader prop set to true` on `/articles/grpc-gateway-comparison`
+- changed rich-content table rendering so the first rendered column is always marked as the row-header column
+- applied the same rule to article detail tables and home intro tables
+- added regression coverage for Notion tables that have column headers but no Notion row headers
+
+Files:
+
+- `src/components/article/article-detail-view.tsx`
+- `src/components/article/article-detail-view.test.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/home/intro.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- always mark column 0 as `isRowHeader` because HeroUI Table requires at least one row-header column even when Notion did not mark row headers
+- keep this as renderer behavior instead of forcing Notion data to claim it has row headers
+
+Verification:
+
+- `pnpm test -- src/components/article/article-detail-view.test.tsx src/components/home/intro.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `113` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3277`: PASS, local production server started at `http://127.0.0.1:3277`.
+- `curl --max-time 90 -s -o /tmp/blog-grpc-table.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3277/articles/grpc-gateway-comparison && rg -n 'role="rowheader"|role="columnheader"|<table|grpc|gRPC|A table must have at least one Column' /tmp/blog-grpc-table.html | head -60`: PASS, returned `200 text/html; charset=utf-8`; rendered RSC payload includes `isRowHeader":true` for `column-0` and the runtime error string is absent.
+
+Blockers:
+
+- browser automation unavailable in this session.
+
+## 2026-05-18 - Homepage Card Horizontal Padding Removal
+
+Status: done locally
+
+Summary:
+
+- removed the HeroUI Card base horizontal padding from homepage feed modules
+- unified homepage feed module internal content padding to `p-5` / 20px across standard, compact, and feature cards
+- forced rich-text links inside feed cards to break long URL tokens with `break-all`
+- added a regression assertion that rendered feed card markup includes `px-0`
+- added regression assertions that feed module body markup does not reintroduce `gap-2 p-4` or `p-6`
+- added a regression assertion that feed rich-text links keep the `break-all` class
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- apply `px-0` to the Card base instead of changing the feed body spacing, because the visible issue was the card-level left/right inset around the image/content block
+- keep compact cards' tighter `gap-2` rhythm, but do not let module size change the 20px content padding
+- apply forced breaking only to rich-text link anchors so normal prose keeps its existing wrapping behavior
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+
+Blockers:
+
+- browser automation unavailable in this session.
+
+## 2026-05-18 - Homepage Masonry Card Shadow Clipping
+
+Status: done locally
+
+Summary:
+
+- fixed homepage masonry feed card shadows being clipped at the grid cell boundary
+- removed `content-visibility: auto` and `contain-intrinsic-size` from feed masonry cells because they trigger paint containment that clips descendant shadows
+- added a regression assertion so server-rendered feed markup does not reintroduce `content-visibility`
+
+Files:
+
+- `src/components/feed/masonry-feed.module.css`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep HeroUI card usage unchanged; the clipping was caused by the masonry cell containment, not by the card component
+- prefer visible card shadows over this specific below-viewport paint optimization on the homepage feed
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3275`: PASS, local production server started at `http://127.0.0.1:3275`.
+- `curl --max-time 90 -s -o /tmp/blog-masonry-shadow.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3275/ && rg -n 'content-visibility|contain-intrinsic-size|masonry-feed_cell|data-feed-layout="fallback-single-column"|data-slot="card"' /tmp/blog-masonry-shadow.html | head -40`: PASS, returned `200 text/html; charset=utf-8`; rendered homepage markup contains masonry/card output and no `content-visibility` or `contain-intrinsic-size`.
+- Browser verification could not be completed in this session because the Browser tool was not exposed and Node REPL could not import `playwright`.
+
+Follow-up:
+
+- avoid reintroducing CSS paint containment on masonry cells unless shadow rendering is checked in a browser.
+
+Blockers:
+
+- browser automation unavailable in this session.
+
+## 2026-05-18 - HeroUI Font Token Update
+
+Status: done locally
+
+Summary:
+
+- changed heading typography to Libre Bodoni through `--font-heading`
+- changed the default interface font to `font-display`
+- changed display typography and code typography to Courier Prime through `--font-display` and `--font-code`
+- removed the temporary display/code runtime aliases and the app's `font-sans`, `font-serif`, and `font-mono` conventions
+- changed article CSS Module code blocks and inline code to use `--font-code` directly
+- changed active heading call sites from `font-serif` to `font-heading`
+- changed the shell wordmark to `font-display`
+- updated the feed layout engine title measurement font to Libre Bodoni
+- removed unused Fraunces, Outfit, Instrument Sans, Newsreader, and Roboto Slab Next Font loading from the active layout
+
+Files:
+
+- `src/app/layout.tsx`
+- `src/app/globals.css`
+- `src/components/article/article-detail-view.module.css`
+- `src/components/article/article-detail-view.tsx`
+- `src/components/article/article-list.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/home/intro.module.css`
+- `src/components/projects/projects-list.tsx`
+- `src/components/shell/site-header.tsx`
+- `src/domains/feed/feed-layout-engine.ts`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep only three active app font conventions: `font-display` for default UI, `font-heading` for headings, and `font-code` for `pre`/`code`
+- use one Courier Prime Next Font variable, `--font-courier-prime-system`, for both display and code tokens
+
+Verification:
+
+- `pnpm lint`: PASS.
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx src/components/article/article-detail-view.test.tsx src/components/home/intro.test.tsx src/components/shell/site-shell.test.tsx src/domains/feed/feed-layout-engine.test.ts`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm typecheck`: PASS when rerun after `pnpm build`; an earlier parallel `typecheck` failed because `next build` was concurrently recreating `.next/types`.
+- `rg -n "font-sans|font-serif|font-mono|--font-sans|--font-serif|--font-mono|--font-fraunces|--font-display-runtime|--font-code-runtime|Fraunces" src/app src/components src/domains`: PASS, no old active font conventions remain.
+- `rg -o -e "--font-display:[^;]+|--font-heading:[^;]+|--font-code:[^;]+|\\.font-display\\{[^}]+\\}|\\.font-heading\\{[^}]+\\}|\\.font-code\\{[^}]+\\}|:where\\(h1,h2,h3,h4,h5,h6\\)\\{[^}]+\\}|:where\\(pre,code\\)\\{[^}]+\\}|font-family:var\\(--font-code\\),monospace" .next/static/css/*.css`: PASS, compiled CSS maps display, heading, and code to the current font tokens.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3274`: PASS, local production server started at `http://127.0.0.1:3274`.
+- `curl --max-time 90 -s -o /tmp/blog-font-conventions-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3276/ && rg -n 'font-heading|font-display|font-code|font-sans|font-serif|font-mono|Fraunces|Outfit|Instrument|Newsreader|Roboto|__variable_' /tmp/blog-font-conventions-home.html | head -80`: PASS, returned `200 text/html; charset=utf-8`; rendered HTML includes `font-display` and two Next Font variable classes, with no old font names or old font utility classes in page markup.
+
+## 2026-05-18 - HeroUI Token and Final shadcn Removal
+
+Status: done locally
+
+Summary:
+
+- replaced the old shadcn token/bootstrap configuration in `src/app/globals.css` with the provided HeroUI theme variables
+- removed `@import "shadcn/tailwind.css"` and deleted `components.json`
+- deleted the remaining unused local primitives under `src/components/ui`: `button`, `field`, `label`, and `select`
+- removed `shadcn`, `@base-ui/react`, and `class-variance-authority` from dependencies
+- migrated active app token class names from shadcn-style names to HeroUI names, including `text-muted`, `bg-surface`, `bg-default`, `border-separator`, `outline-focus`, and `text-accent`
+- removed the ESLint exemption that skipped arbitrary-token checks under `src/components/ui`
+
+Files:
+
+- `src/app/globals.css`
+- `src/app/layout.tsx`
+- `src/app/error.tsx`
+- `src/components/article/article-detail-view.tsx`
+- `src/components/article/article-detail-view.module.css`
+- `src/components/article/article-list.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/home/intro.module.css`
+- `src/components/projects/projects-list.tsx`
+- `src/components/projects/projects-list.test.tsx`
+- `src/components/shell/site-header.tsx`
+- `src/components/shell/site-footer.tsx`
+- `src/components/shell/public-boundary.tsx`
+- `src/components/thoughts/thoughts-page.tsx`
+- `src/components/ui/button.tsx`
+- `src/components/ui/field.tsx`
+- `src/components/ui/label.tsx`
+- `src/components/ui/select.tsx`
+- `components.json`
+- `eslint.config.mjs`
+- `package.json`
+- `pnpm-lock.yaml`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- treat the provided HeroUI variables as the complete active token source
+- keep `background` and `foreground` because they are also HeroUI token names, not only shadcn names
+- delete unused local primitives instead of keeping dead shadcn/Base UI files that would keep old token utilities in Tailwind's source scan
+- load Fraunces through `next/font/google` because the provided HeroUI token config initially pointed `--font-sans` at `--font-fraunces`; this was superseded by the later three-token font convention where default UI uses `font-display`.
+
+Verification:
+
+- `pnpm typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `pnpm test`: PASS, `33` files and `111` tests.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS with exit code 0 and `.open-next/worker.js` generated; OpenNext printed non-fatal `Failed to copy` package-template logs for `hast-util-to-html`, `hast-util-whitespace`, and `property-information`.
+- `rg -n "shadcn|@base-ui|class-variance-authority|@/components/ui|components/ui|text-muted-foreground|bg-card|border-border|outline-ring|text-primary|--card|--muted-foreground|--primary|--secondary|--popover|--ring|--input|--destructive" src package.json pnpm-lock.yaml eslint.config.mjs`: PASS, no output.
+- `find src/components/ui -maxdepth 1 -type f -print 2>/dev/null | sort; test ! -e components.json && echo components.json-deleted`: PASS, no local UI primitive files remain and `components.json` is deleted.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3273`: PASS, local production server started at `http://127.0.0.1:3273`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-token-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3273/ && rg -n 'shadcn|text-muted-foreground|border-border|bg-card|text-primary|text-muted|bg-surface|border-separator|--accent|--surface' /tmp/blog-heroui-token-home.html | head -40`: PASS, returned `200 text/html; charset=utf-8` and rendered HeroUI token classes such as `text-muted`, `bg-surface`, and `border-separator`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-token-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3273/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-token-health.json -w '%{http_code} %{content_type}\n' http://127.0.0.1:3273/api/health && cat /tmp/blog-heroui-token-health.json`: PASS, returned `200 application/json` and `{"ok":true,...}`.
+
+Blockers:
+
+- Browser verification could not be completed: the Browser tool was not exposed in this session, and Node REPL could not import `playwright`.
+
+## 2026-05-18 - HeroUI Card Empty Separator Migration
+
+Status: done locally
+
+Summary:
+
+- migrated active `card`, `empty`, and `separator` usage away from local shadcn/Base UI primitives
+- deleted `src/components/ui/card.tsx`, `src/components/ui/empty.tsx`, and `src/components/ui/separator.tsx`
+- used HeroUI React `Card` directly in the client Overview Feed
+- added `src/components/heroui/server-primitives.tsx` to render HeroUI `cardVariants` and `separatorVariants` in server components without importing client-only `@heroui/react`
+- replaced old Empty composition with HeroUI card surfaces instead of keeping an `Empty` primitive wrapper
+- updated legacy `field.tsx` internals to import HeroUI `Separator` directly so deleting `components/ui/separator` does not break typecheck
+
+Files:
+
+- `src/components/heroui/server-primitives.tsx`
+- `src/components/ui/card.tsx`
+- `src/components/ui/empty.tsx`
+- `src/components/ui/separator.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/projects/projects-list.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/article/article-detail-view.tsx`
+- `src/components/thoughts/thoughts-page.tsx`
+- `src/components/ui/field.tsx`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- do not import HeroUI React `Card` or `Separator` directly in server components because `@heroui/react` is client-only
+- use `@heroui/styles` variants for server-rendered cards and separators while preserving HeroUI default class names
+- do not keep `components/ui/card`, `components/ui/empty`, or `components/ui/separator` compatibility wrappers
+- leave unused `button`, `field`, `label`, and `select` cleanup for a separate final cleanup slice
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Card Separator`: PASS, reviewed HeroUI `Card` and `Separator` APIs; `Divider`/`EmptyState` are not HeroUI v3 components.
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx src/components/projects/projects-list.test.tsx src/components/home/intro.test.tsx src/components/article/article-detail-view.test.tsx src/components/thoughts/thoughts-page.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `pnpm typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS after moving server components to `@heroui/styles` variants; build retained existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `rg -n "@/components/ui/(card|empty|separator)|components/ui/(card|empty|separator)|<Empty\\b|EmptyContent|EmptyTitle|EmptyDescription|from \\"@/components/ui/card\\"|from \\"@/components/ui/empty\\"|from \\"@/components/ui/separator\\"" src package.json pnpm-lock.yaml`: PASS, no old Card/Empty/Separator primitive references remain.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3272`: PASS, local production server started at `http://127.0.0.1:3272`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-card-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3272/ && rg -n 'class="[^\"]*(card|separator)|data-slot="card|data-slot="empty|data-slot="separator|href="/stack"' /tmp/blog-heroui-card-home.html`: PASS, returned `200 text/html; charset=utf-8`; homepage rendered HeroUI card/separator classes and no old empty/separator data slots.
+
+Follow-up:
+
+- remove the now-unused `button`, `field`, `label`, and `select` primitives and old shadcn/Base UI dependencies in a final cleanup slice.
+
+Blockers:
+
+- browser automation remains blocked by unavailable Playwright and browser Apple Events JavaScript settings.
+
+## 2026-05-18 - Domain UI Boundary Cleanup
+
+Status: done locally
+
+Summary:
+
+- moved React view components out of `src/domains/*` and into `src/components/*`
+- kept `src/domains/*` focused on types, data normalization, sorting, route/link rules, and use cases
+- moved shell UI to `src/components/shell` while leaving `src/domains/shell/site-links.ts` as the public route/link rule module
+- added `src/domains/feed/overview-feed-view-model.ts` so feed serialization can expose view data without importing a component
+- left shadcn/HeroUI primitive usage only in `src/components/*`, not in domain modules
+
+Files:
+
+- `src/components/article/*`
+- `src/components/feed/*`
+- `src/components/home/*`
+- `src/components/projects/*`
+- `src/components/shell/*`
+- `src/components/thoughts/*`
+- `src/domains/feed/overview-feed-view-model.ts`
+- `src/domains/feed/overview-feed-serialization.ts`
+- `src/app/page.tsx`
+- `src/app/articles/[slug]/page.tsx`
+- `src/app/layout.tsx`
+- `src/app/not-found.tsx`
+- `docs/specs/2026-05-18-heroui-design-system-migration-design.md`
+- `docs/specs/2026-05-13-tailwind-inline-style-convergence-design.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- do not migrate `card` while UI composition still lives in domain folders; clean the boundary first
+- keep `OverviewFeedViewItem` as a domain view-model type because it is produced by domain serialization and consumed by UI
+- keep `site-links.ts` in the domain layer because it expresses public route rules rather than rendering UI
+
+Verification:
+
+- `find src/domains -name '*.tsx' -type f -print`: PASS, no React component files remain under `src/domains`.
+- `rg -n "@/components/ui/" src/domains`: PASS, no shadcn/HeroUI primitive imports remain in domain modules.
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx src/components/projects/projects-list.test.tsx src/components/home/intro.test.tsx src/components/home/profile-hero.test.tsx src/components/article/article-detail-view.test.tsx src/components/article/article-list.test.tsx src/components/thoughts/thoughts-page.test.tsx src/components/shell/site-shell.test.tsx`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `pnpm typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+
+Follow-up:
+
+- migrate the remaining `card`, `empty`, and `separator` usages from `src/components/*` to HeroUI without reintroducing primitive imports into `src/domains/*`.
+
+Blockers:
+
+- none.
+
+## 2026-05-18 - Stack Page Removal
+
+Status: done locally
+
+Summary:
+
+- removed the remaining Stack page implementation surface from the active app
+- deleted the Stack domain list/use-case/types/tests
+- deleted the Stack Notion adapter and Stack KV cache helper
+- removed Stack-specific provider-cache wrapping and shell route recognition
+- removed the layout/runtime `includeStack` branch because Stack is no longer a hidden non-production route
+
+Files:
+
+- `src/domains/stack/*`
+- `src/integrations/notion/stack.ts`
+- `src/integrations/kv/stack-cache.ts`
+- `src/integrations/kv/provider-wrappers.ts`
+- `src/domains/shell/site-links.ts`
+- `src/domains/shell/site-header.tsx`
+- `src/domains/shell/site-footer.tsx`
+- `src/domains/shell/site-shell.test.tsx`
+- `src/app/layout.tsx`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- treat `/stack` as removed, not merely hidden from primary navigation
+- remove Stack-specific provider/cache code because no active route or feed item consumes it
+- keep unrelated generic `src/components/ui/*` primitives for the ongoing HeroUI migration instead of deleting them as part of this page removal
+
+Verification:
+
+- `pnpm test -- src/domains/shell/site-shell.test.tsx src/integrations/kv/provider-wrappers.test.ts`: PASS, Vitest config ran the active full suite (`33` files, `111` tests).
+- `rg -n "stack|Stack" src --glob '!src/integrations/telegram/public-page.ts'`: PASS, only negative shell test assertions remain.
+- `rg -n "@/domains/stack|domains/stack|@/integrations/notion/stack|integrations/notion/stack|stack-cache|withCachedStackSource|NotionStack" src package.json pnpm-lock.yaml`: PASS, no active Stack domain/provider/cache imports remain.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, route output has no `/stack`; build retained existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3271`: PASS, local production server started at `http://127.0.0.1:3271`.
+- `curl --max-time 90 -s -o /tmp/blog-stack-removed.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3271/stack`: PASS, returned `404 text/html; charset=utf-8`.
+- `curl --max-time 90 -s -o /tmp/blog-stack-removed-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3271/ && rg -n 'href="/stack"|Stack|stack live nearby' /tmp/blog-stack-removed-home.html`: PASS, returned `200 text/html; charset=utf-8` and found no Stack navigation/copy markers.
+- `curl --max-time 90 -s -o /tmp/blog-stack-removed-sitemap.xml -w '%{http_code} %{content_type}\n' http://127.0.0.1:3271/sitemap.xml && rg -n '/stack|<loc>' /tmp/blog-stack-removed-sitemap.xml`: PASS, returned `200 application/xml; charset=utf-8` and listed sitemap URLs without `/stack`.
+
+Follow-up:
+
+- remove now-unused local UI primitives only as part of their own HeroUI/final cleanup slice.
+
+Blockers:
+
+- none.
+
+## 2026-05-18 - HeroUI Table Primitive Migration
+
+Status: done locally
+
+Summary:
+
+- migrated Notion rich-content tables in article detail and home intro rendering from the old local table primitive to HeroUI `Table`
+- added a semantic `src/components/rich-content/rich-content-table.tsx` client boundary because HeroUI `Table` is client-only and the rich-content renderers are server modules
+- deleted `src/components/ui/table.tsx` in the same slice
+- preserved article table overflow shells and wrapping-friendly article table cell classes
+
+Files:
+
+- `src/components/rich-content/rich-content-table.tsx`
+- `src/components/ui/table.tsx`
+- `src/domains/article/article-detail-view.tsx`
+- `src/domains/home/intro.tsx`
+- `src/domains/home/intro.test.tsx`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- use HeroUI `Table` compound components directly inside a semantic rich-content client component instead of keeping `components/ui/table`
+- keep article and home table rendering in their existing server modules and cross into HeroUI only at the client component boundary
+- map Notion column headers to HeroUI `Table.Column` and row-header intent to `isRowHeader`
+- update tests to assert React Aria roles (`role="columnheader"` / `role="rowheader"`) rather than the old native `scope` attributes
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Table`: PASS, reviewed HeroUI `Table` docs before implementation.
+- `pnpm test -- src/domains/article/article-detail-view.test.tsx src/domains/home/intro.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests).
+- `pnpm typecheck`: PASS after moving HeroUI `Table` behind a client rich-content boundary.
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS after the client boundary fix; build retained existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `rg -n "@/components/ui/table|components/ui/table" src package.json pnpm-lock.yaml`: PASS, no old Table primitive references remain in source or package manifests.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3270`: PASS, local production server started at `http://127.0.0.1:3270`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-table-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3270/`: PASS, returned `200 text/html; charset=utf-8`; current live home content did not include a Notion table, so rich-content table markup is covered by render tests.
+- Browser automation remains blocked in this environment: Node REPL could not import `playwright`; Chrome and Safari both reject JavaScript execution through AppleScript because `Allow JavaScript from Apple Events` is disabled.
+
+Follow-up:
+
+- continue migration with another primitive and delete its old `src/components/ui/*` file in the same slice.
+- if a live article/home page with table content is available later, add a curl/browser evidence line for that exact URL.
+
+Blockers:
+
+- automated browser DOM/interaction verification is blocked by unavailable Playwright and browser Apple Events JavaScript settings.
+
+## 2026-05-18 - HeroUI Tabs Primitive Migration
+
+Status: done locally
+
+Summary:
+
+- migrated the homepage Overview Feed filters from the local shadcn/Base UI tabs primitive and hand-written tab-like markup to HeroUI `Tabs`
+- preserved anchor-backed filter links for `/`, `/?type=writing`, `/?type=projects`, and `/?source=telegram`
+- deleted `src/components/ui/tabs.tsx` in the same slice
+- kept old visual compatibility out of scope and used HeroUI default tab classes
+
+Files:
+
+- `src/components/ui/tabs.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- use HeroUI `Tabs` compound components directly from `@heroui/react`
+- keep `NextLink` as the rendered tab element so SSR/no-JS navigation keeps real `href` values
+- use HeroUI selected state markers (`data-selected="true"` and `aria-selected="true"`) instead of the old local `data-active="true"` marker
+- do not create a new `components/ui/tabs` compatibility wrapper
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Tabs`: PASS, reviewed HeroUI `Tabs` docs before implementation.
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS after updating assertions to HeroUI tab markers; Vitest config ran the full suite (`35` files, `118` tests).
+- `rg -n "@/components/ui/tabs|components/ui/tabs|TabsList|TabsTrigger|TabsContent|tabsListVariants|data-active=\\"true\\"" src package.json pnpm-lock.yaml`: PASS, no old Tabs primitive references remain in source or package manifests.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS after casting HeroUI tab render props to `ComponentProps<typeof NextLink>` for the custom `NextLink` renderer.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3269`: PASS, local production server started at `http://127.0.0.1:3269`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-tabs-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3269/ && rg -n 'class="tabs|tabs__list|tabs__tab|tabs__indicator|data-slot="tabs|data-selected="true"|aria-selected="true"|href="/\\?type=writing"|data-active="true"|base-ui-' /tmp/blog-heroui-tabs-home.html`: PASS, returned `200 text/html; charset=utf-8` and rendered HeroUI tabs with `All` selected.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-tabs-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3269/?type=writing' && rg -n 'class="tabs|tabs__tab|data-selected="true"|aria-selected="true"|href="/\\?type=writing"|data-active="true"|base-ui-' /tmp/blog-heroui-tabs-writing.html`: PASS, returned `200 text/html; charset=utf-8` and rendered `Writing` as the selected HeroUI tab.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-tabs-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3269/?type=projects' && rg -n 'class="tabs|tabs__tab|data-selected="true"|aria-selected="true"|href="/\\?type=projects"|data-active="true"|base-ui-' /tmp/blog-heroui-tabs-projects.html`: PASS, returned `200 text/html; charset=utf-8` and rendered `Projects` as the selected HeroUI tab.
+- Browser automation remains blocked in this environment: Node REPL could not import `playwright`; Chrome and Safari both reject JavaScript execution through AppleScript because `Allow JavaScript from Apple Events` is disabled.
+
+Follow-up:
+
+- when a real browser automation path is available, verify hydrated filter clicks update the URL and feed contents without console errors.
+- continue migration with another primitive and delete its old `src/components/ui/*` file in the same slice.
+
+Blockers:
+
+- automated browser DOM/interaction verification is blocked by unavailable Playwright and browser Apple Events JavaScript settings.
+
+## 2026-05-18 - HeroUI Badge Primitive Migration
+
+Status: done locally
+
+Summary:
+
+- migrated the old local Badge primitive usage to HeroUI defaults
+- used HeroUI `Chip` for the existing standalone label/status use cases because HeroUI documents `Badge` as an anchored indicator and `Chip` as the label/status component
+- deleted `src/components/ui/badge.tsx` in the same slice
+- installed HeroUI dependencies and imported `@heroui/styles` after Tailwind
+- kept the remaining shadcn CSS import because other unmigrated `src/components/ui/*` primitives still depend on the shadcn/Base UI baseline
+
+Files:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `src/app/globals.css`
+- `src/components/ui/badge.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `src/domains/thoughts/thoughts-page.tsx`
+- `docs/specs/2026-05-18-heroui-design-system-migration-design.md`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- do not preserve the old shadcn badge visual treatment during this migration; use HeroUI defaults as requested
+- replace `Badge` call sites directly with `Chip` imports from `@heroui/react`
+- do not create a new `components/ui/badge` compatibility wrapper
+- leave `@base-ui/react`, `class-variance-authority`, `shadcn`, and `shadcn/tailwind.css` in place until their remaining component users are migrated
+
+Verification:
+
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Badge`: PASS, reviewed Badge docs before implementation.
+- `node /Users/sorcererxw/.agents/skills/heroui-react/scripts/get_component_docs.mjs Chip`: PASS, reviewed Chip docs and confirmed standalone labels map to `Chip`.
+- `pnpm add @heroui/react @heroui/styles tailwind-variants`: PASS, installed `@heroui/react 3.0.5`, `@heroui/styles 3.0.5`, and `tailwind-variants 3.2.2`.
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests).
+- `rg -n "@/components/ui/badge|components/ui/badge|<Badge|Badge\\b|badgeVariants|data-slot=\\"badge\\"|data-variant=\\"secondary\\"" src package.json pnpm-lock.yaml`: PASS, no old Badge primitive references remain in source or package manifests; article author CSS class names are unrelated.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3268`: PASS, local production server started at `http://127.0.0.1:3268`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-chip-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3268/ && rg -n 'class="[^\"]*chip|chip__label|Writing|Telegram|data-slot="badge"|@heroui|href="/\\?type=writing"' /tmp/blog-heroui-chip-home.html`: PASS, returned `200 text/html; charset=utf-8` and rendered HeroUI chip markup such as `class="chip chip--default chip--secondary"` / `data-slot="chip"`.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-chip-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3268/?type=writing' && rg -n 'class="[^\"]*chip|chip__label|Writing|data-slot="badge"|href="/articles/' /tmp/blog-heroui-chip-writing.html`: PASS, returned `200 text/html; charset=utf-8` and rendered HeroUI chip markup for writing labels.
+- `curl --max-time 90 -s -o /tmp/blog-heroui-chip-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3268/?type=projects' && rg -n 'class="[^\"]*chip|chip__label|Project|data-slot="badge"' /tmp/blog-heroui-chip-projects.html`: PASS, returned `200 text/html; charset=utf-8` and rendered HeroUI chip markup for project labels.
+- Browser automation was attempted but not completed: Node REPL could not import `playwright`; Chrome and Safari both rejected JavaScript execution through AppleScript because `Allow JavaScript from Apple Events` is disabled.
+
+Follow-up:
+
+- migrate `separator` or `button` next, deleting the corresponding old `src/components/ui/*` file in the same slice.
+- run real browser verification once a browser automation path is available or Apple Events JavaScript is enabled.
+
+Blockers:
+
+- automated browser DOM verification is blocked by unavailable Playwright and browser Apple Events JavaScript settings.
+
+## 2026-05-18 - HeroUI Design System Migration Contract
+
+Status: planned
+
+Summary:
+
+- defined the progressive migration path from local shadcn/Base UI primitives to HeroUI v3
+- captured the user constraint that each migrated primitive must delete the corresponding `src/components/ui/*` file in the same slice
+- updated the active Personal Site overview docs and roadmap so they no longer require shadcn as the target feed primitive source
+- recorded verification expectations for per-component migration slices
+
+Files:
+
+- `docs/specs/2026-05-18-heroui-design-system-migration-design.md`
+- `docs/plans/2026-05-18-heroui-design-system-migration.md`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- HeroUI v3 is the target shared component implementation for public UI primitives.
+- Do not keep `src/components/ui/*` as a long-lived HeroUI compatibility facade.
+- When a primitive is migrated, update its call sites, delete the old file, and record the replacement strategy.
+- App wrappers are allowed only when they carry product semantics, such as feed or article meaning, not when they merely mirror a generic primitive.
+- Start from low-risk display primitives before higher-risk interactive controls.
+
+Verification:
+
+- `sed -n '1,220p' /Users/sorcererxw/.agents/skills/heroui-react/SKILL.md`: reviewed HeroUI v3 local skill guidance.
+- HeroUI official docs search: reviewed v3 release, quick start, theming, and composition guidance for Tailwind CSS v4, `@heroui/react`, `@heroui/styles`, no-provider setup, and compound components.
+- `sed -n '1,220p' AGENTS.md`: reviewed repo operating contract.
+- `sed -n '1,220p' docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md`: reviewed active framework/styling direction.
+- `sed -n '1,220p' docs/specs/2026-05-13-tailwind-inline-style-convergence-design.md`: reviewed Tailwind and `src/components/ui` exemption context.
+- `sed -n '1,220p' docs/plans/2026-05-13-tailwind-inline-style-convergence.md`: reviewed completed Tailwind convergence plan.
+- `sed -n '1,220p' docs/roadmap.md`: reviewed current shadcn primitive constraint before replacing it.
+- `sed -n '1,180p' docs/verification.md`: reviewed current verification baselines.
+- `rg -n "@/components/ui|components/ui|shadcn|@base-ui|class-variance-authority|cva\\(|<Button|<Card|<Badge|<Tabs|<Dialog|<Tooltip|<Dropdown|<Select|<Input" src package.json components.json docs`: inventoried current local primitive usage.
+- `find src/components/ui -maxdepth 2 -type f -print`: inventoried current local UI primitive files.
+
+Follow-up:
+
+- execute Slice 0 by installing HeroUI dependencies and auditing token/style import collisions.
+- migrate `separator` first, then `badge`, deleting each old component file in its migration slice.
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Homepage Feed Badge Secondary
 
 Status: done locally
@@ -184,7 +836,7 @@ Status: done locally
 Summary:
 
 - optimized the homepage Overview Feed without changing the one-page product model or removing feed content
-- added `content-visibility: auto` plus a stable intrinsic size to feed cells so below-viewport modules can skip initial rendering work
+- added `content-visibility: auto` plus a stable intrinsic size to feed cells so below-viewport modules can skip initial rendering work; this optimization was later removed in the 2026-05-18 masonry shadow clipping fix because it clipped card shadows
 - reduced default homepage eager media from three media-bearing feed items to two while preserving three eager media candidates for explicit type filters such as Writing
 
 Files:

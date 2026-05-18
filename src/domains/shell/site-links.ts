@@ -1,4 +1,4 @@
-export type PublicRouteKey = "home" | "blog" | "thoughts" | "projects" | "stack";
+export type PublicRouteKey = "home" | "blog" | "thoughts" | "projects";
 
 type PublicRoute = {
   key: PublicRouteKey;
@@ -35,10 +35,6 @@ export function getCurrentPublicRoute(pathname: string | null): PublicRouteKey |
     return "projects";
   }
 
-  if (/^\/stack(?:\/|$)/.test(pathname)) {
-    return "stack";
-  }
-
   if (pathname === "/") {
     return "home";
   }
@@ -48,15 +44,12 @@ export function getCurrentPublicRoute(pathname: string | null): PublicRouteKey |
 
 export function getPublicRoutes(
   currentRoute: PublicRouteKey | null = null,
-  _options: { includeStack?: boolean } = {},
 ): PublicRoute[] {
   void currentRoute;
   return [];
 }
 
-export function getFooterLinks(
-  _options: { includeStack?: boolean } = {},
-): FooterLinkGroup[] {
+export function getFooterLinks(): FooterLinkGroup[] {
   return [
     {
       title: "站外",

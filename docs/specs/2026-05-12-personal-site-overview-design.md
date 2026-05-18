@@ -28,6 +28,7 @@ The homepage should not behave like a blog archive with extra sections attached.
 - turning Notion into a complete CMS for every external post
 - adding standalone social-post detail pages
 - making Stack Inventory a public first-class section
+- retaining the legacy Stack Inventory page or Stack-specific Notion/KV pipeline
 - preserving `/blog`, `/projects`, or `/thoughts` as primary product pages
 - introducing D1 or another new storage system solely for the first overview implementation
 
@@ -45,17 +46,19 @@ Core rules:
 - `Profile Hero` is sourced from Notion and targets a one hour freshness window.
 - `Feed Item` types for v1 are `Blog Entry`, `Project`, and `Social Post`.
 - `Social Post` carries a `Social Source` such as Telegram channel or Twitter, but source does not create a separate presentation component family.
-- `Stack Inventory` stays hidden and is not a feed item type.
+- `Stack Inventory` is not part of the Personal Site product surface and is not a feed item type.
 
 ## Presentation Model
 
 All feed content uses one Feed Module presentation system.
 
-V1 Feed UI implementation uses shadcn primitives for shared module structure:
+The original V1 Feed UI implementation used shadcn primitives for shared module structure:
 
 - Feed Filters use shadcn `Tabs`
 - Feed Modules use shadcn `Card`
 - Feed source labels use shadcn `Badge`
+
+`docs/specs/2026-05-18-heroui-design-system-migration-design.md` supersedes that component-source decision. HeroUI v3 is now the target shared component implementation. During migration, each replaced primitive must be removed from `src/components/ui` in the same slice rather than preserved as a long-lived compatibility wrapper.
 
 Feed Modules support these Module Sizes:
 
@@ -134,7 +137,7 @@ These redirects are compatibility behavior, not app route surfaces. If the frame
 
 `/articles/[slug]` remains available as Content Detail for long-form Blog Entries.
 
-`/stack` remains hidden from the primary Personal Site structure.
+`/stack` is removed from the Personal Site surface and should return `404`; do not keep a hidden Stack route, navigation entry, Notion adapter, or KV cache path.
 
 ## Sitemap and Discovery
 
@@ -145,7 +148,7 @@ Rules:
 - include `/`
 - include Content Detail URLs such as `/articles/[slug]`
 - include manually authored durable topic/query pages only if they remain part of the product
-- do not include `/blog`, `/projects`, or `/thoughts`
+- do not include `/blog`, `/projects`, `/thoughts`, or `/stack`
 - do not include filtered query URLs
 - preserve old non-blog archive link equity through permanent redirects to Filter Queries
 

@@ -1,5 +1,5 @@
 import type { FeedItem } from "./types";
-import type { OverviewFeedViewItem } from "./overview-feed-view";
+import type { OverviewFeedViewItem } from "./overview-feed-view-model";
 
 export const serializeOverviewFeedItems = (items: FeedItem[]): OverviewFeedViewItem[] =>
   items.map((item) => ({

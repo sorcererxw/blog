@@ -97,7 +97,7 @@ Work:
 - implement lightweight Feed Media Preview handling using existing media delivery where possible
 - keep presentation unified across item types and sources
 - implement Feed Filters as URL-backed client state after SSR, not section pages
-- use shadcn `Tabs` for Feed Filters, shadcn `Card` for Feed Modules, and shadcn `Badge` for source labels
+- use the active design-system primitives for Feed Filters, Feed Modules, and source labels; the initial implementation used shadcn `Tabs`, `Card`, and `Badge`, but `docs/specs/2026-05-18-heroui-design-system-migration-design.md` makes HeroUI v3 the target component implementation
 - animate Feed Module insertion and removal when hydrated filters change the visible item set
 - render all matching Feed Items in one response without pagination or infinite scroll
 
@@ -119,7 +119,6 @@ Files:
 - `src/pages/blog/index.astro`
 - `src/pages/projects/index.astro`
 - `src/pages/thoughts/index.astro`
-- `src/pages/stack/index.astro`
 - `src/pages/sitemap.xml.ts`
 - route tests if present
 
@@ -129,7 +128,7 @@ Work:
 - redirect `/projects` to `/?type=projects`
 - redirect `/thoughts` to `/?type=social`
 - keep `/articles/[slug]` as Content Detail
-- keep `/stack` hidden from the primary product structure
+- remove `/stack`; it should return `404` and no Stack-specific domain, provider, or cache path should remain in the active app
 - remove old archive routes and filter query URLs from sitemap discovery
 
 Verification:

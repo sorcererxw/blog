@@ -17,7 +17,7 @@ Keep CSS modules only when the styling depends on selectors that are materially 
 - Ordinary one-element styling belongs inline as Tailwind classes.
 - Conditional or compositional `className` expressions must use `cn(...)` from `src/lib/utils.ts`.
 - Tailwind typography, spacing, radius, and ring utilities must use named tokens for font size, letter spacing, line height, padding, margin, gap, border radius, and ring width; arbitrary utilities in those categories are not allowed.
-- `src/components/ui/` is exempt because it is the shadcn/base UI layer and should preserve upstream primitive defaults unless a separate component-layer decision is made.
+- `src/components/ui/` is exempt while it remains the shadcn/Base UI layer. `docs/specs/2026-05-18-heroui-design-system-migration-design.md` is the separate component-layer decision that makes the exemption temporary: migrated primitives must leave `src/components/ui` and delete the old files.
 - CSS modules are allowed for:
   - rendered rich text container selectors
   - third-party generated markup selectors
@@ -27,9 +27,9 @@ Keep CSS modules only when the styling depends on selectors that are materially 
 
 ## Current Allowed CSS Modules
 
-- `src/domains/article/article-detail-view.module.css`: rich text block selectors, Shiki dark-theme selectors, Notion block color classes
-- `src/domains/home/intro.module.css`: Notion-rendered rich text container selectors
-- `src/domains/feed/masonry-feed.module.css`: responsive masonry layout switching plus transition keyframes
+- `src/components/article/article-detail-view.module.css`: rich text block selectors, Shiki dark-theme selectors, Notion block color classes
+- `src/components/home/intro.module.css`: Notion-rendered rich text container selectors
+- `src/components/feed/masonry-feed.module.css`: responsive masonry layout switching plus transition keyframes
 
 ## Non-Goals
 

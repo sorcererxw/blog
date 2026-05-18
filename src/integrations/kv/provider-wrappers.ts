@@ -1,10 +1,8 @@
 import type { NotionArticleDetailRecord } from "@/domains/article/article-detail-types";
 import type { NotionArticleRecord } from "@/domains/article/types";
-import type { NotionStackRecord } from "@/domains/stack/types";
 import type { HomePageRecord, HomePageSource } from "@/integrations/notion/home";
 import type { NotionArticleSource } from "@/integrations/notion/articles";
 import type { NotionArticleDetailSource } from "@/integrations/notion/article-detail";
-import type { NotionStackSource } from "@/integrations/notion/stack";
 import type { NotionProjectRecord } from "@/domains/projects/types";
 import type { NotionProjectSource } from "@/integrations/notion/projects";
 import type { ThoughtListItem } from "@/domains/thoughts/types";
@@ -30,7 +28,6 @@ const key = {
       : "blog2:provider:notion:articles:published:v1",
   home: "blog2:provider:notion:home:v1",
   projects: "blog2:provider:notion:projects:public:v1",
-  stack: "blog2:provider:notion:stack:public:v1",
   thoughts: ({
     channelUsername,
     maxPages,
@@ -94,20 +91,6 @@ export function withCachedProjectSource(
         cache,
         key.projects,
         source.listProjects,
-      ),
-  };
-}
-
-export function withCachedStackSource(
-  source: NotionStackSource,
-  cache: ProviderCache,
-): NotionStackSource {
-  return {
-    listStack: () =>
-      readThroughProviderCache<NotionStackRecord[]>(
-        cache,
-        key.stack,
-        source.listStack,
       ),
   };
 }

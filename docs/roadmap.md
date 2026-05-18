@@ -44,7 +44,7 @@ Excluded:
 - generic OAuth/admin flows from the old backend
 - non-blog backend products
 - standalone social-post detail pages
-- public Stack Inventory as a first-class section
+- Stack Inventory page, navigation, and Stack-specific provider/cache pipeline
 
 ## Source of Truth and Storage
 
@@ -103,7 +103,6 @@ Goals:
 - implement article listing
 - implement article detail rendering
 - implement projects
-- implement stack
 - implement sitemap
 - implement Notion fetch + normalization + KV-backed caching
 
@@ -184,9 +183,9 @@ Exit criteria:
 - runtime integrations must not synthesize content when source configuration is missing
 - `/sitemap.xml` is runtime-generated so Cloudflare builds do not require `NOTION_SECRET`, while runtime requests still require valid Notion configuration
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
-- feed UI primitives should come from the local shadcn component set, not HeroUI
+- feed UI primitives and tokens have migrated from the local shadcn/Base UI component set to HeroUI v3 under `docs/specs/2026-05-18-heroui-design-system-migration-design.md`; `src/components/ui/*`, `components.json`, `shadcn/tailwind.css`, and the old shadcn/Base UI dependencies are no longer part of the active source tree
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
-- ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind tokens rather than arbitrary values, with `src/components/ui/` exempt as the shadcn/base UI layer
+- ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
 - current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
 
 ## Active Priorities
