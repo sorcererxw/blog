@@ -13,5 +13,6 @@ Convert low-complexity CSS module usage to inline Tailwind utilities and add ESL
 - [x] Add ESLint rules that:
   - restrict `.module.css` imports to the allowlist
   - reject conditional/template/binary `className` expressions so complex class decisions go through `cn(...)`
+- [x] Add an ESLint guard that rejects arbitrary Tailwind font-size, tracking, leading, padding, margin, gap, rounded, and ring utilities outside `src/components/ui/`, then convert existing arbitrary values in app/domain surfaces to named Tailwind tokens.
 - [x] Run tests, lint, typecheck, build, HTTP checks, and browser verification.
 - [x] Record verification and decisions in `docs/task-ledger.md`.

@@ -54,7 +54,7 @@ function StackIcon({ item }: { item: StackListItem }) {
 
   if (item.icon.kind === "emoji") {
     return (
-      <span className="inline-flex h-6 min-w-6 items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+      <span className="inline-flex h-6 min-w-6 items-center justify-center text-base leading-none text-muted-foreground">
         {item.icon.value}
       </span>
     );
@@ -85,7 +85,7 @@ function ChipRow({
 
   return (
     <div className="grid gap-2">
-      <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+      <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-2">
         {values.map((value) => (
           <Badge key={`${label}-${value}`} variant="outline">
@@ -134,11 +134,11 @@ export function StackListView({
   return (
     <section aria-label="Stack" className={cn("grid w-full max-w-3xl gap-5", className)}>
       <header className="grid gap-2">
-        <p className="m-0 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Engineering stack</p>
-        <h1 className="m-0 text-balance font-serif text-[clamp(2rem,4vw,3.25rem)] font-medium leading-[0.98] tracking-[-0.04em]">
+        <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Engineering stack</p>
+        <h1 className="m-0 text-balance font-serif text-4xl font-medium leading-none tracking-tighter md:text-5xl">
           The tools, runtimes, and services behind how the site ships.
         </h1>
-        <p className="m-0 text-[1.03rem] leading-[1.85] text-muted-foreground">
+        <p className="m-0 text-base leading-loose text-muted-foreground">
           This stack page documents the software, infrastructure, and deployment surfaces
           used to publish, debug, and maintain the site.
         </p>
@@ -146,7 +146,7 @@ export function StackListView({
 
       <div className="grid gap-3 lg:grid-cols-2" aria-label="Stack filters">
         <Field className="grid gap-2">
-          <FieldLabel className="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground" htmlFor="stack-platform-filter">
+          <FieldLabel className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" htmlFor="stack-platform-filter">
             Platform
           </FieldLabel>
           <FieldContent>
@@ -156,7 +156,7 @@ export function StackListView({
             >
               <SelectTrigger
                 aria-label="Platform"
-                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-[0.96rem] leading-[1.4]"
+                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-base leading-snug"
                 id="stack-platform-filter"
               >
                 <SelectValue placeholder={FILTER_PLACEHOLDER.platform} />
@@ -174,7 +174,7 @@ export function StackListView({
         </Field>
 
         <Field className="grid gap-2">
-          <FieldLabel className="text-[0.82rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground" htmlFor="stack-category-filter">
+          <FieldLabel className="text-xs font-semibold uppercase tracking-widest text-muted-foreground" htmlFor="stack-category-filter">
             Category
           </FieldLabel>
           <FieldContent>
@@ -184,7 +184,7 @@ export function StackListView({
             >
               <SelectTrigger
                 aria-label="Category"
-                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-[0.96rem] leading-[1.4]"
+                className="h-auto w-full rounded-xl border-border bg-card px-4 py-3 text-base leading-snug"
                 id="stack-category-filter"
               >
                 <SelectValue placeholder={FILTER_PLACEHOLDER.category} />
@@ -229,7 +229,7 @@ export function StackListView({
         <div className="grid gap-4 lg:grid-cols-2">
           {visibleItems.map((item) => (
             <article key={`${item.name}-${item.link}`}>
-              <Card className="overflow-clip rounded-[1.1rem] bg-[color:color-mix(in_oklab,var(--background)_92%,var(--card)_8%)] py-0">
+              <Card className="overflow-clip rounded-2xl bg-[color:color-mix(in_oklab,var(--background)_92%,var(--card)_8%)] py-0">
                 <NextLink
                   className="grid gap-4 p-4 transition-[color,transform,border-color] duration-150 hover:-translate-y-0.5 [&:hover_.stack-card-title]:text-foreground [&:hover_.stack-summary]:text-foreground"
                   href={item.link}
@@ -238,17 +238,17 @@ export function StackListView({
                 >
                   <div className="flex min-w-0 items-start justify-between gap-4">
                     <div className="space-y-2">
-                      <h2 className="stack-card-title m-0 text-pretty font-serif text-[clamp(1.25rem,2vw,1.65rem)] font-medium leading-[1.05] tracking-[-0.03em]">
+                      <h2 className="stack-card-title m-0 text-pretty font-serif text-xl font-medium leading-tight tracking-tight md:text-2xl">
                         {item.name}
                       </h2>
-                      <p className="m-0 break-all text-[0.94rem] leading-[1.7] text-muted-foreground">
+                      <p className="m-0 break-all text-base leading-relaxed text-muted-foreground">
                         {item.link}
                       </p>
                     </div>
                     <StackIcon item={item} />
                   </div>
 
-                  <p className="stack-summary m-0 text-base leading-[1.8] text-muted-foreground">
+                  <p className="stack-summary m-0 text-base leading-loose text-muted-foreground">
                     {item.description}
                   </p>
 

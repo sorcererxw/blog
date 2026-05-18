@@ -121,7 +121,7 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
 
     if (segment.monospace) {
       content = (
-        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]">
+        <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">
           {content}
         </code>
       );

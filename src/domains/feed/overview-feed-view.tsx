@@ -138,7 +138,7 @@ function renderRichTextSegment(segment: FeedRichTextSegment, index: number): Rea
 
   if (segment.monospace) {
     content = (
-      <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.88em]">
+      <code className="rounded bg-muted px-1 py-0.5 font-mono text-sm">
         {content}
       </code>
     );
@@ -162,14 +162,14 @@ function renderRichTextSegment(segment: FeedRichTextSegment, index: number): Rea
 function FeedText({ item }: { item: OverviewFeedViewItem }) {
   if (item.summaryRichText?.length) {
     return (
-      <p className="m-0 whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-muted-foreground">
+      <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-muted-foreground">
         {item.summaryRichText.map(renderRichTextSegment)}
       </p>
     );
   }
 
   return item.summary ? (
-    <p className="m-0 whitespace-pre-wrap break-words text-[0.95rem] leading-relaxed text-muted-foreground">
+    <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-muted-foreground">
       {item.summary}
     </p>
   ) : null;
@@ -251,9 +251,9 @@ function ModuleInner({
       <MediaGrid item={item} />
       <div
         className={cn(
-          "grid gap-[0.85rem] p-[1.15rem]",
-          moduleSize === "compact" && "gap-[0.65rem] p-4",
-          moduleSize === "feature" && "p-[1.35rem]",
+          "grid gap-3 p-5",
+          moduleSize === "compact" && "gap-2 p-4",
+          moduleSize === "feature" && "p-6",
         )}
       >
         <div className="justify-self-start">
@@ -264,9 +264,9 @@ function ModuleInner({
         {isTelegram ? null : (
           <h2
             className={cn(
-              "m-0 flex items-baseline gap-2 font-serif text-[1.35rem] font-semibold leading-[1.1] tracking-normal text-foreground",
-              moduleSize === "compact" && "text-[1.05rem]",
-              moduleSize === "feature" && "text-[1.65rem]",
+              "m-0 flex items-baseline gap-2 font-serif text-2xl font-semibold leading-tight tracking-normal text-foreground",
+              moduleSize === "compact" && "text-lg",
+              moduleSize === "feature" && "text-3xl",
             )}
           >
             {item.titleEmoji ? (
@@ -491,7 +491,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                 <NextLink
                   aria-selected={isActive}
                   className={cn(
-                    "inline-flex w-auto min-w-0 flex-none items-center justify-center rounded-full px-3 py-1.5 text-[0.85rem] font-medium text-foreground no-underline transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    "inline-flex w-auto min-w-0 flex-none items-center justify-center rounded-full px-3 py-1.5 text-sm font-medium text-foreground no-underline transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                     isActive && "bg-foreground text-background hover:text-background",
                   )}
                   data-active={isActive}

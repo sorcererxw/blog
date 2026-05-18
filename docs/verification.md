@@ -1,5 +1,40 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Tailwind Token Lint State
+
+Current styling guardrail:
+
+- `eslint.config.mjs` rejects arbitrary Tailwind font size, tracking, leading, padding, margin, gap, rounded, and ring utilities in string and template literal class tokens outside `src/components/ui/`.
+- Existing app/domain source classes use named Tailwind tokens for those categories.
+- `src/components/ui/` is exempt as the shadcn/base UI layer; its primitive defaults were restored after the exemption was added.
+- Other arbitrary Tailwind utilities are still allowed where the current Tailwind convergence spec permits them.
+
+Current evidence:
+
+- `pnpm lint`: PASS.
+- `pnpm test`: PASS (`34` files, `114` tests).
+- `pnpm typecheck`: PASS after `pnpm build`; the first parallel run raced `.next/types` generation and failed with missing generated route type files.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3219/`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3219/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3219/?type=projects'`: PASS, returned `200 text/html; charset=utf-8`.
+- Browser verification at `http://127.0.0.1:3219/`, `/?type=writing`, and `/?type=projects`: PASS, no horizontal overflow and no console errors; homepage rendered `58` article/card elements, writing rendered `42` article links, and projects rendered without browser errors.
+
+Previous evidence:
+
+- `rg -n "text-\\[[^\\]]+\\]" src eslint.config.mjs`: PASS, no matches before expanding the guard.
+- `curl --max-time 20 -s -o /tmp/blog-token-lint-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3218/`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 20 -s -o /tmp/blog-token-lint-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3218/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 20 -s -o /tmp/blog-token-lint-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3218/?type=projects'`: PASS, returned `200 text/html; charset=utf-8`.
+- Browser verification at `http://127.0.0.1:3218/`, `/?type=writing`, and `/?type=projects`: PASS, no horizontal overflow and no console errors; homepage rendered `58` article/card elements, writing rendered `42` article links, and projects rendered without browser errors.
+- `pnpm test`: PASS (`34` files, `114` tests).
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm typecheck`: PASS after `pnpm build`; the first parallel run raced `.next/types` generation and failed with missing generated route type files.
+- `curl --max-time 20 -s -o /tmp/blog-tailwind-lint-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3217/`: PASS, returned `200 text/html; charset=utf-8`.
+- `curl --max-time 20 -s -o /tmp/blog-tailwind-lint-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3217/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`.
+- Browser verification at `http://127.0.0.1:3217/`: PASS, rendered `58` article/card elements, no horizontal overflow, and no console errors.
+- Browser verification at `http://127.0.0.1:3217/?type=writing`: PASS, rendered `42` article detail links, no horizontal overflow, and no console errors.
+
 ## 2026-05-18 Provider KV Cache State
 
 Current provider cache shape:

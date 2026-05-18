@@ -246,7 +246,7 @@ function renderBlock(block: ArticleDetailBlock) {
         <figure className="space-y-3">
           <div className="grid gap-2">
             {block.language ? (
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 {block.language}
               </p>
             ) : null}

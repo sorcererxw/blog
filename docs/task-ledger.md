@@ -16,6 +16,61 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Tailwind Arbitrary Token Lint Guard
+
+Status: done locally, pending deploy verification
+
+Summary:
+
+- added a repo-local ESLint rule that rejects arbitrary Tailwind font size, tracking, leading, padding, margin, gap, rounded, and ring utilities in string and template literal class tokens outside `src/components/ui/`
+- converted existing arbitrary utilities in app/domain surfaces to nearby named Tailwind tokens
+- reverted changes to `src/components/ui/` and exempted that shadcn/base UI layer from this guard
+- updated the Tailwind inline style convergence docs to make named spacing and typography tokens part of the styling contract
+
+Files:
+
+- `eslint.config.mjs`
+- `docs/specs/2026-05-13-tailwind-inline-style-convergence-design.md`
+- `docs/plans/2026-05-13-tailwind-inline-style-convergence.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+- `src/domains/article/article-list.tsx`
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `src/domains/home/intro.tsx`
+- `src/domains/projects/projects-list.tsx`
+- `src/domains/shell/public-boundary.tsx`
+- `src/domains/stack/stack-list.tsx`
+- `src/domains/thoughts/thoughts-page.tsx`
+- `src/app/error.tsx`
+
+Decisions:
+
+- enforce this as ESLint policy instead of a one-off cleanup
+- scope the new policy to the requested spacing, typography, radius, and ring categories outside `src/components/ui/`; this slice does not ban unrelated arbitrary Tailwind utilities such as custom colors or layout formulas
+- preserve `src/components/ui/` upstream primitive defaults instead of forcing app-level token rules into the shadcn/base UI layer
+- use named Tailwind tokens with responsive variants where prior arbitrary values carried hierarchy or compact spacing
+
+Verification:
+
+- `pnpm lint`: PASS
+- `pnpm test`: PASS (`34` files, `114` tests)
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm typecheck`: PASS after `pnpm build`; initial parallel run failed because `.next/types` route files were missing while build was generating them
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3219/`: PASS, returned `200 text/html; charset=utf-8`
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-writing.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3219/?type=writing'`: PASS, returned `200 text/html; charset=utf-8`
+- `curl --max-time 20 -s -o /tmp/blog-rounded-ring-lint-projects.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3219/?type=projects'`: PASS, returned `200 text/html; charset=utf-8`
+- Browser verification at `http://127.0.0.1:3219/`, `/?type=writing`, and `/?type=projects`: PASS, no horizontal overflow and no console errors; homepage rendered `58` article/card elements, writing rendered `42` article links, and projects rendered without browser errors
+
+Follow-up:
+
+- consider adding narrower tests around local ESLint rules if the repo accumulates more custom lint policy
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Provider KV Cache Wrappers
 
 Status: done locally, pending deploy verification

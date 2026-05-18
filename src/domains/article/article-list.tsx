@@ -29,7 +29,7 @@ function getIconLabel(item: ArticleListItem) {
 function IconMark({ item }: { item: ArticleListItem }) {
   if (item.icon?.kind === "emoji") {
     return (
-      <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+      <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted-foreground">
         {item.icon.value}
       </span>
     );
@@ -63,7 +63,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
 
       {items.length === 0 ? (
         <div className="grid w-full max-w-[38rem] gap-3 pt-2" aria-label="Article list empty state">
-          <h2 className="m-0 font-serif text-[clamp(1.8rem,4vw,2.6rem)] font-medium leading-none tracking-[-0.05em]">
+          <h2 className="m-0 font-serif text-3xl font-medium leading-none tracking-tighter md:text-4xl">
             No articles published yet.
           </h2>
           <p className="m-0 max-w-[38rem] text-base leading-7 text-muted-foreground">
@@ -107,7 +107,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
 
                   <div className="grid gap-2.5">
                     <time
-                      className="text-[0.82rem] uppercase leading-normal tracking-[0.08em] text-muted-foreground"
+                      className="text-xs uppercase leading-normal tracking-widest text-muted-foreground"
                       dateTime={item.date.toISOString()}
                     >
                       {formatArticleDate(item.date)}
@@ -116,14 +116,14 @@ export function ArticleList({ items, className }: ArticleListProps) {
                     <div className="flex min-w-0 items-start justify-between gap-4">
                       <h2
                         className={cn(
-                          "m-0 text-pretty font-serif text-[clamp(1.4rem,2vw,2rem)] font-medium leading-[1.02] tracking-[-0.04em]",
-                          item.cover && "text-[clamp(1.6rem,2.4vw,2.25rem)]",
+                          "m-0 text-pretty font-serif text-2xl font-medium leading-none tracking-tighter md:text-3xl",
+                          item.cover && "text-3xl md:text-4xl",
                         )}
                       >
                         {item.title}
                       </h2>
                       {iconLabel ? (
-                        <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-[0.95rem] leading-none text-muted-foreground">
+                        <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted-foreground">
                           {iconLabel}
                         </span>
                       ) : null}

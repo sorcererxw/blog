@@ -79,6 +79,45 @@ const localRules = {
         };
       },
     },
+    "no-arbitrary-tailwind-design-tokens": {
+      meta: {
+        type: "problem",
+        messages: {
+          noArbitraryUtility:
+            "Use Tailwind design tokens instead of arbitrary text, tracking, leading, padding, margin, gap, rounded, or ring utilities.",
+        },
+        schema: [],
+      },
+      create(context) {
+        const arbitraryUtilityPattern =
+          /(?:^|:)(?:text|tracking|leading|rounded(?:-[trblse]|-[trbl][trbl]|-[xy])?|ring(?:-(?:offset|inset|[0-9]+|[xy]))?|-?(?:m[trblxy]?|p[trblxy]?|gap(?:-[xy])?))-\[[^\]]+\]/;
+        const filename = context.filename ?? context.getFilename();
+        const isUiComponent = filename.includes("/src/components/ui/");
+
+        function checkText(value, node) {
+          if (isUiComponent) {
+            return;
+          }
+
+          const tokens = value.split(/\s+/).filter(Boolean);
+
+          if (tokens.some((token) => arbitraryUtilityPattern.test(token))) {
+            context.report({ node, messageId: "noArbitraryUtility" });
+          }
+        }
+
+        return {
+          Literal(node) {
+            if (typeof node.value === "string") {
+              checkText(node.value, node);
+            }
+          },
+          TemplateElement(node) {
+            checkText(node.value.raw, node);
+          },
+        };
+      },
+    },
     "require-next-link-and-image": {
       meta: {
         type: "problem",
@@ -159,6 +198,7 @@ const eslintConfig = tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "local/no-arbitrary-tailwind-design-tokens": "error",
       "local/no-unapproved-css-module-imports": "error",
       "local/require-cn-for-complex-classname": "error",
       "local/require-next-link-and-image": "error",

@@ -62,7 +62,7 @@ describe("OverviewFeed", () => {
     expect(markup).toContain('data-slot="badge"');
     expect(markup).not.toContain("base-ui-");
     expect(markup).toContain('class="justify-self-start"');
-    expect(markup).not.toContain("px-[1.15rem]");
+    expect(markup).not.toContain("px-" + "[1.15rem]");
     expect(markup).not.toContain("badge--soft");
     expect(markup).toContain('href="/articles/one"');
     expect(markup).toContain("https%3A%2F%2Fexample.com%2Farticle-cover.jpg");
@@ -101,7 +101,7 @@ describe("OverviewFeed", () => {
 
     expect(markup).toMatch(/◇[\s\S]*Project One/);
     expect(markup).toContain('class="justify-self-start"');
-    expect(markup).not.toContain("-ml-[1.15rem]");
+    expect(markup).not.toContain("-ml-" + "[1.15rem]");
     expect(markup).not.toMatch(/Project\s*◇/);
     expect(markup).toContain('href="https://example.com/project"');
   });

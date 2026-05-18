@@ -16,6 +16,8 @@ Keep CSS modules only when the styling depends on selectors that are materially 
 
 - Ordinary one-element styling belongs inline as Tailwind classes.
 - Conditional or compositional `className` expressions must use `cn(...)` from `src/lib/utils.ts`.
+- Tailwind typography, spacing, radius, and ring utilities must use named tokens for font size, letter spacing, line height, padding, margin, gap, border radius, and ring width; arbitrary utilities in those categories are not allowed.
+- `src/components/ui/` is exempt because it is the shadcn/base UI layer and should preserve upstream primitive defaults unless a separate component-layer decision is made.
 - CSS modules are allowed for:
   - rendered rich text container selectors
   - third-party generated markup selectors
@@ -35,6 +37,7 @@ Keep CSS modules only when the styling depends on selectors that are materially 
 - no token palette change
 - no removal of global theme variables
 - no migration of Shiki or Notion rich text selectors into brittle inline utilities
+- no broad ban on arbitrary Tailwind utilities outside font size, letter spacing, line height, padding, margin, gap, border radius, and ring width
 
 ## Verification
 
