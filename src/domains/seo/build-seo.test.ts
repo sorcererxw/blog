@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import { buildSeo } from "./build-seo";
 
 describe("buildSeo", () => {
-  it("builds canonical, robots, and social metadata for indexable pages", () => {
+  it("builds canonical, robots, and social metadata for the homepage", () => {
     const seo = buildSeo({
       description: "Technical notes about Astro and Cloudflare.",
-      kind: "collection",
+      kind: "home",
       pathname: "/",
-      title: "Engineering writing overview",
+      title: "sorcererxw",
     });
 
-    expect(seo.title).toBe("Engineering writing overview | sorcererxw'blog");
+    expect(seo.title).toBe("sorcererxw");
     expect(seo.canonicalUrl).toBe("https://sorcererxw.com/");
     expect(seo.robots).toBe("index,follow,max-image-preview:large");
     expect(seo.openGraph.type).toBe("website");
@@ -47,6 +47,7 @@ describe("buildSeo", () => {
     });
 
     expect(seo.openGraph.type).toBe("article");
+    expect(seo.title).toBe("Building the new blog shell | sorcererxw");
     expect(seo.openGraph.publishedTime).toBe("2026-04-14T00:00:00.000Z");
     expect(seo.openGraph.modifiedTime).toBe("2026-04-15T00:00:00.000Z");
     expect(seo.twitter.image?.url).toBe("https://images.example.com/cover.jpg");

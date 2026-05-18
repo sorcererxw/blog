@@ -2,7 +2,7 @@ import { getWorkerEnvSync } from "@/lib/cloudflare-env";
 import type { CloudflareEnv } from "@/types/cloudflare";
 import type { SeoImage } from "./model";
 
-export const SITE_NAME = "sorcererxw'blog";
+export const SITE_NAME = "sorcererxw";
 export const SITE_AUTHOR_NAME = "sorcererxw";
 export const DEFAULT_SITE_ORIGIN = "https://sorcererxw.com";
 export const DEFAULT_SOCIAL_IMAGE_PATH = "/favicon.svg";

@@ -14,7 +14,7 @@ describe("build-structured-data", () => {
       "@context": "https://schema.org",
       "@type": "WebSite",
       description: "Site description",
-      name: "sorcererxw'blog",
+      name: "sorcererxw",
       publisher: {
         "@type": "Person",
         name: "sorcererxw",

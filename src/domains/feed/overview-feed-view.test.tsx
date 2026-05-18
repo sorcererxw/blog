@@ -61,7 +61,15 @@ describe("OverviewFeed", () => {
     expect(markup).toContain('data-active="true"');
     expect(markup).toContain('data-slot="tabs-list"');
     expect(markup).toContain('data-slot="card"');
+    expect(markup).toContain("border-border");
+    expect(markup).toContain(
+      '<p class="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-foreground">Feed item summary</p>',
+    );
+    expect(markup).toContain(
+      '<time class="mt-1 inline-flex items-center text-xs uppercase text-foreground"',
+    );
     expect(markup).toContain('data-slot="badge"');
+    expect(markup).toContain('data-variant="secondary"');
     expect(markup).not.toContain("base-ui-");
     expect(markup).toContain('class="justify-self-start"');
     expect(markup).not.toContain("px-" + "[1.15rem]");

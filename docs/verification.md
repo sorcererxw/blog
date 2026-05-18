@@ -1,5 +1,72 @@
 # Blog2 Verification Guide
 
+## 2026-05-18 Homepage Feed Badge State
+
+Current homepage feed badge shape:
+
+- Overview Feed card badges use `variant="secondary"`.
+- The rendered feed badge uses `bg-secondary text-secondary-foreground`.
+- The shared Badge primitive remains on the existing local implementation in `src/components/ui/badge.tsx`.
+
+Current evidence:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `curl --max-time 90 -s -o /tmp/blog-badge-secondary-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3264/ && rg -n 'data-slot="badge"|data-variant="secondary"|bg-secondary|rounded-md|rounded-4xl|h-5|group/badge' /tmp/blog-badge-secondary-home.html`: PASS, homepage badge markup used `data-variant="secondary"` with the then-current Badge primitive
+- Headless Chrome verification at `http://127.0.0.1:3264/`: PASS, first rendered feed badge had `data-variant="secondary"`, computed secondary background/text colors, hydrated masonry remained active, and there was no horizontal overflow; screenshot saved to `/tmp/blog-badge-secondary-home.png`
+
+## 2026-05-18 Homepage Feed Card Text Color State
+
+Current homepage card text shape:
+
+- Overview Feed card body copy uses `text-foreground`.
+- Overview Feed rich-text quotes use `text-foreground`.
+- Overview Feed timestamps use `text-foreground`.
+- Badge hover state may still include `hover:text-muted-foreground`; that is not used for card body text.
+
+Current evidence:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `curl --max-time 90 -s -o /tmp/blog-card-text-color-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3262/ && rg -n 'text-muted-foreground|text-foreground|data-slot="card"' /tmp/blog-card-text-color-home.html`: PASS, feed card summaries and times used `text-foreground`
+- Headless Chrome verification at `http://127.0.0.1:3262/`: PASS, first rendered feed-card paragraph and time computed to `--foreground`, hydrated masonry remained active, and there was no horizontal overflow; screenshot saved to `/tmp/blog-card-text-color-home.png`
+
+## 2026-05-18 Homepage Feed Card Border State
+
+Current homepage card frame shape:
+
+- Overview Feed modules render with the shared Card primitive plus explicit `border border-border`.
+- The shared shadcn Card primitive remains unchanged; the border restoration is scoped to homepage feed modules.
+
+Current evidence:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm typecheck`: PASS after rerunning separately from build
+- `curl --max-time 90 -s -o /tmp/blog-card-border-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3261/ && rg -n 'border-border|data-slot="card"|data-overview-feed' /tmp/blog-card-border-home.html`: PASS, homepage feed card markup included `border border-border`
+- Headless Chrome verification at `http://127.0.0.1:3261/`: PASS, rendered `138` Overview Feed cards, first card computed `1px solid` top border, hydrated masonry remained active, and there was no horizontal overflow; screenshot saved to `/tmp/blog-card-border-home.png`
+
+## 2026-05-18 Browser Tab Title State
+
+Current browser-title shape:
+
+- `/` emits the exact browser tab title `sorcererxw`.
+- `/articles/[slug]` emits `{article title} | sorcererxw`.
+- shared SEO site metadata uses `sorcererxw` as the canonical site name.
+
+Current evidence:
+
+- `pnpm test -- src/domains/seo/build-seo.test.ts src/domains/seo/build-structured-data.test.ts src/app/seo.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `curl --max-time 90 -s -o /tmp/blog-title-home.html -w 'home %{http_code} %{content_type}\n' http://127.0.0.1:3257/ && rg -o '<title>[^<]+</title>' /tmp/blog-title-home.html`: PASS, returned `<title>sorcererxw</title>`
+- `curl --max-time 90 -s -o /tmp/blog-title-article.html -w 'article %{http_code} %{content_type}\n' http://127.0.0.1:3257/articles/stop-migrate-nextjs-to-astro && rg -o '<title>[^<]+</title>' /tmp/blog-title-article.html`: PASS, returned `<title>放弃从 Next.js 迁移到 Astro.js | sorcererxw</title>`
+- Browser verification at `http://127.0.0.1:3257/` and `/articles/stop-migrate-nextjs-to-astro`: PASS, `document.title` matched and recent app console logs had no warnings/errors
+
 ## 2026-05-18 Brand Favicon State
 
 Current favicon shape:

@@ -16,6 +16,167 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-18 - Homepage Feed Badge Secondary
+
+Status: done locally
+
+Summary:
+
+- changed homepage Overview Feed card badges from `outline` to `secondary`
+- added a rendered markup assertion for the feed badge `secondary` variant
+- reverted the attempted shared Badge primitive styling change; `src/components/ui/badge.tsx` stays on its existing local primitive styling
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep homepage feed badge usage explicit as `variant="secondary"` instead of relying on Badge default variant
+- do not change `src/components/ui/badge.tsx`; shared UI primitive changes are out of scope for this slice
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec next start --hostname 127.0.0.1 -p 3264`: PASS, local production server started at `http://127.0.0.1:3264`
+- `curl --max-time 90 -s -o /tmp/blog-badge-secondary-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3264/ && rg -n 'data-slot="badge"|data-variant="secondary"|bg-secondary|rounded-md|rounded-4xl|h-5|group/badge' /tmp/blog-badge-secondary-home.html`: PASS, returned `200 text/html; charset=utf-8` and homepage badge markup used `data-variant="secondary"` with the then-current Badge primitive
+- Headless Chrome verification through DevTools Protocol at `http://127.0.0.1:3264/`: PASS, first rendered feed badge had `data-variant="secondary"`, computed secondary background/text colors, hydrated masonry remained active, and there was no horizontal overflow; screenshot saved to `/tmp/blog-badge-secondary-home.png`
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Homepage Feed Card Text Foreground
+
+Status: done locally
+
+Summary:
+
+- changed Overview Feed card body copy, rich-text quotes, and timestamps from `text-muted-foreground` to `text-foreground`
+- added a regression assertion for rendered summary and time classes
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep the change scoped to homepage Overview Feed card content
+- leave Badge hover styling untouched because it is an interaction state, not the card body text color
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS after tightening the assertion to the summary and time elements; Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec next start --hostname 127.0.0.1 -p 3262`: PASS, local production server started at `http://127.0.0.1:3262`
+- `curl --max-time 90 -s -o /tmp/blog-card-text-color-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3262/ && rg -n 'text-muted-foreground|text-foreground|data-slot="card"' /tmp/blog-card-text-color-home.html`: PASS, returned `200 text/html; charset=utf-8` and feed card summaries/times used `text-foreground`
+- Headless Chrome verification through DevTools Protocol at `http://127.0.0.1:3262/`: PASS, first rendered feed-card paragraph and time computed to the `--foreground` color, hydrated masonry remained active, and there was no horizontal overflow; screenshot saved to `/tmp/blog-card-text-color-home.png`
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Homepage Feed Card Border Restore
+
+Status: done locally
+
+Summary:
+
+- restored the visible border on homepage Overview Feed cards
+- added a server-rendered regression assertion that feed card markup includes the `border-border` class
+- kept the fix scoped to homepage feed modules instead of changing the shared shadcn Card primitive globally
+
+Files:
+
+- `src/domains/feed/overview-feed-view.tsx`
+- `src/domains/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- use a real `border border-border` on the Overview Feed module surface because the existing low-contrast ring was not enough to preserve the intended homepage card frame
+- leave `src/components/ui/card.tsx` unchanged so other card consumers do not get an unrequested visual change
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm typecheck`: PASS after rerunning separately; the first concurrent run raced with `.next/types` regeneration during `pnpm build`
+- `pnpm exec next start --hostname 127.0.0.1 -p 3261`: PASS, local production server started at `http://127.0.0.1:3261`
+- `curl --max-time 90 -s -o /tmp/blog-card-border-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3261/ && rg -n 'border-border|data-slot="card"|data-overview-feed' /tmp/blog-card-border-home.html`: PASS, returned `200 text/html; charset=utf-8` and homepage card markup included `border border-border`
+- Headless Chrome verification through DevTools Protocol at `http://127.0.0.1:3261/`: PASS, rendered `138` Overview Feed cards, first card computed `border-top-width: 1px`, `border-top-style: solid`, layout was `hydrated-masonry`, and there was no horizontal overflow; screenshot saved to `/tmp/blog-card-border-home.png`
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-18 - Browser Tab Title Contract
+
+Status: done locally
+
+Summary:
+
+- changed the shared SEO site name from `sorcererxw'blog` to `sorcererxw`
+- changed the homepage metadata title to emit the exact brand title `sorcererxw`
+- kept article detail metadata in the `{article title} | sorcererxw` format
+
+Files:
+
+- `src/domains/seo/site.ts`
+- `src/app/page.tsx`
+- `src/domains/seo/build-seo.test.ts`
+- `src/domains/seo/build-structured-data.test.ts`
+- `src/app/seo.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- treat `sorcererxw` as the canonical browser-tab brand name for root and shared metadata
+- keep homepage structured-data collection naming unchanged; this slice only changes the site/tab brand contract
+
+Verification:
+
+- `pnpm test -- src/domains/seo/build-seo.test.ts src/domains/seo/build-structured-data.test.ts src/app/seo.test.tsx`: PASS, Vitest config ran the full suite (`35` files, `118` tests)
+- `pnpm typecheck`: PASS
+- `pnpm lint`: PASS
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings
+- `pnpm exec next start --hostname 127.0.0.1 -p 3257`: PASS, local production server started at `http://127.0.0.1:3257`
+- `curl --max-time 90 -s -o /tmp/blog-title-home.html -w 'home %{http_code} %{content_type}\n' http://127.0.0.1:3257/ && rg -o '<title>[^<]+</title>' /tmp/blog-title-home.html`: PASS, returned `200 text/html; charset=utf-8` and `<title>sorcererxw</title>`
+- `curl --max-time 90 -s -o /tmp/blog-title-article.html -w 'article %{http_code} %{content_type}\n' http://127.0.0.1:3257/articles/stop-migrate-nextjs-to-astro && rg -o '<title>[^<]+</title>' /tmp/blog-title-article.html`: PASS, returned `200 text/html; charset=utf-8` and `<title>放弃从 Next.js 迁移到 Astro.js | sorcererxw</title>`
+- Browser plugin at `http://127.0.0.1:3257/` and `/articles/stop-migrate-nextjs-to-astro`: PASS, `document.title` matched the curl titles and recent app console logs had no warnings/errors
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-18 - Impeccable Homepage Optimize
 
 Status: done locally

@@ -14,6 +14,7 @@ import {
   buildWebsiteStructuredData,
 } from "@/domains/seo/build-structured-data";
 import { buildSeo } from "@/domains/seo/build-seo";
+import { SITE_NAME } from "@/domains/seo/site";
 import { listProjects } from "@/domains/projects/list-projects";
 import { listThoughts } from "@/domains/thoughts/list-thoughts";
 import {
@@ -104,7 +105,7 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
         title: "Personal Site overview feed",
       }),
     ],
-    title: "Engineering notes on Astro, Cloudflare, Notion, and systems",
+    title: SITE_NAME,
   });
 
   return {

@@ -154,7 +154,7 @@ function renderRichTextSegment(segment: FeedRichTextSegment, index: number): Rea
 
   if (segment.quote) {
     return (
-      <blockquote className="my-2 border-l-2 border-border pl-3 text-muted-foreground" key={index}>
+      <blockquote className="my-2 border-l-2 border-border pl-3 text-foreground" key={index}>
         {content}
       </blockquote>
     );
@@ -166,14 +166,14 @@ function renderRichTextSegment(segment: FeedRichTextSegment, index: number): Rea
 function FeedText({ item }: { item: OverviewFeedViewItem }) {
   if (item.summaryRichText?.length) {
     return (
-      <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-muted-foreground">
+      <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-foreground">
         {item.summaryRichText.map(renderRichTextSegment)}
       </p>
     );
   }
 
   return item.summary ? (
-    <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-muted-foreground">
+    <p className="m-0 whitespace-pre-wrap break-words text-base leading-relaxed text-foreground">
       {item.summary}
     </p>
   ) : null;
@@ -253,7 +253,7 @@ function ModuleInner({
   const isTelegram = item.source === "telegram";
   const time = (
     <time
-      className="mt-1 inline-flex items-center text-xs uppercase text-muted-foreground"
+      className="mt-1 inline-flex items-center text-xs uppercase text-foreground"
       dateTime={item.displayedAt ?? item.sourcePublishedAt ?? undefined}
     >
       {formatFeedDate(item)}
@@ -271,7 +271,7 @@ function ModuleInner({
         )}
       >
         <div className="justify-self-start">
-          <Badge variant="outline">
+          <Badge variant="secondary">
             {item.metaLabel ?? item.type}
           </Badge>
         </div>
@@ -320,7 +320,7 @@ function FeedModule({
   const shouldUseOuterLink = item.destination.kind !== "none" && !hasInlineLinks(item);
   const surface = (
     <Card
-      className="block gap-0 overflow-hidden py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="block gap-0 overflow-hidden border border-border py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       data-size={moduleSize}
     >
       <ModuleInner
