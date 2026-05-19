@@ -144,6 +144,7 @@ Goals:
 - restore required SEO, comments, and route compatibility details
 - land the approved search-native SEO slice with one narrow engineer-facing query wedge before any broader content-taxonomy expansion
 - keep current Personal Site discovery explicit for search crawlers and AI answer engines through structured data, robots, sitemap, and `llms.txt`
+- advertise agent discovery resources from the homepage with RFC 8288 `Link` headers and an RFC 9727 `/.well-known/api-catalog`
 
 Exit criteria:
 
@@ -187,6 +188,7 @@ Exit criteria:
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
 - ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
 - current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
+- homepage agent discovery uses `Link` headers for `api-catalog`, `service-doc`, and `describedby`; the API catalog remains a narrow linkset over existing public resources
 
 ## Active Priorities
 

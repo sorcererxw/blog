@@ -35,6 +35,7 @@ This slice tightens machine-readable discovery for search crawlers and AI answer
 Indexable discovery surfaces:
 
 - `/`
+- `/.well-known/api-catalog`
 - `/articles/[slug]`
 - `/sitemap.xml`
 - `/robots.txt`
@@ -97,6 +98,18 @@ It should:
 - describe the canonical route rules
 - stay short enough to be read before deeper crawling
 
+## Agent Link Header Contract
+
+The homepage response should advertise machine-readable agent discovery resources through RFC 8288 `Link` headers.
+
+Required homepage relations:
+
+- `api-catalog` to `/.well-known/api-catalog`
+- `service-doc` to `/llms.txt`
+- `describedby` to `/sitemap.xml`
+
+`/.well-known/api-catalog` returns an RFC 9727 API catalog as `application/linkset+json`. The catalog is intentionally narrow: it lists the public health endpoint as the current API item and links the AI-readable site guide and sitemap as supporting documentation.
+
 ## Verification
 
 Required evidence:
@@ -106,5 +119,6 @@ Required evidence:
 - `pnpm lint`
 - `pnpm build`
 - local HTTP checks for `/`, `/robots.txt`, `/llms.txt`, and `/sitemap.xml`
+- local HTTP checks for the homepage `Link` response header and `/.well-known/api-catalog`
 - direct metadata and JSON-LD inspection for `/`, homepage filter URLs, `/blog`, and one article detail URL
 - browser verification for `/` because homepage structured data changes share the rendered route

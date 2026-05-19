@@ -74,3 +74,24 @@ Update before completion:
 - `docs/roadmap.md`
 - `docs/verification.md`
 - `docs/task-ledger.md`
+
+## Slice 4: Agent Link Header Discovery
+
+Files:
+
+- `next.config.ts`
+- `src/domains/seo/agent-discovery.ts`
+- `src/app/.well-known/api-catalog/route.ts`
+- `src/app/.well-known/api-catalog/route.test.ts`
+
+Work:
+
+1. add an RFC 8288 homepage `Link` response header with `api-catalog`, `service-doc`, and `describedby` relations
+2. add `/.well-known/api-catalog` as a small RFC 9727 `application/linkset+json` catalog
+3. keep the catalog scoped to existing public resources instead of inventing a broader API surface
+
+Verification:
+
+- route test for the API catalog GET/HEAD behavior
+- `curl` checks for homepage `Link` response headers
+- `curl` checks for API catalog content type, `Link` headers, and JSON body

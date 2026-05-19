@@ -16,6 +16,54 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-19 - Agent Link Header Discovery
+
+Status: done locally
+
+Summary:
+
+- added RFC 8288 homepage `Link` response headers for agent discovery
+- added `/.well-known/api-catalog` as an RFC 9727 `application/linkset+json` catalog
+- kept the catalog narrow by listing only the existing public health endpoint and discovery documents
+
+Files:
+
+- `next.config.ts`
+- `src/domains/seo/agent-discovery.ts`
+- `src/app/.well-known/api-catalog/route.ts`
+- `src/app/.well-known/api-catalog/route.test.ts`
+- `docs/specs/2026-05-18-sitewide-seo-geo-design.md`
+- `docs/plans/2026-05-18-sitewide-seo-geo.md`
+- `docs/roadmap.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Decisions:
+
+- put the homepage response header in `next.config.ts`, where homepage cache headers already live
+- advertise `api-catalog`, `service-doc`, and `describedby` because these are the agent-useful registered relation types backed by existing resources
+- make `/.well-known/api-catalog` a route handler instead of a static file so GET and HEAD can share the same Link headers and content type
+
+Verification:
+
+- `curl -fsSL https://isitagentready.com/.well-known/agent-skills/link-headers/SKILL.md`: PASS, reviewed the linked skill requirements.
+- `pnpm test -- 'src/app/.well-known/api-catalog/route.test.ts'`: PASS, Vitest config ran the active full suite (`34` files, `115` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3280`: PASS, served the production build locally.
+- `curl --max-time 90 -s -D /tmp/blog-agent-link-home.headers -o /tmp/blog-agent-link-home.html http://127.0.0.1:3280/ && rg -n '^HTTP/|^link:|^cache-control:|^content-type:' /tmp/blog-agent-link-home.headers`: PASS, homepage returned `200` and a `Link` header containing `rel="api-catalog"`, `rel="service-doc"`, and `rel="describedby"`.
+- `curl --max-time 90 -s -D /tmp/blog-agent-api-catalog.headers -o /tmp/blog-agent-api-catalog.json http://127.0.0.1:3280/.well-known/api-catalog`: PASS, returned `200`, `application/linkset+json`, and the same agent discovery `Link` relations.
+- `curl --max-time 90 -s -I http://127.0.0.1:3280/.well-known/api-catalog`: PASS, returned `200`, `application/linkset+json`, and `rel="api-catalog"` with no response body.
+
+Follow-up:
+
+- run the isitagentready scan against `https://sorcererxw.com` after deployment.
+
+Blockers:
+
+- production scanner verification is pending deployment.
+
 ## 2026-05-18 - Feed Card Outer Link Priority
 
 Status: done locally

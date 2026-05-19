@@ -1,5 +1,25 @@
 # Blog2 Verification Guide
 
+## 2026-05-19 Agent Link Header Discovery State
+
+Current discovery shape:
+
+- `/` emits an RFC 8288 `Link` response header with `api-catalog`, `service-doc`, and `describedby` relations.
+- `/.well-known/api-catalog` serves `application/linkset+json` with the public health endpoint as the current API item.
+- The API catalog links `/llms.txt` as `service-doc` and `/sitemap.xml` as `describedby`.
+
+Current evidence:
+
+- `curl -fsSL https://isitagentready.com/.well-known/agent-skills/link-headers/SKILL.md`: PASS, reviewed the agent-readiness requirement.
+- `pnpm test -- 'src/app/.well-known/api-catalog/route.test.ts'`: PASS, Vitest config ran the active full suite (`34` files, `115` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next `middleware` deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3280`: PASS, served the production build locally.
+- `curl --max-time 90 -s -D /tmp/blog-agent-link-home.headers -o /tmp/blog-agent-link-home.html http://127.0.0.1:3280/ && rg -n '^HTTP/|^link:|^cache-control:|^content-type:' /tmp/blog-agent-link-home.headers`: PASS, homepage returned `200` and a `Link` header containing `rel="api-catalog"`, `rel="service-doc"`, and `rel="describedby"`.
+- `curl --max-time 90 -s -D /tmp/blog-agent-api-catalog.headers -o /tmp/blog-agent-api-catalog.json http://127.0.0.1:3280/.well-known/api-catalog`: PASS, returned `200`, `application/linkset+json`, and the same agent discovery `Link` relations.
+- `curl --max-time 90 -s -I http://127.0.0.1:3280/.well-known/api-catalog`: PASS, returned `200`, `application/linkset+json`, and `rel="api-catalog"` with no response body.
+
 ## 2026-05-18 Feed Card Link Priority State
 
 Current feed card link shape:
