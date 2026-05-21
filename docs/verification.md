@@ -5,8 +5,10 @@
 Current feed card link shape:
 
 - Overview Feed items with a non-`none` destination render a focusable card surface with `role="link"` and client-side click / keyboard navigation.
+- Card-surface click handling must not treat the card's own `role="link"` as an internal interactive child; otherwise card-body clicks are swallowed before navigation.
 - The card surface is not an outer `<a>`, so rich-text URLs inside Feed Module bodies are not nested inside another anchor.
 - The item's real crawlable destination anchor is rendered on the timestamp.
+- Timestamp destination anchors apply `hover:[&_time]:underline` so the link affordance appears on the inline-flex `<time>` element itself.
 - Items with `destination.kind === "none"` still render without card click behavior and without a timestamp destination link.
 
 Current evidence:
@@ -15,6 +17,8 @@ Current evidence:
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
 - `pnpm build`: PASS, with existing Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3293`: PASS, served the production build locally.
+- Chrome verification at `http://127.0.0.1:3293/`: PASS, clicking the FeedContext card body opened a new tab at `https://feedcontext.io`.
 - `pnpm exec next start --hostname 127.0.0.1 -p 3292`: PASS, served the production build locally.
 - `curl --max-time 90 -s -o /tmp/blog-card-timestamp-links.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3292/ && rg -n 'role="link"|tabindex="0"|href="https://t\.me/s/tech_bb/[0-9]+"|href="/articles/|class="block text-inherit no-underline"|break-all font-semibold text-foreground underline' /tmp/blog-card-timestamp-links.html | head -80`: PASS, returned `200 text/html; charset=utf-8`, rendered focusable card surfaces, timestamp destination links, and rich-text anchors, with no whole-card outer link class.
 - Chrome verification at `http://127.0.0.1:3292/`: PASS, rendered the homepage Overview Feed; accessibility tree showed cards as `link Open Telegram item` with nested timestamp links such as `MAY 10, 2026` pointing to `t.me/s/tech_bb/111`.

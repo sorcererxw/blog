@@ -16,6 +16,68 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - Overview Feed Card Click Fix
+
+Status: done locally
+
+Summary:
+
+- fixed card-body clicks being swallowed by the internal interactive-target guard
+- changed the guard so the card surface's own `role="link"` does not count as an internal interactive child
+- kept timestamp and rich-text anchors protected from card-level navigation
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm lint`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3293`: PASS, served the production build locally.
+- Chrome verification at `http://127.0.0.1:3293/`: PASS, clicking the FeedContext card body opened a new tab at `https://feedcontext.io`.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-21 - Overview Feed Timestamp Hover Underline
+
+Status: done locally
+
+Summary:
+
+- added hover underline styling to Overview Feed timestamp destination links
+- moved the hover underline target onto the nested `<time>` element because the timestamp is rendered as `inline-flex`
+- kept the card-surface JavaScript navigation and timestamp anchor split unchanged
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - Overview Feed Card Timestamp Links
 
 Status: done locally

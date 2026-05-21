@@ -309,7 +309,7 @@ function ModuleInner({
         <FeedText item={item} />
         {footerDestination && footerDestination.kind !== "none" ? (
           <NextLink
-            className="justify-self-start no-underline hover:[&_time]:text-foreground"
+            className="justify-self-start no-underline hover:[&_time]:text-foreground hover:[&_time]:underline hover:[&_time]:underline-offset-4"
             href={footerDestination.href}
             rel={
               footerDestination.kind === "external" ? "noreferrer" : undefined
@@ -328,16 +328,19 @@ function ModuleInner({
   );
 }
 
-function isInteractiveTarget(target: EventTarget | null) {
-  if (!(target instanceof Element)) {
+function isInteractiveTarget(
+  target: EventTarget | null,
+  currentTarget: EventTarget | null,
+) {
+  if (!(target instanceof Element) || !(currentTarget instanceof Element)) {
     return false;
   }
 
-  return Boolean(
-    target.closest(
-      'a, button, input, select, textarea, summary, [role="button"], [role="link"]',
-    ),
+  const interactiveTarget = target.closest(
+    'a, button, input, select, textarea, summary, [role="button"], [role="link"]',
   );
+
+  return Boolean(interactiveTarget && interactiveTarget !== currentTarget);
 }
 
 function FeedModule({
@@ -365,7 +368,7 @@ function FeedModule({
   };
 
   const handleCardClick = (event: MouseEvent<HTMLElement>) => {
-    if (isInteractiveTarget(event.target)) {
+    if (isInteractiveTarget(event.target, event.currentTarget)) {
       return;
     }
 
@@ -373,7 +376,7 @@ function FeedModule({
   };
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (isInteractiveTarget(event.target)) {
+    if (isInteractiveTarget(event.target, event.currentTarget)) {
       return;
     }
 

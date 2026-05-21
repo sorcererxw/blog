@@ -192,7 +192,7 @@ describe("OverviewFeed", () => {
       /<a class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https:\/\/example\.com\/rich"/,
     );
     expect(markup).toMatch(
-      /<a class="justify-self-start no-underline hover:\[&amp;_time\]:text-foreground"[^>]+href="https:\/\/t\.me\/s\/example\/1"[\s\S]+<time/,
+      /<a class="justify-self-start no-underline hover:\[&amp;_time\]:text-foreground hover:\[&amp;_time\]:underline hover:\[&amp;_time\]:underline-offset-4"[^>]+href="https:\/\/t\.me\/s\/example\/1"[\s\S]+<time/,
     );
     expect(markup).not.toMatch(
       /<a class="block text-inherit no-underline"[^>]+href="https:\/\/t\.me\/s\/example\/1"/,
