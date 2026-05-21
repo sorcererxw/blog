@@ -25,6 +25,14 @@ export type FeedMediaPreview = {
   width?: number | null;
 };
 
+export type FeedQuotePreview = {
+  authorName?: string | null;
+  authorUsername?: string | null;
+  media: FeedMediaPreview[];
+  text: string;
+  url: string;
+};
+
 export type FeedRichTextSegment = {
   bold?: boolean;
   hashTag?: boolean;
@@ -48,6 +56,7 @@ export type FeedItem = {
   displayedAt: Date | null;
   sourcePublishedAt: Date | null;
   presentationIntent?: PresentationIntent | null;
+  quote?: FeedQuotePreview | null;
   destination: FeedDestination;
   media: FeedMediaPreview[];
   metaLabel?: string | null;

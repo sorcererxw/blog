@@ -176,6 +176,15 @@ export const xSocialPostToFeedItem = (post: XSocialPostDetail): FeedItem => ({
   },
   media: post.media,
   metaLabel: "X",
+  quote: post.quotedPost
+    ? {
+        authorName: post.quotedPost.authorName,
+        authorUsername: post.quotedPost.authorUsername,
+        media: post.quotedPost.media,
+        text: post.quotedPost.text,
+        url: post.quotedPost.url,
+      }
+    : null,
 });
 
 export const buildOverviewFeedIndex = ({

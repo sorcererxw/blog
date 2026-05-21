@@ -147,6 +147,7 @@ V1 Social Source scope:
 - X sync should run in production through the daily Cloudflare cron only; local manual triggering should use Wrangler's scheduled-event test route against the same Worker `scheduled()` handler
 - X sync should enter through the Worker-level `src/worker.ts` `scheduled()` handler; business logic should live in a domain/use-case module, and X API calls should stay inside an integration adapter
 - X KV storage should use one list/index key carrying ordered ids and the last successful fetched boundary, plus per-post detail keys for point lookups by X post id
+- X quote posts should expand the quoted post during sync, store a one-level quoted-post preview in the per-post detail, remove the trailing quoted `t.co` URL from the parent text, and render the quoted author, text, optional media preview, and external target in the Overview Feed
 - X Feed Items can participate in homepage structured data, but they should not expand the existing homepage JSON-LD item cap
 
 ## Compatibility Routes

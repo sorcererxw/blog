@@ -40,6 +40,14 @@ describe("X Social Source KV store", () => {
       id: "101",
       kind: "original",
       media: [],
+      quotedPost: {
+        authorName: "ZEN",
+        authorUsername: "supezen",
+        id: "100",
+        media: [],
+        text: "quoted",
+        url: "https://x.com/supezen/status/100",
+      },
       text: "hello",
       url: "https://x.com/sorcererxw/status/101",
     });
@@ -56,6 +64,14 @@ describe("X Social Source KV store", () => {
     await expect(store.getPost("101")).resolves.toMatchObject({
       createdAt: new Date("2026-05-21T00:00:00.000Z"),
       id: "101",
+      quotedPost: {
+        authorName: "ZEN",
+        authorUsername: "supezen",
+        id: "100",
+        media: [],
+        text: "quoted",
+        url: "https://x.com/supezen/status/100",
+      },
       text: "hello",
     });
     await expect(store.getIndex()).resolves.toMatchObject({

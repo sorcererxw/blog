@@ -2,6 +2,15 @@ import type { Client } from "@xdevplatform/xdk";
 
 export type XSocialPostKind = "original" | "quote" | "reply" | "repost";
 
+export type XSocialQuotedPost = {
+  authorName?: string | null;
+  authorUsername?: string | null;
+  id: string;
+  media: XSocialPostDetail["media"];
+  text: string;
+  url: string;
+};
+
 export type XSocialPostDetail = {
   createdAt: Date;
   id: string;
@@ -12,6 +21,7 @@ export type XSocialPostDetail = {
     src: string;
     width?: number | null;
   }>;
+  quotedPost?: XSocialQuotedPost | null;
   text: string;
   url: string;
 };
@@ -40,12 +50,27 @@ type XPost = {
     mediaKeys?: string[];
     media_keys?: string[];
   };
+  authorId?: string;
+  author_id?: string;
   createdAt?: string;
   created_at?: string;
+  entities?: {
+    urls?: XUrlEntity[];
+  };
   id?: string;
   referencedTweets?: XReferencedPost[];
   referenced_tweets?: XReferencedPost[];
   text?: string;
+};
+
+type XUrlEntity = {
+  displayUrl?: string;
+  display_url?: string;
+  expandedUrl?: string;
+  expanded_url?: string;
+  url?: string;
+  unwoundUrl?: string;
+  unwound_url?: string;
 };
 
 type XMedia = {
@@ -65,7 +90,18 @@ type XUserPostsResponse = {
   data?: XPost[];
   includes?: {
     media?: XMedia[];
+    tweets?: XPost[];
+    users?: XUser[];
   };
+};
+
+type XUser = {
+  id?: string;
+  name?: string;
+  profileImageUrl?: string;
+  profile_image_url?: string;
+  username?: string;
+  verified?: boolean;
 };
 
 export type XSocialPostStore = {
@@ -135,6 +171,101 @@ const normalizeXMedia = (media: XMedia): XSocialPostDetail["media"][number] | nu
   };
 };
 
+const getMediaKeys = (post: XPost) =>
+  post.attachments?.mediaKeys ?? post.attachments?.media_keys ?? [];
+
+const normalizePostMedia = (
+  post: XPost,
+  mediaByKey: Map<string, XMedia>,
+): XSocialPostDetail["media"] =>
+  getMediaKeys(post).flatMap((key) => {
+    const media = mediaByKey.get(key);
+    const normalized = media ? normalizeXMedia(media) : null;
+
+    return normalized ? [normalized] : [];
+  });
+
+const getReferencedTweets = (post: XPost) =>
+  post.referencedTweets ?? post.referenced_tweets ?? [];
+
+const getQuotedReference = (post: XPost) =>
+  getReferencedTweets(post).find((reference) => reference.type === "quoted");
+
+const authorId = (post: XPost) => post.authorId ?? post.author_id ?? null;
+
+const postUrl = (post: XPost, user?: XUser | null) =>
+  user?.username
+    ? `https://x.com/${user.username}/status/${post.id}`
+    : `https://x.com/i/web/status/${post.id}`;
+
+const entityUrls = (post: XPost) => post.entities?.urls ?? [];
+
+const entityMatchesQuotedPost = (
+  entity: XUrlEntity,
+  quotedPostId: string,
+) => {
+  const candidates = [
+    entity.expandedUrl,
+    entity.expanded_url,
+    entity.unwoundUrl,
+    entity.unwound_url,
+    entity.displayUrl,
+    entity.display_url,
+  ].filter(Boolean);
+
+  return candidates.some((candidate) => candidate?.includes(`/status/${quotedPostId}`));
+};
+
+const stripTrailingQuotedUrl = (text: string, post: XPost, quotedPostId?: string) => {
+  if (!quotedPostId) {
+    return text;
+  }
+
+  const quotedEntityUrl = entityUrls(post).find(
+    (entity) => entity.url && entityMatchesQuotedPost(entity, quotedPostId),
+  )?.url;
+
+  if (quotedEntityUrl && text.endsWith(quotedEntityUrl)) {
+    return text.slice(0, -quotedEntityUrl.length).trimEnd();
+  }
+
+  return text.replace(/\s+https:\/\/t\.co\/[A-Za-z0-9_]+$/u, "").trimEnd();
+};
+
+const normalizeQuotedPost = ({
+  mediaByKey,
+  quotedReference,
+  tweetById,
+  userById,
+}: {
+  mediaByKey: Map<string, XMedia>;
+  quotedReference?: XReferencedPost;
+  tweetById: Map<string, XPost>;
+  userById: Map<string, XUser>;
+}): XSocialQuotedPost | null => {
+  if (!quotedReference?.id) {
+    return null;
+  }
+
+  const quotedPost = tweetById.get(quotedReference.id);
+
+  if (!quotedPost?.id) {
+    return null;
+  }
+
+  const author = authorId(quotedPost);
+  const user = author ? userById.get(author) : null;
+
+  return {
+    authorName: user?.name ?? null,
+    authorUsername: user?.username ?? null,
+    id: quotedPost.id,
+    media: normalizePostMedia(quotedPost, mediaByKey),
+    text: quotedPost.text ?? "",
+    url: postUrl(quotedPost, user),
+  };
+};
+
 const normalizeXPosts = (response: XUserPostsResponse): XSocialPostScanResult => {
   const mediaByKey = new Map(
     response.includes?.media?.flatMap((media) => {
@@ -143,6 +274,16 @@ const normalizeXPosts = (response: XUserPostsResponse): XSocialPostScanResult =>
       return mediaKey ? [[mediaKey, media] as const] : [];
     }) ?? [],
   );
+  const tweetById = new Map(
+    response.includes?.tweets?.flatMap((post) =>
+      post.id ? [[post.id, post] as const] : [],
+    ) ?? [],
+  );
+  const userById = new Map(
+    response.includes?.users?.flatMap((user) =>
+      user.id ? [[user.id, user] as const] : [],
+    ) ?? [],
+  );
 
   return {
     posts: (response.data ?? []).flatMap((post) => {
@@ -150,20 +291,27 @@ const normalizeXPosts = (response: XUserPostsResponse): XSocialPostScanResult =>
         return [];
       }
 
+      const kind = xPostKind(post);
+      const quotedReference = getQuotedReference(post);
+      const quotedPost = normalizeQuotedPost({
+        mediaByKey,
+        quotedReference,
+        tweetById,
+        userById,
+      });
+
       return [
         {
           createdAt: post.createdAt || post.created_at
             ? new Date(post.createdAt ?? post.created_at ?? "")
             : new Date(0),
           id: post.id,
-          kind: xPostKind(post),
-          media: (post.attachments?.mediaKeys ?? post.attachments?.media_keys ?? []).flatMap((key) => {
-            const media = mediaByKey.get(key);
-            const normalized = media ? normalizeXMedia(media) : null;
-
-            return normalized ? [normalized] : [];
-          }),
-          text: post.text ?? "",
+          kind,
+          media: normalizePostMedia(post, mediaByKey),
+          quotedPost,
+          text: kind === "quote"
+            ? stripTrailingQuotedUrl(post.text ?? "", post, quotedReference?.id)
+            : post.text ?? "",
           url: `https://x.com/sorcererxw/status/${post.id}`,
         },
       ];
@@ -221,7 +369,12 @@ export async function syncXSocialPosts({
   try {
     scan = normalizeXPosts(
       await xClient.users.getPosts(userId, {
-        expansions: ["attachments.media_keys"],
+        expansions: [
+          "attachments.media_keys",
+          "referenced_tweets.id",
+          "referenced_tweets.id.attachments.media_keys",
+          "referenced_tweets.id.author_id",
+        ],
         exclude: ["replies", "retweets"],
         maxResults: X_SYNC_LIMIT,
         mediaFields: [
@@ -241,6 +394,7 @@ export async function syncXSocialPosts({
           "referenced_tweets",
           "text",
         ],
+        userFields: ["id", "name", "profile_image_url", "username", "verified"],
       }),
     );
   } catch (error) {

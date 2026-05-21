@@ -140,6 +140,7 @@ Goals:
 
 - implement thoughts / Telegram-driven public content from public pages
 - implement X as a fixed Social Source for `https://x.com/sorcererxw` through daily cron-backed KV state
+- render X quote posts with one-level quoted post previews instead of raw quoted `t.co` links
 - introduce Cloudflare-backed image delivery for public media surfaces
 - add image metadata support
 - restore required SEO, comments, and route compatibility details

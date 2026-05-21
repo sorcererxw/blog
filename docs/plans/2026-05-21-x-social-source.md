@@ -25,6 +25,7 @@ Use Cloudflare KV as durable source state, not as a short route cache.
 - replies and reposts are excluded by the X API request and therefore do not enter local boundary advancement
 - boundary advancement happens only after retained detail keys and the list/index key are written successfully
 - homepage reads stored KV state and skips missing detail records instead of failing the Overview Feed
+- quote post details may include a one-level quoted-post preview with author, text, optional media, and target URL
 
 List/index metadata:
 
@@ -83,7 +84,14 @@ List/index metadata:
    - add `/?source=x` filtering while keeping X posts in the default Overview Feed
    - keep homepage JSON-LD capped by the existing sitewide cap
 
-6. Verify. Done locally.
+6. Add quote-post preview support. Done.
+   - request quoted tweet, quoted tweet author, and quoted tweet media expansions from `users.getPosts`
+   - store quoted post preview data in each quote post detail record
+   - strip the parent post's trailing quoted `t.co` URL when the quoted target is available
+   - render a lightweight one-level quoted post preview in the Overview Feed
+   - rebuild the X KV-derived cache after the code change so existing quote posts pick up the enriched detail shape
+
+7. Verify. Done locally.
    - targeted tests for X adapter normalization
    - targeted tests for sync state transitions and write failure behavior
    - targeted tests for Overview Feed filtering and missing detail tolerance

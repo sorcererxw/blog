@@ -187,7 +187,25 @@ describe("overview feed", () => {
   });
 
   it("normalizes stored X Social Posts into feed items", () => {
-    const item = xSocialPostToFeedItem(xPost());
+    const item = xSocialPostToFeedItem(
+      xPost({
+        quotedPost: {
+          authorName: "ZEN",
+          authorUsername: "supezen",
+          id: "3",
+          media: [
+            {
+              alt: "Quoted image",
+              height: 720,
+              src: "https://pbs.twimg.com/media/quoted.jpg",
+              width: 1280,
+            },
+          ],
+          text: "Quoted post text",
+          url: "https://x.com/supezen/status/3",
+        },
+      }),
+    );
 
     expect(item).toMatchObject({
       displayedAt: new Date("2026-05-02T00:00:00.000Z"),
@@ -202,6 +220,20 @@ describe("overview feed", () => {
     expect(item.destination).toEqual({
       kind: "external",
       href: "https://x.com/sorcererxw/status/104",
+    });
+    expect(item.quote).toEqual({
+      authorName: "ZEN",
+      authorUsername: "supezen",
+      media: [
+        {
+          alt: "Quoted image",
+          height: 720,
+          src: "https://pbs.twimg.com/media/quoted.jpg",
+          width: 1280,
+        },
+      ],
+      text: "Quoted post text",
+      url: "https://x.com/supezen/status/3",
     });
     expect(item.media).toEqual([
       {

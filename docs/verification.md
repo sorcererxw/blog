@@ -1,5 +1,32 @@
 # Blog2 Verification Guide
 
+## 2026-05-21 X Quote Post Preview State
+
+Current X quote-post shape:
+
+- X quote posts remain in scope because they are authored by `sorcererxw`; pure replies and retweets are still excluded by the X API request.
+- X sync expands quoted tweet, quoted tweet author, and quoted tweet media data during the scheduled sync path.
+- Stored X Social Post details may include a one-level `quotedPost` preview with author, username, text, media, and target URL.
+- Parent quote-post text strips the trailing quoted `t.co` URL when the quoted target is available.
+- Overview Feed renders the parent post text followed by a lightweight quoted-post preview, without using the official Twitter/X embed script.
+
+Current evidence:
+
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active suite (`36` files, `123` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing non-fatal OpenNext package-template copy logs; `.open-next/worker.js` was generated.
+- Remote X KV cache rebuild: deleted `social:x:index` and `social:x:posts:*`, confirmed the prefix list returned `[]`, then triggered Wrangler `/__scheduled`.
+- `curl --max-time 90 -i -X POST 'http://127.0.0.1:3294/__scheduled?cron=0+18+*+*+*'`: PASS, returned `200 OK` and `Ran scheduled event`; worker log reported `retainedCount: 18`, `scannedCount: 18`, and `scannedBoundaryId: "2050332911732503022"`.
+- `pnpm exec wrangler kv key get 'social:x:index' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS after KV propagation, returned `lastError: null`, `lastRetainedCount: 18`, `lastScannedCount: 18`, and 18 ordered ids.
+- `pnpm exec wrangler kv key get 'social:x:posts:2056921917324722661' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned `kind: "quote"`, parent text without the quoted `t.co`, and `quotedPost` for ZEN / `@supezen`.
+- Chrome verification at `http://127.0.0.1:3294/?source=x`: PASS, rendered the target card with parent text and a ZEN / `@supezen` quote preview.
+
+Residual risk:
+
+- The rebuild returned 18 X posts while the previous cache had 19; the older `1335174971300036608` post was not returned by the current owned-post rebuild.
+
 ## 2026-05-21 X Media Image State
 
 Current X image delivery shape:

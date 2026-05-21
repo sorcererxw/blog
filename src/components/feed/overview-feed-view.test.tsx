@@ -242,6 +242,47 @@ describe("OverviewFeed", () => {
     expect(markup).toContain("grid-cols-2");
   });
 
+  it("renders X quote previews without the trailing t.co URL in the parent text", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed
+        initialFilter={{ source: "x" }}
+        items={serializeOverviewFeedItems([
+          item({
+            id: "social:x:quote",
+            type: "social",
+            source: "x",
+            title: "",
+            summary: "只是从 idea 不值钱，变成了 idea 和 code 都不值钱，ship 变成真正值钱的一部分。",
+            destination: { kind: "external", href: "https://x.com/sorcererxw/status/104" },
+            metaLabel: "X",
+            quote: {
+              authorName: "ZEN",
+              authorUsername: "supezen",
+              media: [
+                {
+                  alt: "Quoted media",
+                  height: 720,
+                  src: "https://pbs.twimg.com/media/quoted.jpg",
+                  width: 1280,
+                },
+              ],
+              text: "以前我们说 idea 不值钱，现在有了 cc 和 codex 发现 idea 可以很值钱。",
+              url: "https://x.com/supezen/status/3",
+            },
+          }),
+        ])}
+      />,
+    );
+
+    expect(markup).toContain("ZEN");
+    expect(markup).toContain("@supezen");
+    expect(markup).toContain("以前我们说 idea 不值钱");
+    expect(markup).toContain('href="https://x.com/supezen/status/3"');
+    expect(markup).toContain("https%3A%2F%2Fpbs.twimg.com%2Fmedia%2Fquoted.jpg");
+    expect(markup).not.toContain("https://t.co/C6afVyxUzX");
+    expect(markup).not.toContain("<span>X post</span>");
+  });
+
 
   it("renders non-clickable modules and an empty state", () => {
     const nonClickable = renderToStaticMarkup(

@@ -26,6 +26,8 @@ import masonryStyles from "./masonry-feed.module.css";
 import type {
   FeedDestination,
   FeedFilter,
+  FeedMediaPreview,
+  FeedQuotePreview,
   FeedRichTextSegment,
   ModuleSize,
 } from "@/domains/feed/types";
@@ -260,6 +262,55 @@ function MediaGrid({
   );
 }
 
+function QuoteMediaGrid({ media }: { media: FeedMediaPreview[] }) {
+  if (media.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-small bg-default">
+      {media.slice(0, 4).map((item, index) => (
+        <div className="aspect-[16/10] overflow-hidden bg-default" key={`${item.src}-${index}`}>
+          <ResponsiveRemoteImage
+            alt={item.alt}
+            className="h-full w-full object-cover"
+            height={item.height ?? 720}
+            loading="lazy"
+            preset="article-card"
+            src={item.src}
+            width={item.width ?? 1280}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
+  const author = quote.authorName || quote.authorUsername;
+  const handle = quote.authorUsername ? `@${quote.authorUsername}` : null;
+
+  return (
+    <NextLink
+      className="block rounded-medium border border-separator px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
+      href={quote.url}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {author || handle ? (
+        <div className="mb-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm leading-tight text-foreground">
+          {author ? <span className="font-semibold">{author}</span> : null}
+          {handle ? <span className="text-foreground/70">{handle}</span> : null}
+        </div>
+      ) : null}
+      <p className="m-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">
+        {quote.text}
+      </p>
+      <QuoteMediaGrid media={quote.media} />
+    </NextLink>
+  );
+}
+
 function ModuleInner({
   eagerMedia,
   footerDestination,
@@ -307,6 +358,7 @@ function ModuleInner({
           </h2>
         )}
         <FeedText item={item} />
+        {item.quote ? <QuotePreview quote={item.quote} /> : null}
         {footerDestination && footerDestination.kind !== "none" ? (
           <NextLink
             className="justify-self-start no-underline hover:[&_time]:text-foreground hover:[&_time]:underline hover:[&_time]:underline-offset-4"

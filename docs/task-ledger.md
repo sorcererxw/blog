@@ -16,6 +16,66 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - X Quote Post Preview
+
+Status: done locally and remote cache rebuilt
+
+Summary:
+
+- fixed X quote posts rendering as parent text plus a raw quoted `t.co` link
+- expanded quoted tweet, quoted author, and quoted media data in the X owned-post sync request
+- stored a one-level `quotedPost` preview on X Social Post details
+- stripped the parent post's trailing quoted URL when the quoted target is known
+- rendered quoted author, handle, text, and optional media as a lightweight Overview Feed preview
+- restored `src/app/layout.tsx` formatting after a temporary pasted embed snippet had left the file in an invalid TSX shape
+
+Files:
+
+- `src/domains/social/x-sync.ts`
+- `src/domains/social/x-sync.test.ts`
+- `src/domains/feed/types.ts`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/feed/overview-feed-view-model.ts`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `src/integrations/kv/x-social-post-store.test.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-21-x-social-source.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- keep official Twitter/X embeds out of the feed v1 because they require third-party script hydration and would fight the existing SSR/KV/masonry model
+- keep quote support to one nested quoted post preview, not a full social embed or thread renderer
+- continue excluding replies and retweets through X API `exclude`, while retaining quote posts authored by `sorcererxw`
+
+Verification:
+
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active suite (`36` files, `123` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing non-fatal OpenNext package-template copy logs; `.open-next/worker.js` was generated.
+- `pnpm exec wrangler kv key list --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --prefix 'social:x:' --remote`: PASS before deletion, listed `social:x:index` plus 19 post detail keys; PASS after deletion, returned `[]`.
+- deleted the remote `social:x:index` and `social:x:posts:*` keys for the X-derived cache rebuild.
+- `pnpm exec wrangler dev --remote --ip 127.0.0.1 --port 3294 --test-scheduled`: PASS, remote preview started with `BLOG_CACHE`, `NOTION_SECRET`, and `X_SECRET`.
+- `curl --max-time 90 -i -X POST 'http://127.0.0.1:3294/__scheduled?cron=0+18+*+*+*'`: PASS, returned `200 OK` and `Ran scheduled event`; worker log reported `retainedCount: 18`, `scannedCount: 18`, and `scannedBoundaryId: "2050332911732503022"`.
+- `pnpm exec wrangler kv key get 'social:x:index' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS after KV propagation, returned `lastError: null`, `lastRetainedCount: 18`, `lastScannedCount: 18`, and 18 ordered ids.
+- `pnpm exec wrangler kv key get 'social:x:posts:2056921917324722661' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned `kind: "quote"`, parent text without the quoted `t.co`, and `quotedPost` for ZEN / `@supezen`.
+- `curl --max-time 90 -s -o /tmp/blog-x-quote-filter-retry.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3294/?source=x' && rg -n 'ZEN|supezen|以前我们说 idea|只是从 idea|https://t\.co/C6afVyxUzX|No feed items match this filter|href="https://x.com/supezen/status' /tmp/blog-x-quote-filter-retry.html`: PASS, returned `200 text/html; charset=utf-8`; rendered the quote content and no empty state.
+- Chrome verification at `http://127.0.0.1:3294/?source=x`: PASS, X tab rendered the target card with parent text and a ZEN / `@supezen` quote preview, with no parent `t.co` link.
+
+Follow-up:
+
+- remote rebuild returned 18 X posts whereas the previous cache had 19; the older `1335174971300036608` detail was not returned by the current owned-post API rebuild and is no longer in the rebuilt X cache
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - X Media Image Transform Allowlist
 
 Status: done locally

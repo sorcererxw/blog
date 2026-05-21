@@ -46,12 +46,18 @@ describe("X Social Source sync", () => {
       xClient: createTestXClient(async (id, options) => {
         expect(id).toBe("3798600074");
         expect(options).toEqual({
-          expansions: ["attachments.media_keys"],
+          expansions: [
+            "attachments.media_keys",
+            "referenced_tweets.id",
+            "referenced_tweets.id.attachments.media_keys",
+            "referenced_tweets.id.author_id",
+          ],
           exclude: ["replies", "retweets"],
           maxResults: 50,
           mediaFields: ["alt_text", "height", "media_key", "preview_image_url", "type", "url", "width"],
           sinceId: "100",
           tweetFields: ["attachments", "created_at", "entities", "referenced_tweets", "text"],
+          userFields: ["id", "name", "profile_image_url", "username", "verified"],
         });
 
         return {
@@ -75,11 +81,47 @@ describe("X Social Source sync", () => {
             },
             {
               createdAt: "2026-05-21T00:00:04.000Z",
+              entities: {
+                urls: [
+                  {
+                    expandedUrl: "https://x.com/supezen/status/3",
+                    url: "https://t.co/C6afVyxUzX",
+                  },
+                ],
+              },
               id: "104",
               referencedTweets: [{ id: "3", type: "quoted" }],
-              text: "post 104",
+              text: "post 104 https://t.co/C6afVyxUzX",
             },
           ],
+          includes: {
+            media: [
+              {
+                altText: "Quoted image",
+                height: 720,
+                mediaKey: "quoted-media",
+                type: "photo",
+                url: "https://pbs.twimg.com/media/quoted.jpg",
+                width: 1280,
+              },
+            ],
+            tweets: [
+              {
+                attachments: { mediaKeys: ["quoted-media"] },
+                authorId: "200",
+                createdAt: "2026-05-20T00:00:00.000Z",
+                id: "3",
+                text: "quoted text",
+              },
+            ],
+            users: [
+              {
+                id: "200",
+                name: "ZEN",
+                username: "supezen",
+              },
+            ],
+          },
         };
       }),
     });
@@ -87,7 +129,24 @@ describe("X Social Source sync", () => {
     await expect(store.getPost("101")).resolves.toBeNull();
     await expect(store.getPost("103")).resolves.toBeNull();
     await expect(store.getPost("102")).resolves.toMatchObject({ text: "post 102" });
-    await expect(store.getPost("104")).resolves.toMatchObject({ text: "post 104" });
+    await expect(store.getPost("104")).resolves.toMatchObject({
+      quotedPost: {
+        authorName: "ZEN",
+        authorUsername: "supezen",
+        id: "3",
+        media: [
+          {
+            alt: "Quoted image",
+            height: 720,
+            src: "https://pbs.twimg.com/media/quoted.jpg",
+            width: 1280,
+          },
+        ],
+        text: "quoted text",
+        url: "https://x.com/supezen/status/3",
+      },
+      text: "post 104",
+    });
     await expect(store.getIndex()).resolves.toMatchObject({
       lastError: null,
       lastRetainedCount: 2,
