@@ -186,6 +186,7 @@ Exit criteria:
 - runtime integrations must not synthesize content when source configuration is missing
 - `/sitemap.xml` is runtime-generated so Cloudflare builds do not require `NOTION_SECRET`, while runtime requests still require valid Notion configuration
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
+- article detail pages may render trusted authored HTML only from Notion `html` code blocks whose text starts with `<!--render-->`; all other code blocks remain display code
 - feed UI primitives and tokens have migrated from the local shadcn/Base UI component set to HeroUI v3 under `docs/specs/2026-05-18-heroui-design-system-migration-design.md`; `src/components/ui/*`, `components.json`, `shadcn/tailwind.css`, and the old shadcn/Base UI dependencies are no longer part of the active source tree
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
 - Overview Feed cards use client-side card-surface navigation, while the SEO-visible destination anchor lives on the timestamp to avoid nested `<a>` markup around rich-text links

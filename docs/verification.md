@@ -1,5 +1,24 @@
 # Blog2 Verification Guide
 
+## 2026-05-21 Article HTML Render Code Blocks
+
+Current article render shape:
+
+- Article detail Notion code blocks render as code by default.
+- A code block with language `html` and text starting with `<!--render-->` is marked `renderHtml` during Notion normalization.
+- The article renderer injects a marked block as authored HTML only when `renderHtml` is true and the text still starts with `<!--render-->`.
+- HTML code blocks without the marker still render through Shiki-highlighted display code.
+
+Current evidence:
+
+- `pnpm test -- src/integrations/notion/article-detail.test.ts src/components/article/article-detail-view.test.tsx`: PASS, Vitest config ran the active full suite (`36` files, `125` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3295`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-screenshot-render.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3295/articles/screenshot-render && rg -n 'Rendered|rendered|<!--render-->|class="shiki|<pre|&lt;!--render|screenshot|article|data-rendered|html' /tmp/blog-screenshot-render.html | head -120`: PASS, returned `200 text/html; charset=utf-8`; marked render blocks appeared as real `<pre>`, `<style>`, and simulated screenshot HTML while unmarked examples still rendered with `class="shiki"`.
+- Chrome verification at `http://127.0.0.1:3295/articles/screenshot-render`: PASS, the page rendered marked examples as visible article content including `button`, `span paragraph`, and the phone-screen simulation.
+
 ## 2026-05-21 X Quote Post Preview State
 
 Current X quote-post shape:

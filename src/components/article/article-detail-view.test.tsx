@@ -336,4 +336,27 @@ describe("ArticleDetailView", () => {
     expect(markup).toContain('class="shiki"');
     expect(markup).not.toContain("<pre><pre");
   });
+
+  it("renders marked html code blocks as article body html", () => {
+    const markup = renderToStaticMarkup(
+      <ArticleDetailView
+        article={{
+          ...article,
+          blocks: [
+            {
+              kind: "code",
+              language: "html",
+              text: '<!--render--><section data-rendered-html="true"><h2>Rendered demo</h2></section>',
+              renderHtml: true,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(markup).toContain('data-rendered-html="true"');
+    expect(markup).toContain("<h2>Rendered demo</h2>");
+    expect(markup).not.toContain("&lt;section");
+    expect(markup).not.toContain('class="shiki');
+  });
 });

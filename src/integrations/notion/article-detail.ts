@@ -225,6 +225,11 @@ const toBlockRichText = (block: NotionBlock): ArticleDetailRichText[] => {
   return normalizeRichText(richText?.rich_text);
 };
 
+const RENDER_HTML_MARKER = "<!--render-->";
+
+const isMarkedHtmlCodeBlock = (text: string, language?: string | null) =>
+  language?.trim().toLowerCase() === "html" && text.startsWith(RENDER_HTML_MARKER);
+
 const toTocNodes = (blocks: NotionBlock[]): ArticleDetailTocNode[] =>
   blocks.flatMap((block) => {
     if (block.type !== "heading_1" && block.type !== "heading_2" && block.type !== "heading_3") {
@@ -303,6 +308,7 @@ const toArticleDetailBlocks = (blocks: NotionBlock[]): ArticleDetailBlock[] => {
           kind: "code",
           language: value?.language ?? null,
           text: codeText,
+          renderHtml: isMarkedHtmlCodeBlock(codeText, value?.language),
           caption: normalizeRichText(value?.caption),
         });
         break;

@@ -164,6 +164,8 @@ These redirects are compatibility behavior, not app route surfaces. If the frame
 
 `/articles/[slug]` remains available as Content Detail for long-form Blog Entries.
 
+Article Content Detail rendering treats Notion code blocks as display code by default. A Notion code block with language `html` may opt into trusted inline rendering only when its text starts with the exact marker `<!--render-->`; those blocks are injected into the article body as authored HTML instead of highlighted code. Non-HTML code blocks and HTML blocks without the marker must continue to render as code.
+
 `/stack` is removed from the Personal Site surface and should return `404`; do not keep a hidden Stack route, navigation entry, Notion adapter, or KV cache path.
 
 ## Sitemap and Discovery

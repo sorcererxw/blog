@@ -16,6 +16,92 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - Homepage Cold Load Diagnosis
+
+Status: diagnosed
+
+Summary:
+
+- reproduced the slow homepage path on local OpenNext preview after clearing provider KV keys
+- confirmed warm provider-cache requests are fast, while a cold provider-cache homepage request waits on external provider fan-in
+- identified Telegram public-page crawling as the dominant cold-cache bottleneck
+- confirmed the homepage currently renders the full Overview Feed into SSR/RSC output, producing a large HTML payload
+
+Files:
+
+- `docs/task-ledger.md`
+
+Decisions:
+
+- no code change was made in this diagnostic slice
+- root cause is server-side cold provider cache miss plus full-feed SSR/hydration cost, not X API calls in the homepage path
+- `generateMetadata()` and `HomePage` both call `loadHomeData()`, so cold misses can duplicate the same provider work during one request
+
+Verification:
+
+- `curl -L --max-time 30 -s -o /tmp/blog-live-home-1.html -w 'live-home-1 http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' https://sorcererxw.com/`: PASS, production homepage returned `200`; uncompressed HTML was about `915KB`, with `starttransfer` around `2.17s` and full transfer around `2.76s` for that run.
+- `curl -L --compressed --max-time 30 -s -D /tmp/blog-live-compressed-1.headers -o /tmp/blog-live-compressed-1.html -w 'compressed-1 http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' https://sorcererxw.com/`: PASS, production homepage returned gzip content around `152KB`; representative runs ranged from about `0.66s` to `5.86s` total with `starttransfer` around `0.46s` to `1.22s`.
+- local OpenNext preview before clearing provider KV: `curl --compressed --max-time 120 -s -o /tmp/blog-local-home-1.html -w 'local-home-1 http=%{http_code} total=%{time_total} starttransfer=%{time_starttransfer} size=%{size_download}\n' http://127.0.0.1:3301/`: PASS, first run returned `200` in `5.60s`, then warm runs returned in about `0.06s`.
+- temporary `[DEBUG-home-perf]` instrumentation after clearing local provider KV: PASS, cold homepage returned `200` in `13.49s`; `thoughts` took about `13.06s`, Notion home about `4.44s`, articles/projects about `1.49s` to `1.86s`, and X posts about `6ms` to `9ms`.
+- HTML inspection of production homepage: PASS, counted about `98` `<img>` tags, `60` Next flight payload markers, `42` article links, `87` Telegram links, `19` X links, and about `915KB` uncompressed HTML.
+
+Follow-up:
+
+- avoid loading the full provider-backed Overview Feed in `generateMetadata()`; metadata only needs description and capped structured-data inputs
+- add request-local/in-flight dedupe around homepage provider assembly so metadata and page rendering cannot trigger duplicate cold provider fetches
+- move Telegram ingestion out of request-time crawling or cap/partition the homepage Telegram feed so cold-cache misses do not crawl the full public pagination chain
+- consider an Overview Feed pagination/truncation slice; the current v1 renders all matching feed items into the homepage HTML and RSC payload
+
+Blockers:
+
+- remote KV inspection could not be performed from this shell because Wrangler required `CLOUDFLARE_API_TOKEN`
+- browser automation was not available; Playwright was not installed, so browser timing was inferred from HTTP payload and source behavior
+
+## 2026-05-21 - Article HTML Render Code Blocks
+
+Status: done locally
+
+Summary:
+
+- enabled article detail rendering for authored Notion `html` code blocks that start with `<!--render-->`
+- kept ordinary HTML code blocks and non-HTML code blocks on the existing display-code/Shiki path
+- verified the live `/articles/screenshot-render` content renders its marked examples as real page HTML
+
+Files:
+
+- `src/integrations/notion/article-detail.ts`
+- `src/integrations/notion/article-detail.test.ts`
+- `src/components/article/article-detail-view.test.tsx`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-21-article-html-render-code-blocks.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- only Notion code blocks with language `html` and an exact leading `<!--render-->` marker set `renderHtml`
+- the article renderer still requires both `renderHtml` and the leading marker before using `dangerouslySetInnerHTML`
+- Profile Hero code block rendering is unchanged
+
+Verification:
+
+- `pnpm test -- src/integrations/notion/article-detail.test.ts src/components/article/article-detail-view.test.tsx`: PASS, Vitest config ran the active full suite (`36` files, `125` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3295`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-screenshot-render.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3295/articles/screenshot-render && rg -n 'Rendered|rendered|<!--render-->|class="shiki|<pre|&lt;!--render|screenshot|article|data-rendered|html' /tmp/blog-screenshot-render.html | head -120`: PASS, returned `200 text/html; charset=utf-8`; marked render blocks appeared as real `<pre>`, `<style>`, and simulated screenshot HTML while unmarked examples still rendered with `class="shiki"`.
+- Chrome verification at `http://127.0.0.1:3295/articles/screenshot-render`: PASS, the article rendered marked examples as visible page content including `button`, `span paragraph`, and the phone-screen simulation.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - X Quote Post Preview
 
 Status: done locally and remote cache rebuilt

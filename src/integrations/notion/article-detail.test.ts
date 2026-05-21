@@ -277,6 +277,92 @@ describe("createNotionArticleDetailSource", () => {
     );
   });
 
+  it("marks html code blocks that start with the render marker for direct rendering", async () => {
+    getPrimaryDataSourceIdMock.mockResolvedValue("data-source-1");
+    queryMock.mockResolvedValue({
+      results: [
+        {
+          id: "page-1",
+          properties: {
+            Name: {
+              type: "title",
+              title: [{ plain_text: "Screenshot Render" }],
+            },
+            Slug: {
+              type: "rich_text",
+              rich_text: [{ plain_text: "screenshot-render" }],
+            },
+          },
+        },
+      ],
+    });
+
+    collectPaginatedAPIMock.mockImplementation(async (_list, params: { block_id: string }) => {
+      if (params.block_id === "page-1") {
+        return [
+          {
+            id: "code-render-1",
+            type: "code",
+            has_children: false,
+            code: {
+              language: "html",
+              rich_text: [
+                {
+                  plain_text:
+                    '<!--render--><section data-rendered-html="true">Rendered demo</section>',
+                },
+              ],
+            },
+          },
+          {
+            id: "code-plain-html",
+            type: "code",
+            has_children: false,
+            code: {
+              language: "html",
+              rich_text: [
+                {
+                  plain_text: '<section data-rendered-html="false">Plain demo</section>',
+                },
+              ],
+            },
+          },
+        ];
+      }
+
+      return [];
+    });
+
+    const { createNotionArticleDetailSource } = await import("@/integrations/notion/article-detail");
+    const source = createNotionArticleDetailSource();
+    const article = await source.getArticleBySlug({ slug: "screenshot-render" });
+
+    expect(article?.blocks).toEqual([
+      expect.objectContaining({
+        kind: "code",
+        language: "html",
+        renderHtml: true,
+        text: '<!--render--><section data-rendered-html="true">Rendered demo</section>',
+      }),
+      expect.objectContaining({
+        kind: "code",
+        language: "html",
+        renderHtml: false,
+        text: '<section data-rendered-html="false">Plain demo</section>',
+      }),
+    ]);
+    expect(
+      article?.blocks[0] && "highlightedHtml" in article.blocks[0]
+        ? article.blocks[0].highlightedHtml
+        : null,
+    ).toBeNull();
+    expect(
+      article?.blocks[1] && "highlightedHtml" in article.blocks[1]
+        ? article.blocks[1].highlightedHtml
+        : null,
+    ).toContain('class="shiki');
+  });
+
   it("normalizes Notion file covers for article detail pages", async () => {
     getPrimaryDataSourceIdMock.mockResolvedValue("data-source-1");
     queryMock.mockResolvedValue({
