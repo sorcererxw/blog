@@ -60,6 +60,8 @@ Homepage structured data should include:
 
 The homepage `ItemList` should use the already-normalized Overview Feed Index. Internal destinations become absolute site URLs; external destinations stay absolute upstream URLs. Items without destinations are omitted from the list.
 
+Next.js `generateMetadata()` does not own homepage feed discovery. It should build browser/social metadata from the minimum homepage intro data needed for title and description. Feed-backed `CollectionPage` / `ItemList` JSON-LD belongs to the rendered homepage route body, where the Overview Feed is already loaded.
+
 Article detail structured data remains:
 
 - `TechArticle`

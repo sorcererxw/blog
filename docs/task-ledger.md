@@ -16,6 +16,51 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - Homepage Metadata Feed Decoupling
+
+Status: done locally
+
+Summary:
+
+- split homepage metadata generation away from the full Overview Feed loader
+- kept feed-backed `CollectionPage` / `ItemList` JSON-LD in the rendered homepage body
+- added regression coverage proving `generateMetadata()` does not call article, project, Telegram, or X feed providers
+
+Files:
+
+- `src/app/page.tsx`
+- `src/app/page.test.ts`
+- `docs/specs/2026-05-18-sitewide-seo-geo-design.md`
+- `docs/plans/2026-05-18-sitewide-seo-geo.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- `generateMetadata()` now loads only the cached Notion home source needed for homepage title/description metadata
+- page rendering still loads the full Overview Feed and owns the feed-backed structured data scripts
+- this slice does not change the remaining cold-cache Telegram crawl behavior in the page render path
+
+Verification:
+
+- `pnpm test -- src/app/page.test.ts`: PASS, Vitest config ran the active full suite (`37` files, `126` tests); before the implementation, the new regression test failed because `generateMetadata()` called `listArticles()`.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing non-fatal OpenNext package-template copy logs; `.open-next/worker.js` was generated.
+- `curl --max-time 90 -s -D /tmp/blog-home-metadata-decoupling.headers -o /tmp/blog-home-metadata-decoupling.html http://127.0.0.1:3296/`: PASS, returned `200 OK` from `next start` and preserved the homepage agent discovery `Link` header.
+- `node` HTML inspection of `/tmp/blog-home-metadata-decoupling.html`: PASS, found title `sorcererxw`, a description meta tag, `WebSite`, `Person`, `CollectionPage`, and `ItemList` JSON-LD, `50` `ItemList` entries, and `data-overview-feed` markup.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- continue with the remaining cold-cache performance work: request-time Telegram crawling still dominates first homepage render when provider KV is cold
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - Homepage Cold Load Diagnosis
 
 Status: diagnosed

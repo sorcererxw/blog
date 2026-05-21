@@ -1,5 +1,23 @@
 # Blog2 Verification Guide
 
+## 2026-05-21 Homepage Metadata / Feed Boundary
+
+Current homepage metadata shape:
+
+- `generateMetadata()` loads only the cached Notion home source needed to derive the homepage title and description.
+- `generateMetadata()` must not load article, project, Telegram, or X feed providers.
+- Feed-backed `CollectionPage` / `ItemList` JSON-LD remains in the rendered homepage body through `StructuredDataScripts`.
+
+Current evidence:
+
+- `pnpm test -- src/app/page.test.ts`: PASS, Vitest config ran the active full suite (`37` files, `126` tests) and the homepage metadata regression test confirmed feed providers were not called.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing non-fatal OpenNext package-template copy logs; `.open-next/worker.js` was generated.
+- `curl --max-time 90 -s -D /tmp/blog-home-metadata-decoupling.headers -o /tmp/blog-home-metadata-decoupling.html http://127.0.0.1:3296/`: PASS, returned `200 OK` from `next start` and preserved the homepage agent discovery `Link` header.
+- Node HTML inspection of `/tmp/blog-home-metadata-decoupling.html`: PASS, found title `sorcererxw`, a description meta tag, `WebSite`, `Person`, `CollectionPage`, and `ItemList` JSON-LD, `50` `ItemList` entries, and `data-overview-feed` markup.
+
 ## 2026-05-21 Article HTML Render Code Blocks
 
 Current article render shape:

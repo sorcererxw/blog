@@ -31,6 +31,7 @@ import {
   createNotionHomeSource,
   getHomeDescription,
   loadNotionHomePage,
+  type HomePageRecord,
 } from "@/integrations/notion/home";
 import {
   createNotionProjectSource,
@@ -43,6 +44,62 @@ import { seoToMetadata, StructuredDataScripts } from "./seo";
 export const revalidate = 600;
 
 type HomeSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+const FALLBACK_HOME_DESCRIPTION =
+  "A personal site overview with writing, projects, and public notes from sorcererxw.";
+
+const getHomeSeoDescription = (homePage: HomePageRecord) => {
+  const description = getHomeDescription(homePage.blocks) || "sorcererxw blog";
+
+  return description === "sorcererxw blog"
+    ? FALLBACK_HOME_DESCRIPTION
+    : description;
+};
+
+const buildHomeMetadataSeo = (homePage: HomePageRecord) =>
+  buildSeo({
+    description: getHomeSeoDescription(homePage),
+    kind: "home",
+    pathname: "/",
+    title: SITE_NAME,
+  });
+
+const buildHomePageSeo = ({
+  feedStructuredDataItems,
+  homePage,
+}: {
+  feedStructuredDataItems: Array<{ name: string; url: string }>;
+  homePage: HomePageRecord;
+}) => {
+  const seoDescription = getHomeSeoDescription(homePage);
+
+  return buildSeo({
+    description: seoDescription,
+    kind: "home",
+    pathname: "/",
+    structuredData: [
+      buildWebsiteStructuredData(seoDescription),
+      buildPersonStructuredData(seoDescription),
+      ...buildCollectionPageStructuredData({
+        description: seoDescription,
+        items: feedStructuredDataItems,
+        pathname: "/",
+        title: "Personal Site overview feed",
+      }),
+    ],
+    title: SITE_NAME,
+  });
+};
+
+async function loadHomeMetadataSeo() {
+  const providerCache = await createPublicProviderCache();
+  const homeSource = withCachedHomeSource(
+    createNotionHomeSource(loadNotionHomePage),
+    providerCache,
+  );
+
+  return buildHomeMetadataSeo(await homeSource.loadHomePage());
+}
 
 async function loadHomeData(searchParams?: Record<string, string | string[] | undefined>) {
   const providerCache = await createPublicProviderCache();
@@ -75,11 +132,6 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     }
   }
 
-  const description = getHomeDescription(homePage.blocks) || "sorcererxw blog";
-  const seoDescription =
-    description === "sorcererxw blog"
-      ? "A personal site overview with writing, projects, and public notes from sorcererxw."
-      : description;
   const overviewFeedItems = buildOverviewFeedIndex({
     articles,
     projects,
@@ -106,21 +158,9 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
       ];
     })
     .slice(0, 50);
-  const seo = buildSeo({
-    description: seoDescription,
-    kind: "home",
-    pathname: "/",
-    structuredData: [
-      buildWebsiteStructuredData(seoDescription),
-      buildPersonStructuredData(seoDescription),
-      ...buildCollectionPageStructuredData({
-        description: seoDescription,
-        items: feedStructuredDataItems,
-        pathname: "/",
-        title: "Personal Site overview feed",
-      }),
-    ],
-    title: SITE_NAME,
+  const seo = buildHomePageSeo({
+    feedStructuredDataItems,
+    homePage,
   });
 
   return {
@@ -132,9 +172,7 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { seo } = await loadHomeData();
-
-  return seoToMetadata(seo);
+  return seoToMetadata(await loadHomeMetadataSeo());
 }
 
 export default async function HomePage({

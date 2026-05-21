@@ -192,6 +192,7 @@ Exit criteria:
 - Overview Feed cards use client-side card-surface navigation, while the SEO-visible destination anchor lives on the timestamp to avoid nested `<a>` markup around rich-text links
 - ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
 - current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
+- homepage browser/social metadata stays on a minimal intro-derived path; feed-backed `CollectionPage` / `ItemList` JSON-LD is assembled in the rendered route body, not in `generateMetadata()`
 - homepage agent discovery uses `Link` headers for `api-catalog`, `service-doc`, and `describedby`; the API catalog remains a narrow linkset over existing public resources
 
 ## Active Priorities

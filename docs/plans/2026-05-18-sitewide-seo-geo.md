@@ -43,12 +43,14 @@ Work:
 1. add `sameAs` identity links to Person structured data
 2. add homepage `CollectionPage` and `ItemList` structured data from the Overview Feed Index
 3. keep route code responsible for SEO assembly and keep components SEO-passive
+4. keep `generateMetadata()` on a minimal homepage metadata loader; feed-backed structured data is assembled only by the rendered homepage route
 
 Verification:
 
 - targeted SEO structured-data tests
 - HTTP head/body checks for JSON-LD on `/`
 - browser verification for `/`
+- regression test proving homepage metadata generation does not call article, project, Telegram, or X feed providers
 
 ## Slice 3: SEO Verification Refresh
 
