@@ -70,6 +70,14 @@ Module Size changes visual weight only. It must not change the underlying Feed I
 
 Different content types and sources may have distinct ingestion and normalization paths, but the rendered feed modules should stay visually unified.
 
+Feed Module destination rules:
+
+- a Feed Item with a non-`none` destination should make the visual card surface clickable through client-side navigation
+- the card surface itself must not be rendered as an outer `<a>` because Feed Module bodies can contain real rich-text links
+- the primary crawlable destination link for a card lives on the timestamp
+- rich-text URLs inside the card remain real anchors and must not be intercepted by card-level click handling
+- items with `destination.kind === "none"` render without card click behavior and without a timestamp link
+
 Module Size ownership rules:
 
 - Content Sources must not provide Module Size, card height, column placement, or masonry estimates
@@ -121,7 +129,25 @@ Rules:
 V1 Social Source scope:
 
 - implement Telegram from the existing snapshot flow first
-- reserve the model for Twitter/X, but do not implement Twitter/X ingestion in the first overview slice
+- reserve the model for X, but do not implement X ingestion in the first overview slice
+- when X ingestion is implemented, use X API owned-read access for the author's own posts rather than public search or scraping
+- X ingestion should maintain an app-owned long-lived list in KV and record the last successful fetched boundary so the site can poll incrementally instead of rereading the whole X timeline
+- X ingestion should run from a daily cron at 18:00 UTC / 02:00 Asia/Shanghai; homepage rendering should read the stored KV list and should not call X directly
+- X durable KV state should retain all fetched X-sourced Social Posts, and the Overview Feed should render the full fetched X list without an X-specific item cap
+- Each X cron run should fetch at most 50 posts after the last successful fetched boundary and merge those posts into durable KV state
+- The X last successful fetched boundary should be an X post id, not a timestamp
+- If more than 50 X posts exist after the last successful fetched boundary, the cron run should advance the boundary only through the successfully merged 50 posts and later cron runs should continue from there
+- X boundary advancement should be based on scanned X post ids, including replies and reposts that are excluded from the stored Social Post list
+- X boundary advancement should happen only after all retained post detail keys and the list/index key for the scanned batch are written successfully
+- If X durable KV state has no previous fetched boundary, the daily cron should fetch the first 50 owned posts available from the configured X source and record the resulting boundary
+- X list/index metadata should record `scannedBoundaryId`, `orderedIds`, `lastAttemptAt`, `lastSuccessAt`, `lastScannedCount`, `lastRetainedCount`, and `lastError`
+- An X sync run with zero new scanned posts should still update `lastAttemptAt` and `lastSuccessAt`, set scanned and retained counts to zero, leave the boundary unchanged, and clear `lastError`
+- If an X post detail key is missing during homepage reads, the public site should skip that item instead of failing the Overview Feed
+- X sync failures should not affect homepage rendering; the public site should continue to show the last successfully merged X list
+- X sync should run in production through the daily Cloudflare cron only; local manual triggering should use Wrangler's scheduled-event test route against the same Worker `scheduled()` handler
+- X sync should enter through the Worker-level `src/worker.ts` `scheduled()` handler; business logic should live in a domain/use-case module, and X API calls should stay inside an integration adapter
+- X KV storage should use one list/index key carrying ordered ids and the last successful fetched boundary, plus per-post detail keys for point lookups by X post id
+- X Feed Items can participate in homepage structured data, but they should not expand the existing homepage JSON-LD item cap
 
 ## Compatibility Routes
 
@@ -166,7 +192,7 @@ Initial query shape:
 - `/?type=projects`
 - `/?type=social`
 - `/?source=telegram`
-- `/?source=twitter` after a Twitter Social Source exists
+- `/?source=x` after an X Social Source exists
 
 Filter controls should keep regular `href` values as a fallback, then use a narrow React island for hydrated client-side filtering.
 

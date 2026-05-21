@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -60,6 +61,12 @@ const filterLinks = [
     key: "telegram",
     label: "Telegram",
     matches: (filter: FeedFilter) => filter.source === "telegram",
+  },
+  {
+    href: "/?source=x",
+    key: "x",
+    label: "X",
+    matches: (filter: FeedFilter) => filter.source === "x",
   },
 ];
 
@@ -321,6 +328,18 @@ function ModuleInner({
   );
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      'a, button, input, select, textarea, summary, [role="button"], [role="link"]',
+    ),
+  );
+}
+
 function FeedModule({
   eagerMedia,
   item,
@@ -329,37 +348,66 @@ function FeedModule({
   item: OverviewFeedViewItem;
 }) {
   const moduleSize = getFeedModuleSize(item);
-  const shouldUseOuterLink = item.destination.kind !== "none";
+  const destination =
+    item.destination.kind === "none" ? null : item.destination;
+
+  const navigateToDestination = () => {
+    if (!destination) {
+      return;
+    }
+
+    if (destination.kind === "external") {
+      window.open(destination.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    window.location.assign(destination.href);
+  };
+
+  const handleCardClick = (event: MouseEvent<HTMLElement>) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    navigateToDestination();
+  };
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      navigateToDestination();
+    }
+  };
+
   const surface = (
     <Card
-      className="block gap-0 overflow-hidden border border-separator px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+      aria-label={
+        destination ? `Open ${item.metaLabel ?? item.type} item` : undefined
+      }
+      className={cn(
+        "block gap-0 overflow-hidden border border-separator px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        destination && "cursor-pointer",
+      )}
       data-size={moduleSize}
+      onClick={destination ? handleCardClick : undefined}
+      onKeyDown={destination ? handleCardKeyDown : undefined}
+      role={destination ? "link" : undefined}
+      tabIndex={destination ? 0 : undefined}
     >
       <ModuleInner
         eagerMedia={eagerMedia}
-        footerDestination={shouldUseOuterLink ? null : item.destination}
+        footerDestination={item.destination}
         item={item}
         moduleSize={moduleSize}
       />
     </Card>
   );
 
-  if (!shouldUseOuterLink || item.destination.kind === "none") {
-    return <article>{surface}</article>;
-  }
-
-  const destination = item.destination;
-
-  return (
-    <NextLink
-      className="block text-inherit no-underline"
-      href={destination.href}
-      rel={destination.kind === "external" ? "noreferrer" : undefined}
-      target={destination.kind === "external" ? "_blank" : undefined}
-    >
-      {surface}
-    </NextLink>
-  );
+  return <article>{surface}</article>;
 }
 
 function getColumnCount(width: number) {

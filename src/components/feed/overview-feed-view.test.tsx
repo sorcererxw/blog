@@ -43,6 +43,14 @@ describe("OverviewFeed", () => {
             destination: { kind: "external", href: "https://t.me/s/example/1" },
             metaLabel: "Telegram",
           }),
+          item({
+            id: "social:x:1",
+            type: "social",
+            source: "x",
+            title: "X post",
+            destination: { kind: "external", href: "https://x.com/sorcererxw/status/1" },
+            metaLabel: "X",
+          }),
         ])}
       />,
     );
@@ -58,11 +66,15 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain('href="/?type=social"');
     expect(markup).not.toContain(">Social<");
     expect(markup).toContain('href="/?source=telegram"');
+    expect(markup).toContain('href="/?source=x"');
     expect(markup).toContain('data-slot="tabs"');
     expect(markup).toContain('data-slot="tabs-list"');
     expect(markup).toContain('data-slot="tabs-tab"');
     expect(markup).toContain('data-selected="true"');
     expect(markup).toContain('data-slot="card"');
+    expect(markup).toContain('role="link"');
+    expect(markup).toContain('tabindex="0"');
+    expect(markup).toContain("cursor-pointer");
     expect(markup).toContain("border-separator");
     expect(markup).toContain("px-0");
     expect(markup).toContain("grid gap-3 p-5");
@@ -180,7 +192,13 @@ describe("OverviewFeed", () => {
       /<a class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https:\/\/example\.com\/rich"/,
     );
     expect(markup).toMatch(
-      /<a class="block text-inherit no-underline"[^>]+href="https:\/\/t\.me\/s\/example\/1"[\s\S]+<a class="break-all font-semibold text-foreground underline underline-offset-\[0\.12em\]"[^>]+href="https:\/\/example\.com\/rich"/,
+      /<a class="justify-self-start no-underline hover:\[&amp;_time\]:text-foreground"[^>]+href="https:\/\/t\.me\/s\/example\/1"[\s\S]+<time/,
+    );
+    expect(markup).not.toMatch(
+      /<a class="block text-inherit no-underline"[^>]+href="https:\/\/t\.me\/s\/example\/1"/,
+    );
+    expect(markup.indexOf('href="https://example.com/rich"')).toBeLessThan(
+      markup.indexOf('href="https://t.me/s/example/1"'),
     );
     expect(markup).toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain("Telegram");

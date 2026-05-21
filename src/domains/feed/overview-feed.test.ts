@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ArticleListItem } from "@/domains/article/types";
 import type { ProjectListItem } from "@/domains/projects/types";
+import type { XSocialPostDetail } from "@/domains/social/x-sync";
 import type { ThoughtListItem } from "@/domains/thoughts/types";
 
 import {
@@ -12,6 +13,7 @@ import {
   projectToFeedItem,
   sortFeedItems,
   thoughtToFeedItem,
+  xSocialPostToFeedItem,
 } from "./overview-feed";
 import type { FeedItem } from "./types";
 
@@ -45,22 +47,41 @@ const thought = (overrides: Partial<ThoughtListItem> = {}): ThoughtListItem => (
   ...overrides,
 });
 
+const xPost = (overrides: Partial<XSocialPostDetail> = {}): XSocialPostDetail => ({
+  createdAt: new Date("2026-05-02T00:00:00.000Z"),
+  id: "104",
+  kind: "quote",
+  media: [
+    {
+      alt: "Diagram",
+      height: 720,
+      src: "https://pbs.twimg.com/media/photo.jpg",
+      width: 1280,
+    },
+  ],
+  text: "X summary",
+  url: "https://x.com/sorcererxw/status/104",
+  ...overrides,
+});
+
 describe("overview feed", () => {
   it("normalizes articles, projects, and Telegram thoughts into one feed model", () => {
     const feed = buildOverviewFeedIndex({
       articles: [article()],
       projects: [project({ period: new Date("2026-03-01T00:00:00.000Z") })],
       thoughts: [thought()],
+      xPosts: [xPost()],
     });
 
     expect(feed.map((item) => item.id)).toEqual([
+      "social:x:104",
       "article:article",
       "social:telegram:100",
       "project:https://example.com/project",
     ]);
-    expect(feed.map((item) => item.type)).toEqual(["writing", "social", "projects"]);
-    expect(feed.map((item) => item.source)).toEqual(["notion", "telegram", "notion"]);
-    expect(feed.map((item) => item.titleEmoji ?? null)).toEqual(["✦", null, "◇"]);
+    expect(feed.map((item) => item.type)).toEqual(["social", "writing", "social", "projects"]);
+    expect(feed.map((item) => item.source)).toEqual(["x", "notion", "telegram", "notion"]);
+    expect(feed.map((item) => item.titleEmoji ?? null)).toEqual([null, "✦", null, "◇"]);
   });
 
   it("sorts by displayed time, then source published time, then untimed items at the bottom", () => {
@@ -165,6 +186,33 @@ describe("overview feed", () => {
     ]);
   });
 
+  it("normalizes stored X Social Posts into feed items", () => {
+    const item = xSocialPostToFeedItem(xPost());
+
+    expect(item).toMatchObject({
+      displayedAt: new Date("2026-05-02T00:00:00.000Z"),
+      id: "social:x:104",
+      metaLabel: "X",
+      source: "x",
+      sourcePublishedAt: new Date("2026-05-02T00:00:00.000Z"),
+      summary: "X summary",
+      title: "X summary",
+      type: "social",
+    });
+    expect(item.destination).toEqual({
+      kind: "external",
+      href: "https://x.com/sorcererxw/status/104",
+    });
+    expect(item.media).toEqual([
+      {
+        alt: "Diagram",
+        height: 720,
+        src: "https://pbs.twimg.com/media/photo.jpg",
+        width: 1280,
+      },
+    ]);
+  });
+
   it("keeps every Telegram direct and preview image for overview rendering", () => {
     const item = thoughtToFeedItem(
       thought({
@@ -212,6 +260,7 @@ describe("overview feed", () => {
       articles: [article()],
       projects: [project({ period: new Date("2026-01-01T00:00:00.000Z") })],
       thoughts: [thought()],
+      xPosts: [xPost()],
     });
 
     expect(parseFeedFilter(new URL("https://example.com/?type=projects"))).toEqual({
@@ -222,8 +271,16 @@ describe("overview feed", () => {
       source: "telegram",
       type: null,
     });
+    expect(parseFeedFilter(new URL("https://example.com/?source=x"))).toEqual({
+      source: "x",
+      type: null,
+    });
     expect(applyFeedFilter(items, { type: "social" }).map((item) => item.type)).toEqual([
       "social",
+      "social",
+    ]);
+    expect(applyFeedFilter(items, { source: "x" }).map((item) => item.source)).toEqual([
+      "x",
     ]);
     expect(applyFeedFilter(items, { source: "telegram" }).map((item) => item.source)).toEqual([
       "telegram",

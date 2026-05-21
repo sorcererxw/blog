@@ -139,6 +139,7 @@ Status: In progress, with Telegram public-page runtime ingestion and sitewide SE
 Goals:
 
 - implement thoughts / Telegram-driven public content from public pages
+- implement X as a fixed Social Source for `https://x.com/sorcererxw` through daily cron-backed KV state
 - introduce Cloudflare-backed image delivery for public media surfaces
 - add image metadata support
 - restore required SEO, comments, and route compatibility details
@@ -186,6 +187,7 @@ Exit criteria:
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
 - feed UI primitives and tokens have migrated from the local shadcn/Base UI component set to HeroUI v3 under `docs/specs/2026-05-18-heroui-design-system-migration-design.md`; `src/components/ui/*`, `components.json`, `shadcn/tailwind.css`, and the old shadcn/Base UI dependencies are no longer part of the active source tree
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
+- Overview Feed cards use client-side card-surface navigation, while the SEO-visible destination anchor lives on the timestamp to avoid nested `<a>` markup around rich-text links
 - ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
 - current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
 - homepage agent discovery uses `Link` headers for `api-catalog`, `service-doc`, and `describedby`; the API catalog remains a narrow linkset over existing public resources
@@ -197,8 +199,9 @@ Exit criteria:
 3. implement the Profile Hero and Overview Feed Index before broad visual polish
 4. preserve article details and old-route compatibility while removing archive pages from the primary product structure
 5. keep Telegram social content on the runtime public-page crawler defined in `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md`
+6. implement X Social Source sync from `docs/plans/2026-05-21-x-social-source.md` without adding homepage-time X API calls
 
 ## Open Questions
 
 - exact Notion schema for Profile Source beyond rendering the fixed Profile Page body
-- exact first set of Social Sources beyond the existing Telegram public channel
+- exact production X API secret provisioning for the fixed `sorcererxw` owned-read source

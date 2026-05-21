@@ -19,7 +19,13 @@
   },
   "secrets": {
     "required": [
-      "NOTION_SECRET"
+      "NOTION_SECRET",
+      "X_SECRET"
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "0 18 * * *"
     ]
   },
   "routes": [

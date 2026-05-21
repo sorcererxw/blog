@@ -1,5 +1,6 @@
 import type { ArticleListItem } from "@/domains/article/types";
 import type { ProjectListItem } from "@/domains/projects/types";
+import type { XSocialPostDetail } from "@/domains/social/x-sync";
 import type { ThoughtListItem } from "@/domains/thoughts/types";
 
 import type {
@@ -14,6 +15,7 @@ type FeedSourceInput = {
   articles: ArticleListItem[];
   projects: ProjectListItem[];
   thoughts: ThoughtListItem[];
+  xPosts?: XSocialPostDetail[];
 };
 
 const validFeedTypes = new Set<FeedItemType>(["writing", "projects", "social"]);
@@ -159,15 +161,37 @@ export const thoughtToFeedItem = (thought: ThoughtListItem): FeedItem => ({
   metaLabel: "Telegram",
 });
 
+const xPostTitle = (post: XSocialPostDetail) =>
+  post.text.replace(/\s+/g, " ").trim().slice(0, 90) || "X post";
+
+export const xSocialPostToFeedItem = (post: XSocialPostDetail): FeedItem => ({
+  id: `social:x:${post.id}`,
+  type: "social",
+  source: "x",
+  title: xPostTitle(post),
+  summary: post.text,
+  displayedAt: post.createdAt,
+  sourcePublishedAt: post.createdAt,
+  presentationIntent: null,
+  destination: {
+    kind: "external",
+    href: post.url,
+  },
+  media: post.media,
+  metaLabel: "X",
+});
+
 export const buildOverviewFeedIndex = ({
   articles,
   projects,
   thoughts,
+  xPosts = [],
 }: FeedSourceInput): FeedItem[] =>
   sortFeedItems([
     ...articles.map(articleToFeedItem),
     ...projects.map(projectToFeedItem),
     ...thoughts.map(thoughtToFeedItem),
+    ...xPosts.map(xSocialPostToFeedItem),
   ]);
 
 export const parseFeedFilter = (url: URL): FeedFilter => {

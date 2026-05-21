@@ -1,5 +1,52 @@
 # Blog2 Verification Guide
 
+## 2026-05-21 Feed Card Timestamp Link State
+
+Current feed card link shape:
+
+- Overview Feed items with a non-`none` destination render a focusable card surface with `role="link"` and client-side click / keyboard navigation.
+- The card surface is not an outer `<a>`, so rich-text URLs inside Feed Module bodies are not nested inside another anchor.
+- The item's real crawlable destination anchor is rendered on the timestamp.
+- Items with `destination.kind === "none"` still render without card click behavior and without a timestamp destination link.
+
+Current evidence:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3292`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-card-timestamp-links.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3292/ && rg -n 'role="link"|tabindex="0"|href="https://t\.me/s/tech_bb/[0-9]+"|href="/articles/|class="block text-inherit no-underline"|break-all font-semibold text-foreground underline' /tmp/blog-card-timestamp-links.html | head -80`: PASS, returned `200 text/html; charset=utf-8`, rendered focusable card surfaces, timestamp destination links, and rich-text anchors, with no whole-card outer link class.
+- Chrome verification at `http://127.0.0.1:3292/`: PASS, rendered the homepage Overview Feed; accessibility tree showed cards as `link Open Telegram item` with nested timestamp links such as `MAY 10, 2026` pointing to `t.me/s/tech_bb/111`.
+
+## 2026-05-21 X Social Source State
+
+Current X Social Source shape:
+
+- X source id is `x`, with filter URL `/?source=x`.
+- Homepage rendering reads stored X Social Posts from `BLOG_CACHE`; it does not call X directly.
+- X sync enters through the Worker-level `scheduled()` handler and is configured for daily `0 18 * * *` Cloudflare cron.
+- Local manual triggering uses Wrangler scheduled-event testing through `/__scheduled`.
+- X KV state uses `social:x:index` plus per-post `social:x:posts:<id>` detail keys.
+- Sync scans at most 50 posts after `scannedBoundaryId`, stores original and quote posts, and advances the scanned boundary across replies/reposts too.
+
+Current evidence:
+
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/x/user-posts.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings; local build also warned that `X_SECRET` is not present in `.dev.vars`.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing package-template copy logs and the same missing local `X_SECRET` warning.
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3291 --test-scheduled`: PASS, local preview served through Wrangler.
+- `curl --max-time 90 -s -o /tmp/blog-x-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3291/ && rg -n 'href="/\?source=x"|data-slot="tabs-tab"|Personal Site|Overview feed|X' /tmp/blog-x-home.html | head -80`: PASS, homepage returned `200 text/html` and rendered the X filter tab.
+- `curl --max-time 90 -s -o /tmp/blog-x-filter.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3291/?source=x' && rg -n 'href="/\?source=x"|data-selected="true"|No feed items match this filter|Overview feed' /tmp/blog-x-filter.html | head -80`: PASS, X filter returned `200 text/html`, rendered the active X tab, and showed the empty state while local KV had no X posts.
+- `curl --max-time 30 -i -X POST 'http://127.0.0.1:3291/__scheduled?cron=0+18+*+*+*' | head -80`: PASS, Wrangler returned `200 OK` and `Ran scheduled event`.
+- Chrome verification at `http://127.0.0.1:3291/?source=x`: PASS, rendered the homepage with Profile Hero, Overview Feed filters, selected X tab, and empty-state text.
+
+Residual risk:
+
+- Real X API sync was not executed because `X_SECRET` is not configured locally; production must provision the secret before the cron can fetch X posts.
+
 ## 2026-05-19 Agent Link Header Discovery State
 
 Current discovery shape:
@@ -21,6 +68,8 @@ Current evidence:
 - `curl --max-time 90 -s -I http://127.0.0.1:3280/.well-known/api-catalog`: PASS, returned `200`, `application/linkset+json`, and `rel="api-catalog"` with no response body.
 
 ## 2026-05-18 Feed Card Link Priority State
+
+Superseded by `2026-05-21 Feed Card Timestamp Link State`.
 
 Current feed card link shape:
 

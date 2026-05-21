@@ -98,6 +98,7 @@ Work:
 - keep presentation unified across item types and sources
 - implement Feed Filters as URL-backed client state after SSR, not section pages
 - use the active design-system primitives for Feed Filters, Feed Modules, and source labels; the initial implementation used shadcn `Tabs`, `Card`, and `Badge`, but `docs/specs/2026-05-18-heroui-design-system-migration-design.md` makes HeroUI v3 the target component implementation
+- render Feed Module card surfaces with client-side click and keyboard navigation instead of an outer anchor; keep the real destination anchor on the timestamp and preserve rich-text anchors inside the card
 - animate Feed Module insertion and removal when hydrated filters change the visible item set
 - render all matching Feed Items in one response without pagination or infinite scroll
 

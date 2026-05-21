@@ -13,6 +13,7 @@ declare namespace Cloudflare {
 		NOTION_PROJECTS_DATABASE_ID: "63605072597640c4b666cd334b428aee";
 		NOTION_INTRO_PAGE_ID: "ac63bdb57d224c41a951c0536396bdf4";
 		NOTION_SECRET: string;
+		X_SECRET: string;
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}
@@ -20,5 +21,5 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_ENV" | "PUBLIC_SITE_URL" | "NOTION_BLOG_DATABASE_ID" | "NOTION_PROJECTS_DATABASE_ID" | "NOTION_INTRO_PAGE_ID" | "NOTION_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_ENV" | "PUBLIC_SITE_URL" | "NOTION_BLOG_DATABASE_ID" | "NOTION_PROJECTS_DATABASE_ID" | "NOTION_INTRO_PAGE_ID" | "NOTION_SECRET" | "X_SECRET">> {}
 }

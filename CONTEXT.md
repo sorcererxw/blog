@@ -186,6 +186,31 @@ _Avoid_: Server masonry estimate, duplicate layout engine
 - A **Social Post** belongs to exactly one **Social Source**
 - A **Social Post** uses its original platform post as its primary **External Target**
 - The **Personal Site** surfaces **Social Posts** as summaries, not full copied social archives
+- The canonical **Social Source** id for X is `x`, represented by `/?source=x`
+- The X **Social Source** is the author's fixed X account at `https://x.com/sorcererxw` with user id `3798600074`, not a multi-account or user-configurable source
+- The X **Social Source** should use X API owned-read access for the author's own posts, not public search or scraping
+- X-sourced **Social Posts** appear in the default **Overview Feed** and can also be isolated with `/?source=x`
+- X **Feed Items** can participate in homepage structured data but do not expand the existing homepage JSON-LD item cap
+- X-sourced **Social Posts** are stored as an app-owned long-lived KV list and refreshed incrementally from the last successful fetched boundary
+- X refresh uses a daily cron at 18:00 UTC / 02:00 Asia/Shanghai to update durable KV state; homepage rendering reads the stored list and should not call X directly
+- X durable KV state retains all fetched X-sourced **Social Posts**, and the **Overview Feed** renders the full fetched X list without an X-specific item cap
+- X durable KV state uses a list/index key for ordered ids and the last successful fetched boundary, plus per-post detail keys for point lookups by X post id
+- The X last successful fetched boundary is an X post id, not a timestamp
+- X list/index metadata records the scanned boundary, ordered ids, last attempt/success times, scanned count, retained count, and last error
+- Each X cron run fetches at most 50 posts after the last successful fetched boundary and merges those posts into durable KV state
+- An X sync with zero new scanned posts is still a successful sync and leaves the scanned boundary unchanged
+- If more than 50 X posts exist after the last successful fetched boundary, the cron run advances the boundary only through the successfully merged 50 posts and later cron runs continue from there
+- X boundary advancement is based on scanned X post ids, including replies and reposts that are excluded from the stored **Social Post** list
+- X boundary advancement happens only after all retained post detail keys and the list/index key for the scanned batch are written successfully
+- If X durable KV state has no previous fetched boundary, the daily cron fetches the first 50 owned posts available from the configured X source and records the resulting boundary
+- X sync failures do not affect homepage rendering; the public site continues to show the last successfully merged X list
+- If an X post detail key is missing during homepage reads, the public site skips that item instead of failing the **Overview Feed**
+- X sync runs in production through the daily Cloudflare cron only; local manual triggering uses Wrangler's scheduled-event test route against the same Worker `scheduled()` handler
+- X-sourced **Social Posts** include original posts and quote posts only; replies and reposts are not part of the first X source scope
+- For X quote posts, the author's quote commentary is the **Social Post** body; the quoted post is external context, not owned site content
+- X-sourced **Social Posts** should render URL entities with expanded or display URLs rather than exposing raw `t.co` text when entity data is available
+- X-sourced **Feed Media Previews** include images or stable preview images only; X video and GIF players are not embedded in the **Overview Feed**
+- X-sourced **Social Posts** use the X `created_at` timestamp as both **Source Published Time** and default **Displayed Time**
 - A **Feed Item** can have both a **Displayed Time** and a **Source Published Time**
 - **Displayed Time** controls Overview Feed sorting
 - **Source Published Time** preserves the upstream publication timestamp

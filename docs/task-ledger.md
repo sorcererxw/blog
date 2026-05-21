@@ -16,6 +16,128 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - Overview Feed Card Timestamp Links
+
+Status: done locally
+
+Summary:
+
+- removed the outer `<a>` wrapper from Overview Feed cards to avoid nested anchors when rich-text URLs appear inside the card
+- kept whole-card mouse and keyboard navigation through client-side handlers on the HeroUI card surface
+- moved the real item destination link to the timestamp for destination-backed cards
+- preserved rich-text URLs as real anchors and skipped card navigation when an internal interactive target is clicked
+
+Files:
+
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-12-personal-site-overview.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+
+Decisions:
+
+- card-surface navigation uses JavaScript because the card body can contain links
+- timestamp anchors are the SEO-visible destination links for cards with destinations
+- external card-surface navigation keeps the previous new-tab behavior via `window.open(..., "_blank", "noopener,noreferrer")`
+- internal card-surface navigation uses `window.location.assign(...)`
+
+Verification:
+
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS after tightening the destination type narrowing.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3292`: PASS, served the production build locally.
+- `curl --max-time 90 -s -o /tmp/blog-card-timestamp-links.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3292/ && rg -n 'role="link"|tabindex="0"|href="https://t\.me/s/tech_bb/[0-9]+"|href="/articles/|class="block text-inherit no-underline"|break-all font-semibold text-foreground underline' /tmp/blog-card-timestamp-links.html | head -80`: PASS, homepage returned `200 text/html; charset=utf-8`; rendered focusable card surfaces, timestamp destination anchors, and rich-text anchors, with no whole-card outer link class.
+- Chrome verification at `http://127.0.0.1:3292/`: PASS, rendered the homepage Overview Feed; accessibility tree exposed the card surface as `link Open Telegram item` and the timestamp as a nested real link to `t.me/s/tech_bb/111`.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-21 - X Social Source Design and Plan
+
+Status: done locally
+
+Summary:
+
+- defined X as a fixed Social Source for `https://x.com/sorcererxw` with user id `3798600074`
+- narrowed X scope to original posts and quote posts, excluding replies and reposts from stored Social Posts
+- chose daily Cloudflare cron-backed sync into durable KV state, with homepage rendering reading KV only
+- chose local manual triggering through Wrangler scheduled-event testing instead of a production manual endpoint
+- added a dedicated implementation plan for the X Social Source
+- implemented the X sync use case, X API adapter, KV-backed Social Post store, Worker scheduled handler, homepage feed mapping, and `/?source=x` filter
+
+Files:
+
+- `CONTEXT.md`
+- `cloudflare-env.d.ts`
+- `docs/specs/2026-05-12-personal-site-overview-design.md`
+- `docs/plans/2026-05-21-x-social-source.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+- `src/app/page.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/domains/social/x-sync.ts`
+- `src/domains/social/x-sync.test.ts`
+- `src/integrations/kv/x-social-post-store.ts`
+- `src/integrations/kv/x-social-post-store.test.ts`
+- `src/integrations/x/user-posts.ts`
+- `src/integrations/x/user-posts.test.ts`
+- `src/worker.ts`
+- `wrangler.jsonc`
+
+Decisions:
+
+- X uses canonical source id `x` and filter query `/?source=x`
+- X API access should use owned-read access for the author's own posts, not public search or scraping
+- each daily sync reads at most 50 posts after the last successful scanned X post id
+- scanned replies and reposts advance the boundary but do not create stored Social Posts
+- KV uses one list/index key plus per-post detail keys, and boundary advancement happens only after retained detail records and the list/index update succeed
+- homepage skips missing X detail records instead of failing the Overview Feed
+- X Feed Items may enter homepage structured data but do not expand the existing JSON-LD item cap
+- production cron is `0 18 * * *`; local manual sync uses Wrangler `/__scheduled` with the same Worker `scheduled()` handler
+- sync failure records `lastAttemptAt` and `lastError` while preserving the previous successful list and boundary
+- homepage reads X posts from `BLOG_CACHE` only; X API calls are restricted to the scheduled sync path
+
+Verification:
+
+- `pnpm test -- src/domains/social/x-sync.test.ts`: PASS after TDD red/green implementation.
+- `pnpm test -- src/integrations/x/user-posts.test.ts`: PASS after TDD red/green implementation.
+- `pnpm test -- src/integrations/kv/x-social-post-store.test.ts`: PASS after TDD red/green implementation.
+- `pnpm test -- src/domains/feed/overview-feed.test.ts`: PASS after TDD red/green implementation.
+- `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS after TDD red/green implementation.
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/x/user-posts.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS, with existing OpenNext package-template copy logs and the local missing `X_SECRET` warning.
+- `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3291 --test-scheduled`: PASS, local Wrangler preview served the built Worker.
+- `curl --max-time 90 -s -o /tmp/blog-x-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3291/ && rg -n 'href="/\?source=x"|data-slot="tabs-tab"|Personal Site|Overview feed|X' /tmp/blog-x-home.html | head -80`: PASS, homepage returned `200 text/html` and rendered the X tab.
+- `curl --max-time 90 -s -o /tmp/blog-x-filter.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3291/?source=x' && rg -n 'href="/\?source=x"|data-selected="true"|No feed items match this filter|Overview feed' /tmp/blog-x-filter.html | head -80`: PASS, X filter returned `200 text/html`, selected the X tab, and rendered the empty state with no local X KV posts.
+- `curl --max-time 30 -i -X POST 'http://127.0.0.1:3291/__scheduled?cron=0+18+*+*+*' | head -80`: PASS, Wrangler returned `200 OK` and `Ran scheduled event`.
+- Chrome verification at `http://127.0.0.1:3291/?source=x`: PASS, rendered the homepage, Overview Feed filters, selected X tab, and empty state.
+
+Follow-up:
+
+- provision the required X API secret outside the repository
+- after production deployment, verify that the daily cron writes `social:x:index` and `social:x:posts:<id>` entries into `BLOG_CACHE`
+
+Blockers:
+
+- production X API credential provisioning remains pending; real X API sync was not executed locally because `X_SECRET` is absent
+
 ## 2026-05-19 - Agent Link Header Discovery
 
 Status: done locally

@@ -6,6 +6,7 @@ import {
   parseFeedFilter,
 } from "@/domains/feed/overview-feed";
 import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-serialization";
+import { listStoredXSocialPosts } from "@/domains/social/x-sync";
 import { OverviewFeed } from "@/components/feed/overview-feed-view";
 import { ProfileHero } from "@/components/home/profile-hero";
 import {
@@ -24,6 +25,7 @@ import {
   withCachedProjectSource,
   withCachedThoughtProvider,
 } from "@/integrations/kv/provider-wrappers";
+import { createKvXSocialPostStore } from "@/integrations/kv/x-social-post-store";
 import { createBlogArticleSource } from "@/integrations/notion/articles";
 import {
   createNotionHomeSource,
@@ -34,6 +36,7 @@ import {
   createNotionProjectSource,
   listProjectsFromNotion,
 } from "@/integrations/notion/projects";
+import { getWorkerEnv } from "@/lib/cloudflare-env";
 
 import { seoToMetadata, StructuredDataScripts } from "./seo";
 
@@ -43,6 +46,7 @@ type HomeSearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 async function loadHomeData(searchParams?: Record<string, string | string[] | undefined>) {
   const providerCache = await createPublicProviderCache();
+  const env = await getWorkerEnv();
   const homeSource = withCachedHomeSource(
     createNotionHomeSource(loadNotionHomePage),
     providerCache,
@@ -53,11 +57,15 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     providerCache,
   );
   const thoughtProvider = withCachedThoughtProvider(listThoughts, providerCache);
-  const [homePage, articles, projects, thoughts] = await Promise.all([
+  const xPostsPromise = env.BLOG_CACHE
+    ? listStoredXSocialPosts(createKvXSocialPostStore(env.BLOG_CACHE))
+    : Promise.resolve([]);
+  const [homePage, articles, projects, thoughts, xPosts] = await Promise.all([
     homeSource.loadHomePage(),
     listArticles({ source: articleSource }),
     listProjects({ source: projectSource }),
     thoughtProvider(),
+    xPostsPromise,
   ]);
   const url = new URL("https://sorcererxw.com/");
 
@@ -76,6 +84,7 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     articles,
     projects,
     thoughts,
+    xPosts,
   });
   const feedStructuredDataItems = overviewFeedItems
     .flatMap((item) => {
