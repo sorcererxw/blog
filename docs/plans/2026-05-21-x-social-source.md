@@ -22,7 +22,7 @@ Use Cloudflare KV as durable source state, not as a short route cache.
 - one list/index key stores ordered ids, sync metadata, and the scanned boundary
 - per-post detail keys store normalized X Social Post details by X post id
 - the scanned boundary is an X post id, not a timestamp
-- boundary advancement includes scanned replies and reposts even though they are excluded from the stored Social Post list
+- replies and reposts are excluded by the X API request and therefore do not enter local boundary advancement
 - boundary advancement happens only after retained detail keys and the list/index key are written successfully
 - homepage reads stored KV state and skips missing detail records instead of failing the Overview Feed
 
@@ -44,7 +44,7 @@ List/index metadata:
 
 - production sync runs only from a Cloudflare daily cron at `18:00 UTC` / `02:00 Asia/Shanghai`
 - local manual triggering uses Wrangler's scheduled-event test route against the same Worker `scheduled()` handler
-- each cron run reads at most 50 owned posts after the last successful scanned boundary
+- each cron run reads at most 50 owned posts after the last successful scanned boundary, excluding replies and reposts at the X API layer
 - if more than 50 posts exist after the boundary, later cron runs continue from the advanced boundary
 - a zero-new-post run is still successful: update attempt/success timestamps, set counts to zero, leave the boundary unchanged, and clear `lastError`
 - sync failures do not affect homepage rendering; the homepage keeps showing the last successfully merged list
@@ -55,10 +55,11 @@ List/index metadata:
    - model normalized X Social Post details
    - model the list/index metadata
    - add no-op or memory storage helpers for tests
-   - add tests for boundary advancement, skipped replies/reposts, zero-new-post success, and failed writes not advancing the boundary
+   - add tests for boundary advancement, X API reply/repost exclusion, zero-new-post success, and failed writes not advancing the boundary
 
 2. Add the X API adapter. Done.
-   - call X owned-read user posts API for fixed user id `3798600074`
+   - call X owned-read user posts API for fixed user id `3798600074` through `@xdevplatform/xdk`
+   - simplified the final implementation by passing the XDK client directly from `src/worker.ts` into the domain sync module
    - request fields needed for `created_at`, entities, referenced tweet type, and media previews
    - normalize URL entities to expanded/display URLs rather than raw `t.co`
    - normalize photos and stable preview images only
@@ -100,6 +101,6 @@ List/index metadata:
 - daily cron updates KV through one sync use case: implemented; production secret still needs provisioning
 - local scheduled-event triggering exercises the same Worker `scheduled()` handler: verified with Wrangler `/__scheduled`
 - X posts appear in the default Overview Feed and `/?source=x`: implemented; local render shows the X filter empty state until KV contains X posts
-- replies and reposts advance the scanned boundary but do not create Social Posts: covered by sync tests
+- replies and reposts are excluded by the X API request and do not create Social Posts: covered by sync tests
 - missing X detail records do not break homepage rendering: covered by sync tests
 - docs, task ledger, and verification guide record the final commands and outcomes: met

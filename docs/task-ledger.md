@@ -16,6 +16,62 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - X Social Source XClient Sync
+
+Status: done locally
+
+Summary:
+
+- replaced the hand-written X user-posts HTTP adapter with `@xdevplatform/xdk`
+- removed the separate `src/integrations/x` adapter layer because the X account, fields, and API method are intentionally hard-coded for this site
+- simplified the boundary so `worker.ts` creates the XDK `Client` and passes it directly to `syncXSocialPosts`
+- moved the fixed X fetch options and response normalization into the X Social Source domain sync module
+- kept the existing normalized Social Post contract and sync use case unchanged
+- executed the remote Wrangler scheduled path and established the X KV cache
+
+Files:
+
+- `package.json`
+- `pnpm-lock.yaml`
+- `docs/plans/2026-05-21-x-social-source.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+- `src/domains/social/x-sync.ts`
+- `src/domains/social/x-sync.test.ts`
+- `src/worker.ts`
+- deleted `src/integrations/x/user-posts.ts`
+- deleted `src/integrations/x/user-posts.test.ts`
+
+Decisions:
+
+- use the SDK `Client` with the existing `X_SECRET` bearer token value
+- call `users.getPosts("3798600074", ...)` with `sinceId`, `maxResults`, `exclude`, `tweetFields`, `expansions`, and `mediaFields`
+- use X API `exclude: ["replies", "retweets"]` so replies and reposts are filtered before they reach local sync
+- keep X response normalization inside `src/domains/social/x-sync.ts`, where the boundary and retain/filter rules already live
+- keep `worker.ts` thin: binding checks, `new Client`, KV store creation, and scheduled orchestration only
+- do not execute a live X sync during this refactor because X API calls have cost
+
+Verification:
+
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/kv/x-social-post-store.test.ts`: PASS, Vitest config ran the active suite (`36` files, `120` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
+- `pnpm exec opennextjs-cloudflare build`: PASS before remote scheduled verification; OpenNext emitted the existing non-fatal package-template copy logs and wrote `.open-next/worker.js`.
+- `pnpm exec wrangler dev --remote --ip 127.0.0.1 --port 3291 --test-scheduled`: PASS, remote preview started with `BLOG_CACHE`, `NOTION_SECRET`, and `X_SECRET` bindings available.
+- `curl --max-time 60 -i -X POST 'http://127.0.0.1:3291/__scheduled?cron=0+18+*+*+*'`: PASS, returned `200 OK` and `Ran scheduled event`; worker log reported `X sync completed` with `retainedCount: 19`, `scannedCount: 19`, and `scannedBoundaryId: "1335174971300036608"`.
+- `pnpm exec wrangler kv key get 'social:x:index' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned `lastError: null`, `lastRetainedCount: 19`, `lastScannedCount: 19`, and 19 ordered ids.
+- `pnpm exec wrangler kv key get 'social:x:posts:2057007736442040683' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned the normalized X post detail.
+- `curl --max-time 90 -s -o /tmp/blog-x-remote-filter.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3291/?source=x' && rg -n 'x.com/sorcererxw/status|data-selected="true"|No feed items match this filter|Overview feed|href="/\?source=x"' /tmp/blog-x-remote-filter.html | head -80`: PASS, remote preview returned `200 text/html`, selected the X tab, rendered X post cards, and did not render the empty state.
+
+Follow-up:
+
+- after deployment, confirm the production daily cron keeps advancing `social:x:index`.
+
+Blockers:
+
+- none for the local refactor.
+
 ## 2026-05-21 - Overview Feed Card Click Fix
 
 Status: done locally
@@ -155,8 +211,8 @@ Files:
 - `src/domains/social/x-sync.test.ts`
 - `src/integrations/kv/x-social-post-store.ts`
 - `src/integrations/kv/x-social-post-store.test.ts`
-- `src/integrations/x/user-posts.ts`
-- `src/integrations/x/user-posts.test.ts`
+- `package.json`
+- `pnpm-lock.yaml`
 - `src/worker.ts`
 - `wrangler.jsonc`
 
@@ -165,22 +221,22 @@ Decisions:
 - X uses canonical source id `x` and filter query `/?source=x`
 - X API access should use owned-read access for the author's own posts, not public search or scraping
 - each daily sync reads at most 50 posts after the last successful scanned X post id
-- scanned replies and reposts advance the boundary but do not create stored Social Posts
+- replies and reposts are excluded by the X API request and do not create stored Social Posts
 - KV uses one list/index key plus per-post detail keys, and boundary advancement happens only after retained detail records and the list/index update succeed
 - homepage skips missing X detail records instead of failing the Overview Feed
 - X Feed Items may enter homepage structured data but do not expand the existing JSON-LD item cap
 - production cron is `0 18 * * *`; local manual sync uses Wrangler `/__scheduled` with the same Worker `scheduled()` handler
 - sync failure records `lastAttemptAt` and `lastError` while preserving the previous successful list and boundary
 - homepage reads X posts from `BLOG_CACHE` only; X API calls are restricted to the scheduled sync path
+- Worker scheduled sync passes an `@xdevplatform/xdk` client directly to the X Social Source domain sync module
 
 Verification:
 
 - `pnpm test -- src/domains/social/x-sync.test.ts`: PASS after TDD red/green implementation.
-- `pnpm test -- src/integrations/x/user-posts.test.ts`: PASS after TDD red/green implementation.
 - `pnpm test -- src/integrations/kv/x-social-post-store.test.ts`: PASS after TDD red/green implementation.
 - `pnpm test -- src/domains/feed/overview-feed.test.ts`: PASS after TDD red/green implementation.
 - `pnpm test -- src/components/feed/overview-feed-view.test.tsx`: PASS after TDD red/green implementation.
-- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/x/user-posts.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/kv/x-social-post-store.test.ts`: PASS after simplifying X fetch into the Worker, Vitest config ran the active suite (`36` files, `120` tests).
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
 - `pnpm build`: PASS, with Wrangler experimental `secrets`, local missing `X_SECRET`, and Next middleware deprecation warnings.

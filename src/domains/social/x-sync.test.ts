@@ -1,27 +1,24 @@
 import { describe, expect, it } from "vitest";
+import { Client } from "@xdevplatform/xdk";
 
 import {
   createMemoryXSocialPostStore,
   listStoredXSocialPosts,
   syncXSocialPosts,
-  type XSocialPostScanResult,
 } from "./x-sync";
 
-const post = (
-  id: string,
-  kind: XSocialPostScanResult["posts"][number]["kind"],
-  text = `post ${id}`,
-): XSocialPostScanResult["posts"][number] => ({
-  createdAt: new Date(`2026-05-21T00:00:${id.padStart(2, "0")}.000Z`),
-  id,
-  kind,
-  media: [],
-  text,
-  url: `https://x.com/sorcererxw/status/${id}`,
-});
+const createTestXClient = (
+  getPosts: Parameters<typeof syncXSocialPosts>[0]["xClient"]["users"]["getPosts"],
+) => {
+  const client = new Client({ bearerToken: "test-token" });
+
+  client.users.getPosts = getPosts;
+
+  return client;
+};
 
 describe("X Social Source sync", () => {
-  it("retains original and quote posts while advancing the boundary through scanned replies and reposts", async () => {
+  it("asks X to exclude replies and reposts while retaining returned original and quote posts", async () => {
     const store = createMemoryXSocialPostStore({
       index: {
         lastAttemptAt: null,
@@ -43,21 +40,48 @@ describe("X Social Source sync", () => {
     });
 
     const result = await syncXSocialPosts({
-      fetchPosts: async ({ afterId, limit }) => {
-        expect(afterId).toBe("100");
-        expect(limit).toBe(50);
-
-        return {
-          posts: [
-            post("101", "reply"),
-            post("102", "original"),
-            post("103", "repost"),
-            post("104", "quote"),
-          ],
-        };
-      },
       now: () => new Date("2026-05-21T01:00:00.000Z"),
       store,
+      userId: "3798600074",
+      xClient: createTestXClient(async (id, options) => {
+        expect(id).toBe("3798600074");
+        expect(options).toEqual({
+          expansions: ["attachments.media_keys"],
+          exclude: ["replies", "retweets"],
+          maxResults: 50,
+          mediaFields: ["alt_text", "height", "media_key", "preview_image_url", "type", "url", "width"],
+          sinceId: "100",
+          tweetFields: ["attachments", "created_at", "entities", "referenced_tweets", "text"],
+        });
+
+        return {
+          data: [
+            {
+              createdAt: "2026-05-21T00:00:01.000Z",
+              id: "101",
+              referencedTweets: [{ id: "1", type: "replied_to" }],
+              text: "post 101",
+            },
+            {
+              createdAt: "2026-05-21T00:00:02.000Z",
+              id: "102",
+              text: "post 102",
+            },
+            {
+              createdAt: "2026-05-21T00:00:03.000Z",
+              id: "103",
+              referencedTweets: [{ id: "2", type: "retweeted" }],
+              text: "post 103",
+            },
+            {
+              createdAt: "2026-05-21T00:00:04.000Z",
+              id: "104",
+              referencedTweets: [{ id: "3", type: "quoted" }],
+              text: "post 104",
+            },
+          ],
+        };
+      }),
     });
 
     await expect(store.getPost("101")).resolves.toBeNull();
@@ -93,11 +117,12 @@ describe("X Social Source sync", () => {
     });
 
     const result = await syncXSocialPosts({
-      fetchPosts: async () => {
-        throw new Error("X API unavailable");
-      },
       now: () => new Date("2026-05-21T02:00:00.000Z"),
       store,
+      userId: "3798600074",
+      xClient: createTestXClient(async () => {
+        throw new Error("X API unavailable");
+      }),
     });
 
     await expect(store.getIndex()).resolves.toMatchObject({

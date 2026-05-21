@@ -1,9 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- `.open-next/worker.js` may not exist before the OpenNext build.
 // @ts-ignore
 import handler from "../.open-next/worker.js";
+import { Client } from "@xdevplatform/xdk";
+
 import { syncXSocialPosts } from "@/domains/social/x-sync";
 import { createKvXSocialPostStore } from "@/integrations/kv/x-social-post-store";
-import { createXUserPostsSource } from "@/integrations/x/user-posts";
 import { createLogger } from "@/lib/logger";
 import type { CloudflareEnv } from "@/types/cloudflare";
 
@@ -30,12 +31,11 @@ async function runXSocialPostSync(env: Partial<CloudflareEnv>) {
     return;
   }
 
+  const xClient = new Client({ bearerToken: env.X_SECRET });
   const result = await syncXSocialPosts({
-    fetchPosts: createXUserPostsSource({
-      bearerToken: env.X_SECRET,
-      userId: X_USER_ID,
-    }).fetchPosts,
     store: createKvXSocialPostStore(env.BLOG_CACHE),
+    userId: X_USER_ID,
+    xClient,
   });
 
   logger.info("X sync completed", result);

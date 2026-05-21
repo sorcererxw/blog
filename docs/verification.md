@@ -30,17 +30,25 @@ Current X Social Source shape:
 - X source id is `x`, with filter URL `/?source=x`.
 - Homepage rendering reads stored X Social Posts from `BLOG_CACHE`; it does not call X directly.
 - X sync enters through the Worker-level `scheduled()` handler and is configured for daily `0 18 * * *` Cloudflare cron.
+- X sync fetches owned posts through `@xdevplatform/xdk` `Client.users.getPosts`; `worker.ts` creates the client and passes it directly into `syncXSocialPosts`.
+- X sync passes `exclude: ["replies", "retweets"]`, so replies and reposts are filtered by X before local normalization.
 - Local manual triggering uses Wrangler scheduled-event testing through `/__scheduled`.
 - X KV state uses `social:x:index` plus per-post `social:x:posts:<id>` detail keys.
-- Sync scans at most 50 posts after `scannedBoundaryId`, stores original and quote posts, and advances the scanned boundary across replies/reposts too.
+- Sync scans at most 50 API-returned posts after `scannedBoundaryId`; replies and reposts are excluded by the API request, and local sync stores original and quote posts.
 
 Current evidence:
 
-- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/x/user-posts.test.ts src/integrations/kv/x-social-post-store.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active full suite (`37` files, `121` tests).
+- `pnpm test -- src/domains/social/x-sync.test.ts src/integrations/kv/x-social-post-store.test.ts`: PASS after simplifying X fetch around a direct XDK client passed into the domain sync module, Vitest config ran the active suite (`36` files, `120` tests).
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
-- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings; local build also warned that `X_SECRET` is not present in `.dev.vars`.
+- `pnpm build`: PASS, with existing Wrangler experimental `secrets` and Next middleware deprecation warnings.
 - `pnpm exec opennextjs-cloudflare build`: PASS, with existing package-template copy logs and the same missing local `X_SECRET` warning.
+- `pnpm exec opennextjs-cloudflare build`: PASS before remote scheduled verification; OpenNext emitted the existing non-fatal package-template copy logs and wrote `.open-next/worker.js`.
+- `pnpm exec wrangler dev --remote --ip 127.0.0.1 --port 3291 --test-scheduled`: PASS, remote preview started with `BLOG_CACHE`, `NOTION_SECRET`, and `X_SECRET` bindings available from `.dev.vars`.
+- `curl --max-time 60 -i -X POST 'http://127.0.0.1:3291/__scheduled?cron=0+18+*+*+*'`: PASS, returned `200 OK` and `Ran scheduled event`; worker log reported `X sync completed` with `retainedCount: 19`, `scannedCount: 19`, and `scannedBoundaryId: "1335174971300036608"`.
+- `pnpm exec wrangler kv key get 'social:x:index' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned `lastError: null`, `lastRetainedCount: 19`, `lastScannedCount: 19`, `lastSuccessAt: "2026-05-21T04:39:44.063Z"`, and 19 ordered X post ids.
+- `pnpm exec wrangler kv key get 'social:x:posts:2057007736442040683' --namespace-id 82255de05f7d4b9e8cf0cb43521ee243 --remote`: PASS, returned the normalized X post detail with `kind: "original"`, media, text, and canonical X URL.
+- `curl --max-time 90 -s -o /tmp/blog-x-remote-filter.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3291/?source=x' && rg -n 'x.com/sorcererxw/status|data-selected="true"|No feed items match this filter|Overview feed|href="/\?source=x"' /tmp/blog-x-remote-filter.html | head -80`: PASS, remote preview returned `200 text/html`, selected the X tab, rendered X post cards, and did not render the empty state.
 - `pnpm exec opennextjs-cloudflare preview -- --ip 127.0.0.1 --port 3291 --test-scheduled`: PASS, local preview served through Wrangler.
 - `curl --max-time 90 -s -o /tmp/blog-x-home.html -w '%{http_code} %{content_type}\n' http://127.0.0.1:3291/ && rg -n 'href="/\?source=x"|data-slot="tabs-tab"|Personal Site|Overview feed|X' /tmp/blog-x-home.html | head -80`: PASS, homepage returned `200 text/html` and rendered the X filter tab.
 - `curl --max-time 90 -s -o /tmp/blog-x-filter.html -w '%{http_code} %{content_type}\n' 'http://127.0.0.1:3291/?source=x' && rg -n 'href="/\?source=x"|data-selected="true"|No feed items match this filter|Overview feed' /tmp/blog-x-filter.html | head -80`: PASS, X filter returned `200 text/html`, rendered the active X tab, and showed the empty state while local KV had no X posts.
@@ -49,7 +57,7 @@ Current evidence:
 
 Residual risk:
 
-- Real X API sync was not executed because `X_SECRET` is not configured locally; production must provision the secret before the cron can fetch X posts.
+- The remote dev scheduled run established the X KV cache successfully; production deployment still needs the same `X_SECRET` configured for the daily cron.
 
 ## 2026-05-19 Agent Link Header Discovery State
 

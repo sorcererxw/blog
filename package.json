@@ -26,6 +26,7 @@
     "@heroui/styles": "^3.0.5",
     "@notionhq/client": "^5.15.0",
     "@opennextjs/cloudflare": "^1.19.9",
+    "@xdevplatform/xdk": "^0.5.0",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

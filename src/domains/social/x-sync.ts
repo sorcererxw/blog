@@ -1,3 +1,5 @@
+import type { Client } from "@xdevplatform/xdk";
+
 export type XSocialPostKind = "original" | "quote" | "reply" | "repost";
 
 export type XSocialPostDetail = {
@@ -28,6 +30,44 @@ export type XSocialPostScanResult = {
   posts: XSocialPostDetail[];
 };
 
+type XReferencedPost = {
+  id?: string;
+  type?: string;
+};
+
+type XPost = {
+  attachments?: {
+    mediaKeys?: string[];
+    media_keys?: string[];
+  };
+  createdAt?: string;
+  created_at?: string;
+  id?: string;
+  referencedTweets?: XReferencedPost[];
+  referenced_tweets?: XReferencedPost[];
+  text?: string;
+};
+
+type XMedia = {
+  altText?: string;
+  alt_text?: string;
+  height?: number;
+  mediaKey?: string;
+  media_key?: string;
+  previewImageUrl?: string;
+  preview_image_url?: string;
+  type?: string;
+  url?: string;
+  width?: number;
+};
+
+type XUserPostsResponse = {
+  data?: XPost[];
+  includes?: {
+    media?: XMedia[];
+  };
+};
+
 export type XSocialPostStore = {
   getIndex: () => Promise<XSocialPostIndex>;
   getPost: (id: string) => Promise<XSocialPostDetail | null>;
@@ -40,15 +80,6 @@ export type SyncXSocialPostsResult = {
   retainedCount: number;
   scannedBoundaryId: string | null;
   scannedCount: number;
-};
-
-export type SyncXSocialPostsOptions = {
-  fetchPosts: (input: {
-    afterId: string | null;
-    limit: number;
-  }) => Promise<XSocialPostScanResult>;
-  now?: () => Date;
-  store: XSocialPostStore;
 };
 
 const X_SYNC_LIMIT = 50;
@@ -68,6 +99,77 @@ const shouldRetainPost = (post: XSocialPostDetail) =>
 
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Unknown X sync error";
+
+const xPostKind = (post: XPost): XSocialPostKind => {
+  const referenceTypes = new Set(
+    (post.referencedTweets ?? post.referenced_tweets)?.map((reference) => reference.type) ?? [],
+  );
+
+  if (referenceTypes.has("replied_to")) {
+    return "reply";
+  }
+
+  if (referenceTypes.has("retweeted")) {
+    return "repost";
+  }
+
+  if (referenceTypes.has("quoted")) {
+    return "quote";
+  }
+
+  return "original";
+};
+
+const normalizeXMedia = (media: XMedia): XSocialPostDetail["media"][number] | null => {
+  const src = media.url ?? media.previewImageUrl ?? media.preview_image_url ?? null;
+
+  if (!src) {
+    return null;
+  }
+
+  return {
+    alt: media.altText ?? media.alt_text ?? "",
+    height: media.height ?? null,
+    src,
+    width: media.width ?? null,
+  };
+};
+
+const normalizeXPosts = (response: XUserPostsResponse): XSocialPostScanResult => {
+  const mediaByKey = new Map(
+    response.includes?.media?.flatMap((media) => {
+      const mediaKey = media.mediaKey ?? media.media_key;
+
+      return mediaKey ? [[mediaKey, media] as const] : [];
+    }) ?? [],
+  );
+
+  return {
+    posts: (response.data ?? []).flatMap((post) => {
+      if (!post.id) {
+        return [];
+      }
+
+      return [
+        {
+          createdAt: post.createdAt || post.created_at
+            ? new Date(post.createdAt ?? post.created_at ?? "")
+            : new Date(0),
+          id: post.id,
+          kind: xPostKind(post),
+          media: (post.attachments?.mediaKeys ?? post.attachments?.media_keys ?? []).flatMap((key) => {
+            const media = mediaByKey.get(key);
+            const normalized = media ? normalizeXMedia(media) : null;
+
+            return normalized ? [normalized] : [];
+          }),
+          text: post.text ?? "",
+          url: `https://x.com/sorcererxw/status/${post.id}`,
+        },
+      ];
+    }),
+  };
+};
 
 export const createMemoryXSocialPostStore = ({
   index,
@@ -102,19 +204,45 @@ export const createMemoryXSocialPostStore = ({
 };
 
 export async function syncXSocialPosts({
-  fetchPosts,
   now = () => new Date(),
   store,
-}: SyncXSocialPostsOptions): Promise<SyncXSocialPostsResult> {
+  userId,
+  xClient,
+}: {
+  now?: () => Date;
+  store: XSocialPostStore;
+  userId: string;
+  xClient: Client;
+}): Promise<SyncXSocialPostsResult> {
   const index = await store.getIndex();
   const attemptedAt = now().toISOString();
   let scan: XSocialPostScanResult;
 
   try {
-    scan = await fetchPosts({
-      afterId: index.scannedBoundaryId,
-      limit: X_SYNC_LIMIT,
-    });
+    scan = normalizeXPosts(
+      await xClient.users.getPosts(userId, {
+        expansions: ["attachments.media_keys"],
+        exclude: ["replies", "retweets"],
+        maxResults: X_SYNC_LIMIT,
+        mediaFields: [
+          "alt_text",
+          "height",
+          "media_key",
+          "preview_image_url",
+          "type",
+          "url",
+          "width",
+        ],
+        sinceId: index.scannedBoundaryId ?? undefined,
+        tweetFields: [
+          "attachments",
+          "created_at",
+          "entities",
+          "referenced_tweets",
+          "text",
+        ],
+      }),
+    );
   } catch (error) {
     const message = errorMessage(error);
 
