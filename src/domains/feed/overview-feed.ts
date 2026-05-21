@@ -161,14 +161,11 @@ export const thoughtToFeedItem = (thought: ThoughtListItem): FeedItem => ({
   metaLabel: "Telegram",
 });
 
-const xPostTitle = (post: XSocialPostDetail) =>
-  post.text.replace(/\s+/g, " ").trim().slice(0, 90) || "X post";
-
 export const xSocialPostToFeedItem = (post: XSocialPostDetail): FeedItem => ({
   id: `social:x:${post.id}`,
   type: "social",
   source: "x",
-  title: xPostTitle(post),
+  title: "",
   summary: post.text,
   displayedAt: post.createdAt,
   sourcePublishedAt: post.createdAt,

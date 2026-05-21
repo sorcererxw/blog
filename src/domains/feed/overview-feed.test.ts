@@ -196,7 +196,7 @@ describe("overview feed", () => {
       source: "x",
       sourcePublishedAt: new Date("2026-05-02T00:00:00.000Z"),
       summary: "X summary",
-      title: "X summary",
+      title: "",
       type: "social",
     });
     expect(item.destination).toEqual({

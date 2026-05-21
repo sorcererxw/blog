@@ -16,6 +16,80 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-05-21 - X Media Image Transform Allowlist
+
+Status: done locally
+
+Summary:
+
+- diagnosed broken X images as an image-loader URL issue, not an X authentication issue
+- confirmed raw `https://pbs.twimg.com/media/...jpg` returns `200 image/jpeg`
+- confirmed adding arbitrary `?width=...` to the X media URL returns `404`
+- added `pbs.twimg.com` to the Cloudflare image transform allowlist so width/quality are passed through `/cdn-cgi/image` instead of being appended to the upstream X URL
+
+Files:
+
+- `image-loader.ts`
+- `src/domains/media/canonical-image.ts`
+- `src/lib/images/image-loader.test.ts`
+- `src/lib/images/cloudflare.test.ts`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Verification:
+
+- `curl -I -L --max-time 20 'https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg'`: PASS, returned `200 image/jpeg`.
+- `curl -I -L --max-time 20 'https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg?width=384'`: reproduced `404`, confirming the loader-added query caused the breakage.
+- `pnpm test -- src/lib/images/image-loader.test.ts src/lib/images/cloudflare.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active suite (`36` files, `122` tests).
+- `pnpm typecheck`: PASS.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
+## 2026-05-21 - X Feed Card Title Removal
+
+Status: done locally
+
+Summary:
+
+- stopped deriving an Overview Feed title from X post text
+- hid the feed title heading when an item has an empty title, so X cards render the post body without a duplicate title
+- kept structured-data item names non-empty by falling back to summary text for untitled feed items
+
+Files:
+
+- `src/domains/feed/overview-feed.ts`
+- `src/domains/feed/overview-feed.test.ts`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `src/app/page.tsx`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Decisions:
+
+- X Social Posts keep `title: ""` in the feed model.
+- Rendering hides headings for any untitled item, not just Telegram items.
+- JSON-LD ItemList names fall back to normalized summary text so structured data does not emit empty names.
+
+Verification:
+
+- `pnpm test -- src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx src/app/seo.test.tsx src/domains/seo/build-structured-data.test.ts`: PASS, Vitest config ran the active suite (`36` files, `120` tests).
+- `pnpm typecheck`: PASS.
+
+Follow-up:
+
+- none
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - X Social Source XClient Sync
 
 Status: done locally

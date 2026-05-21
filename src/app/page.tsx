@@ -92,9 +92,15 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
         return [];
       }
 
+      const name = item.title || item.summary.replace(/\s+/g, " ").trim().slice(0, 90);
+
+      if (!name) {
+        return [];
+      }
+
       return [
         {
-          name: item.title,
+          name,
           url: item.destination.href,
         },
       ];

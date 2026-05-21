@@ -17,6 +17,18 @@ describe("OpenNext Cloudflare image loader", () => {
     expect(url).toContain("images.unsplash.com");
   });
 
+  it("builds Cloudflare transform URLs for X media without adding width to the upstream URL", () => {
+    const url = cloudflareLoader({
+      src: "https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
+      width: 384,
+      quality: 82,
+    });
+
+    expect(url).toBe(
+      "/cdn-cgi/image/width=384,format=auto,quality=82/https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
+    );
+  });
+
   it("routes volatile image hosts through canonical media without local transform wrapping", () => {
     const url = cloudflareLoader({
       src: "https://cdn5.telesco.pe/file/example-photo.jpg",

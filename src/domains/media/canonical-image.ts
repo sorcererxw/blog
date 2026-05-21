@@ -14,6 +14,7 @@ const VOLATILE_HOST_PATTERNS = [
 
 export const TRANSFORM_ALLOWED_HOST_PATTERNS = [
   /^images\.unsplash\.com$/i,
+  /^pbs\.twimg\.com$/i,
   ...VOLATILE_HOST_PATTERNS,
 ];
 

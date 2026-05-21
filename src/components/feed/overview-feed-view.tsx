@@ -290,7 +290,7 @@ function ModuleInner({
         <div className="justify-self-start">
           <Chip>{item.metaLabel ?? item.type}</Chip>
         </div>
-        {isTelegram ? null : (
+        {isTelegram || !item.title ? null : (
           <h2
             className={cn(
               "m-0 flex items-baseline gap-2 font-heading text-2xl font-semibold leading-tight tracking-normal text-foreground",

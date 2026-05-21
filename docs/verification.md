@@ -1,5 +1,33 @@
 # Blog2 Verification Guide
 
+## 2026-05-21 X Media Image State
+
+Current X image delivery shape:
+
+- X media images from `pbs.twimg.com` are public and do not require authentication.
+- The root cause of broken X images was the custom Next image loader appending width/quality query params to unsupported upstream X media URLs.
+- `pbs.twimg.com` is now in the Cloudflare transform allowlist, so generated image URLs use `/cdn-cgi/image/.../https://pbs.twimg.com/...` instead of `https://pbs.twimg.com/...jpg?width=...`.
+
+Current evidence:
+
+- `curl -I -L --max-time 20 'https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg'`: PASS, returned `200 image/jpeg`.
+- `curl -I -L --max-time 20 'https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg?width=384'`: reproduced `404`.
+- `pnpm test -- src/lib/images/image-loader.test.ts src/lib/images/cloudflare.test.ts src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx`: PASS, Vitest config ran the active suite (`36` files, `122` tests).
+- `pnpm typecheck`: PASS.
+
+## 2026-05-21 X Feed Card Title State
+
+Current X feed rendering shape:
+
+- X Social Posts map to Overview Feed items with `title: ""`.
+- Overview Feed rendering skips the heading block for untitled items, so X cards show the post body once instead of repeating it as title and summary.
+- Homepage JSON-LD ItemList names use `title || summary` so untitled X feed items still produce non-empty structured-data names.
+
+Current evidence:
+
+- `pnpm test -- src/domains/feed/overview-feed.test.ts src/components/feed/overview-feed-view.test.tsx src/app/seo.test.tsx src/domains/seo/build-structured-data.test.ts`: PASS, Vitest config ran the active suite (`36` files, `120` tests).
+- `pnpm typecheck`: PASS.
+
 ## 2026-05-21 Feed Card Timestamp Link State
 
 Current feed card link shape:

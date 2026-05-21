@@ -47,7 +47,7 @@ describe("OverviewFeed", () => {
             id: "social:x:1",
             type: "social",
             source: "x",
-            title: "X post",
+            title: "",
             destination: { kind: "external", href: "https://x.com/sorcererxw/status/1" },
             metaLabel: "X",
           }),
@@ -67,6 +67,7 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain(">Social<");
     expect(markup).toContain('href="/?source=telegram"');
     expect(markup).toContain('href="/?source=x"');
+    expect(markup).not.toContain("<span>X post</span>");
     expect(markup).toContain('data-slot="tabs"');
     expect(markup).toContain('data-slot="tabs-list"');
     expect(markup).toContain('data-slot="tabs-tab"');

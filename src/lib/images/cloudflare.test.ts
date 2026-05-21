@@ -18,6 +18,18 @@ describe("cloudflare image loader", () => {
     expect(url).toContain("images.unsplash.com");
   });
 
+  it("builds transformed urls for X media", () => {
+    const url = buildCloudflareImageUrl(
+      "https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
+      "article-card",
+      { width: 384 },
+    );
+
+    expect(url).toBe(
+      "/cdn-cgi/image/fit=cover,format=auto,quality=82,width=384/https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
+    );
+  });
+
   it("routes volatile hosts through the canonical media path before transforming", () => {
     const url = buildCloudflareImageUrl(
       "https://cdn5.telesco.pe/file/example-photo.jpg",
