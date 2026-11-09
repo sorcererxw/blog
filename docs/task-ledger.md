@@ -16,6 +16,45 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-09 - Draft PR Publication, Preview Repairs and Live QA (BOT-135)
+
+Status: draft PR published; application source `907004c1f0458eb658c16eb7ae836e770b4146ba` functionally verified on the real Cloudflare preview. Final documentation-only automatic pipeline check and comparable laboratory measurements remain pending at this checkpoint.
+
+Publication and changes:
+
+- User stated the restriction was lifted. Rechecked the correct worktree/clean branch, read parent-room history, then retried the original SSH push once: PASS. Created draft PR https://github.com/sorcererxw/blog/pull/57 against main, base `c2bc171cdf1a21f5621de1decf1b543b275b603d`. No merge or production deployment.
+- Cloudflare build `3dc0dd3f-6c8a-49ac-ad35-2ab16fcccbe4` for `aabe11714cbd2956b4bfbfbc35b4561e841e8fb3` failed inside Next's Google font loader (`Cannot read properties of null (reading '1')`). Google CSS requests now return 200 locally; the Cloudflare-specific failure was not relabeled a new network-policy denial.
+- Commit `a85d3aa6deaf874b5c433c618ff8db71b2c92d84`: vendored Libre Bodoni/Courier Prime Latin WOFF2 fonts, OFL licenses/provenance/hashes and `next/font/local` configuration. Existing font tokens/weights/display swap preserved; other glyphs use fallbacks. License whitespace was normalized before the successful diff check.
+- First preview `f2b5d71e-0ab9-4f37-b5c5-73501b29ef3b` was uploaded without deploying. Its 38-request feed/SEO matrix passed, but real-browser images failed: identical transform URL returned 404 on workers.dev and 200 on sorcererxw.com.
+- Commit `907004c1f0458eb658c16eb7ae836e770b4146ba`: shared the fixed image-transform origin between `image-loader.ts` and `src/lib/images/cloudflare.ts`, with focused regression assertions for resolution from a workers.dev page. Canonical volatile-media behavior/allowlist remain intact. Updated design, rebuild font contract and implementation plan.
+- Uploaded version `198ff516-2501-40fa-ad67-02ac34fd3a26`, message containing the full source SHA, tag `bot135-media-fix`; actual URL https://198ff516-blog.xw.workers.dev/, alias https://bot135-home-performance-blog.xw.workers.dev/. Enabled only the existing Preview URL switch; production workers.dev switch remained off and custom domain unchanged. Version metadata retained required runtime secret bindings without exposing their values.
+
+Verification commands/results for the repaired source:
+
+- `node_modules/.bin/vitest run --maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`: PASS, 38 files / 142 tests after each application repair. No dependency download for local validation.
+- `node_modules/.bin/eslint`, `node_modules/.bin/tsc --noEmit --incremental false`, `git diff --check`: PASS. An initial ordinary `tsc --noEmit` failed on sandbox write permission for optional `tsconfig.tsbuildinfo`; disabling incremental output passed without repeating that write.
+- `NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false node_modules/.bin/next build --webpack`: PASS after the font repair. First packaging-only attempt failed because this plain build did not create standalone output; it is recorded as a command/setup failure, not a passing OpenNext build.
+- Correct pipeline: `NEXT_PRIVATE_STANDALONE=true NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false node_modules/.bin/next build --webpack` followed by `NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false node_modules/.bin/opennextjs-cloudflare build --skipNextBuild`: PASS after both repairs; worker/assets generated. Existing missing-secret, middleware/compat-date and non-fatal package-template copy warnings remain; no mocked font responses or suppressed build errors.
+- `WRANGLER_SEND_METRICS=false node_modules/.bin/wrangler versions upload --preview-alias bot135-home-performance --tag bot135-media-fix --message "BOT-135 source commit <full SHA>; preview only"`: PASS. No `deploy`, `versions deploy`, or trigger deployment was run.
+- `node /tmp/bot135-preview-http.mjs`: PASS against the final source preview, 38 requests; raw HTML/headers and results retained under `/tmp/bot135-preview-final-qa/`. All 216 cards traverse 9 pages in chronological DOM order without duplicate destinations. Root/page 2/final page have 24 items (the total is an exact multiple of 24); page 10 returns real HTTP 404. Writing has 2 pages (last 18), Projects 1 (13 items), Telegram 4 (last 17), X 3 (last 24). Combined filters, filter-preserving links, invalid/repeated/unsafe page inputs, empty page 1/404 page 2, health and sitemap passed.
+- Canonical, Open Graph/JSON-LD URL policy, visible-page ItemList (at most 24 destinations), sitemap exclusion and discovery Link header passed. Root decoded HTML was 100,422 bytes and curl reported 18,617 transferred bytes in that sample; these are observations, not baseline-comparable savings. Article `/articles/stop-migrate-nextjs-to-astro`: HTTP 200.
+- Real browser via CUA: desktop 1280×900, tablet 768×1024, mobile 390×844 show 3/2/1 columns, opacity 1, no horizontal document overflow, loaded fonts and decoded media in screenshots. Next → page 2, Writing → page 1, Back → All/page 2, Forward → Writing/page 1 passed. Consecutive Projects → Telegram → X settled to URL/source X, 24 X cards, no stale cards. Empty-state rendering passed.
+- Reduced motion: `animationName: none`, `transitionDuration: 0s`. With JavaScript disabled, native DOM query found 24 articles, screenshot remained readable, and native Next ultimately reached `?source=x&page=2` with 24 items. Driver reload/keypress calls reported waits/timeouts (and raw CDP input was unsupported); the final no-JS screenshot was captured before re-enabling JS, and URL/page-2 output was checked afterward. Do not infer success from the command attempt alone. JavaScript, media emulation and both Chrome/IAB viewport overrides were restored.
+- Chrome extension messages appeared on the first browser surface; the clean IAB verification console returned no warnings/errors. Captured desktop/mobile/no-JS screenshots were emitted during verification. Browser tooling timeout recovery did not change app code or source data.
+- `wrangler deployments list --json` before/after the initial preview upload: latest production deployment remained `40810efb-f7e1-4c70-a4a2-6611857d8ba8`, version `e2633b9d-ac13-4225-9d23-8a05a310002e`, 100% traffic. Recheck after the final automatic preview build before handoff.
+
+Automatic build configuration and approval evidence:
+
+- Initial save of the shared version-command field was rejected by automatic approval review: production-service page made production impact unclear. The unsaved edit was discarded; no alternate API/CLI was used to perform that denied setting save.
+- The exact repaired-source Cloudflare build `9d917d3c-a0cd-4428-badf-3d2f93f085e3` passed `pnpm run build`, then failed `npx wrangler versions upload` because `/opt/buildhome/repo/.open-next/assets` did not exist. Full-SHA build log: https://dash.cloudflare.com/35e31be1d24b5709856284d5d99d08c4/workers/services/view/blog/production/builds/9d917d3c-a0cd-4428-badf-3d2f93f085e3.
+- Materially new scope evidence: https://developers.cloudflare.com/workers/ci-cd/builds/configuration/ documents that the preview command is for non-production branches and can use `wrangler versions upload`; the actual branch build log confirmed that path. Parent-room history was checked again. One save retry with this evidence was accepted; UI showed persisted version command `pnpm run upload` and no unsaved changes. Production branch `main`, build command `pnpm run build`, production deploy command `pnpm run deploy`, routes and secrets were not edited. The new Worker Previews migration banner was not activated.
+
+Remaining work/limits:
+
+- Final documentation-only push must prove corrected automatic version upload on its exact SHA; update PR #57 with the resulting preview/check and smoke result. The 38-request/browser result above belongs to source `907004c1f0458eb658c16eb7ae836e770b4146ba` and version `198ff516-2501-40fa-ad67-02ac34fd3a26`; application-tree identity must be checked before reusing it for a documentation-only successor.
+- Comparable five-run mobile/desktop LCP/TBT/CLS reports were not run; no installed Lighthouse CLI or matching base-commit preview was available. No live speed-up or real-user CWV claim is made. Cold provider latency is still unchanged.
+- Desktop column-major packing remains the documented tradeoff. No production deployment, merge, manual remote KV purge/write or content edit was performed; normal public request cache behavior was left intact.
+
 ## 2026-11-09 - Independent Review and Offline Release Preparation (BOT-135)
 
 Status: offline preparation complete and committed locally; branch publication, actual Cloudflare preview and comparable performance measurements remain blocked/pending.

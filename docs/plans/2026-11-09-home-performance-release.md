@@ -2,12 +2,13 @@
 
 ## Publication state
 
-- Repository: `sorcererxw/blog`; base: `main` at `c2bc171cdf1a21f5621de1decf1b543b275b603d`.
-- Branch: `codex/bot-135-home-performance-verify`.
-- Reviewed application commit: `735f0a8b1ee386da8e8a14769a19a21a7db11647`.
-- The follow-up changes only documentation. At publication, record the full branch HEAD from `git rev-parse HEAD`; that SHA, including the documentation follow-up, must match the Cloudflare build checkout and deployed version. The application commit above alone is not proof that the eventual branch HEAD was deployed.
-- The branch is committed locally. The attempted `git push -u origin codex/bot-135-home-performance-verify` was denied at `socks5-tcp://ssh.github.com:443`. The handoff reports a remote branch lookup returning 404. No successful push, PR creation or real preview URL is recorded. This follow-up makes no network request.
-- A fresh build was blocked at `https://fonts.googleapis.com:443`; pnpm launcher access to `https://registry.npmjs.org:443` and earlier optional Wrangler telemetry to `sparrow.cloudflare.com` were also denied. Do not retry these operations or change protocol, proxy, tool or environment to perform equivalent requests without materially new evidence resolving the denial.
+- Repository `sorcererxw/blog`, base `main` at `c2bc171cdf1a21f5621de1decf1b543b275b603d`; branch `codex/bot-135-home-performance-verify`.
+- Draft PR https://github.com/sorcererxw/blog/pull/57 is published after the user confirmed the restriction was lifted. Original performance implementation: `735f0a8b1ee386da8e8a14769a19a21a7db11647`; preview repairs: local fonts at `a85d3aa6deaf874b5c433c618ff8db71b2c92d84` and image-zone URLs at `907004c1f0458eb658c16eb7ae836e770b4146ba`.
+- Full functional QA was performed on source `907004c1f0458eb658c16eb7ae836e770b4146ba`, version `198ff516-2501-40fa-ad67-02ac34fd3a26`, https://198ff516-blog.xw.workers.dev/. Stable manual alias: https://bot135-home-performance-blog.xw.workers.dev/. The 38-request matrix, desktop/tablet/mobile, no-JS native Next, history/repeated filters, images/fonts and console checks passed. See the current evidence in `docs/verification.md` and the ledger for commands, intermediate failures and limits.
+- The automated Cloudflare source build passed Next but failed direct version upload because it did not build `.open-next/assets`. The first shared-setting save was rejected and discarded; after materially new exact-build and official scope evidence, a single save retry was accepted. Only the non-production version command changed to `pnpm run upload`; the production branch/build/deploy command remain intact. The final documentation-only push must confirm the corrected automatic pipeline.
+- Record the final full branch HEAD, its automatic build and actual version URL in PR #57. For a documentation-only successor, prove `git diff <tested-source> HEAD -- src image-loader.ts next.config.ts open-next.config.ts wrangler.jsonc package.json pnpm-lock.yaml` is empty, reuse the functional source evidence explicitly, and smoke the successor's own preview.
+- Earlier SSH/Fonts/registry/telemetry policy denials are historical. No automatic retry or alternate route was used before new authorization/evidence. No merge or production deployment was performed. Production deployment/version IDs remained unchanged in recorded checks.
+- Comparable laboratory LCP/TBT/CLS remains unrun. Functional QA is not a claim of measured performance improvement.
 
 ## Independent application review
 
@@ -22,7 +23,7 @@ No application defect requiring a fix was found in the diff against the base abo
 - Serialization: only the slice reaches `serializeOverviewFeedItems()`. The 24-item bound is not a fixed byte bound: rich text, galleries and quoted posts can be large. Earlier fixture bytes cannot establish live savings. The feed client imports the small module-size helper instead of the Pretext layout engine; other historical layout code remains outside this client import path.
 - Cache/load: provider wrappers, keys, 600-second TTL, X KV reads and parallel source fan-in are unchanged. Pagination still assembles and sorts the complete server feed, so it does not solve cold provider latency or guarantee smaller provider fetches.
 
-The approved visual tradeoff remains: desktop reads down each CSS column, then across, instead of shortest-column packing. Live font/image reflow and real performance remain preview acceptance work. No new HTTP/browser run is claimed here because application source is unchanged and no real preview exists; the earlier local fixture/browser evidence remains in `docs/verification.md`.
+The approved visual tradeoff remains: desktop reads down each CSS column, then across, instead of shortest-column packing. Live font/image reflow and real performance remain preview acceptance work. This independent-review paragraph describes the original offline checkpoint. Later real HTTP/browser checks and preview build/media repairs are recorded in the publication state above and `docs/verification.md`.
 
 Targeted follow-up command:
 
@@ -32,7 +33,7 @@ node_modules/.bin/vitest run src/domains/feed/feed-pagination.test.ts src/app/pa
 
 Result: PASS, 5 files / 31 tests, exit 0. The first run without `--no-cache` passed all assertions but exited 1 on an `EPERM` write to `node_modules/.vite/vitest/results.json`; disabling the optional results cache avoided that write. No denied network operation was retried. The earlier full 38-file / 142-test result is inherited evidence, not a new full run.
 
-## Ready-to-use draft PR
+## Original ready-to-use draft PR (published; current result belongs in PR #57)
 
 Title:
 
@@ -62,7 +63,7 @@ Acceptance procedure and evidence requirements: `docs/plans/2026-11-09-home-perf
 
 ---
 
-## Resume publication after the blocker is resolved
+## Original resume-publication procedure (completed; retained for handoff)
 
 These are future steps, not commands executed by this follow-up:
 
@@ -74,7 +75,7 @@ These are future steps, not commands executed by this follow-up:
 
 ## Real-preview acceptance procedure
 
-All rows below are **pending**. Fill an evidence record for each with exact SHA, URL/query, timestamp, observed status/count and artifact path. Collect ordinary GET responses, including final response headers and HTML; inspect card DOM separately from escaped RSC payload and JSON-LD so duplicates in transport do not inflate counts. Record decoded HTML bytes and transferred/compressed bytes separately.
+The HTTP/browser rows have been exercised on the exact source/version recorded above; comparable laboratory performance remains pending. For future reruns, fill an evidence record for each with exact SHA, URL/query, timestamp, observed status/count and artifact path. Collect ordinary GET responses, including final response headers and HTML; inspect card DOM separately from escaped RSC payload and JSON-LD so duplicates in transport do not inflate counts. Record decoded HTML bytes and transferred/compressed bytes separately.
 
 ### HTTP, boundaries and SEO
 

@@ -24,7 +24,7 @@ The user confirmed the network restriction was lifted. The original push succeed
 
 1. Vendor the same Latin font families/weights with licenses, provenance and hashes; change only their loader to `next/font/local`.
 2. Run installed tests, lint, typecheck and a production/OpenNext build. Do not use mocked font responses or suppress build errors.
-3. Keep the shared Cloudflare configuration unchanged: automatic review rejected saving the version-command edit, and the unsaved edit was discarded. Build locally with `NEXT_PRIVATE_STANDALONE=true`, package with `opennextjs-cloudflare build --skipNextBuild`, then use preview-only `wrangler versions upload` with exact-commit metadata. Record the current production deployment before/after; do not run `deploy` or `versions deploy`.
+3. Initially keep the shared configuration unchanged after the rejected save, and use standalone/OpenNext local packaging plus preview-only version upload. After exact build logs and official documentation established the non-production command scope, one save retry was accepted: version command is now `pnpm run upload`, with production branch/build/deploy fields unchanged. Confirm the next automatic build and version upload; record the production deployment before/after. Do not run `deploy` or `versions deploy`.
 4. Commit and push the repair, confirm the new exact SHA and successful Cloudflare version upload, then run HTTP/browser acceptance on the actual preview URL. Update PR description and living docs with results and limitations.
 
 ## Real-preview image repair
@@ -34,3 +34,7 @@ Preview version `f2b5d71e-0ab9-4f37-b5c5-73501b29ef3b` maps to source `a85d3aa6d
 1. Share a small fixed Cloudflare image origin between both image URL builders; leave bypass/canonical-media behavior intact.
 2. Add a regression assertion for workers.dev URL resolution, run image/feed tests, lint, typecheck and the standalone/OpenNext build.
 3. Push the repair and upload another preview-only version with exact-SHA metadata. Recheck decoded media, responsive rendering, links, no-JS and history; record earlier failing and final evidence separately.
+
+## Verification checkpoint
+
+Application source `907004c1f0458eb658c16eb7ae836e770b4146ba` passed full tests, lint, typecheck, standalone Next/OpenNext build and real preview acceptance at https://198ff516-blog.xw.workers.dev/. Both earlier preview failures (build-time Google font loader and workers.dev-relative transforms) are repaired. The detailed evidence and remaining comparable laboratory measurements are in `docs/verification.md`. A documentation-only successor will trigger the corrected automatic preview pipeline; its exact SHA, resulting version and smoke checks must be recorded in PR #57 before handoff.

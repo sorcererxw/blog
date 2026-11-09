@@ -2,11 +2,33 @@
 
 ## 2026-11-09 Homepage Visibility and Pagination (BOT-135)
 
+### Resumed publication: current evidence
+
+Draft PR: https://github.com/sorcererxw/blog/pull/57. Functionally verified application source: `907004c1f0458eb658c16eb7ae836e770b4146ba`. Preview version: `198ff516-2501-40fa-ad67-02ac34fd3a26`; immutable URL https://198ff516-blog.xw.workers.dev/; current manual alias https://bot135-home-performance-blog.xw.workers.dev/.
+
+| Stage | Current result |
+| --- | --- |
+| Push and draft PR | PASS after the user confirmed the restriction was lifted. |
+| Full repaired-source tests | PASS, 38 files / 142 tests; installed Vitest, `--no-cache`. |
+| Lint/typecheck/diff | PASS; typecheck uses `--incremental false` to avoid the denied optional build-info write. |
+| Next + OpenNext build | PASS with vendored fonts and standalone mode, then packaging. Historical blocked/failing attempts remain below/in the ledger. |
+| Real preview upload and image rendering | PASS. Image-origin regression was found and fixed; both URL builders use the public image zone. |
+| Real HTTP matrix | PASS, 38 requests on 216 actual items / 9 pages; statuses, boundaries, filters, canonical, JSON-LD, sitemap and discovery. Article smoke: 200. |
+| Real browser | PASS for desktop/tablet/mobile, visible SSR, media/fonts, Next/filter/history/repeated navigation, empty state, reduced motion and no-JS rendering/native Next. Automation waits/timeouts and final outcome evidence are detailed in the ledger. Clean IAB console: no warnings/errors. Overrides restored. |
+| Automatic pipeline | Source Next build PASS, version upload previously FAILED for missing `.open-next/assets`. Preview-only command was subsequently saved as `pnpm run upload` after new scope evidence; exact-HEAD automatic rerun pending the documentation-only push. |
+| Production | Deployment `40810efb-f7e1-4c70-a4a2-6611857d8ba8`, version `e2633b9d-ac13-4225-9d23-8a05a310002e`, remains at 100% in the recorded before/after checks. No production deployment/merge. |
+| Comparable lab performance | NOT RUN. No matching base preview/installed Lighthouse; no LCP/TBT/CLS improvement claimed. |
+
+Evidence: `/tmp/bot135-preview-final-qa/results.json`, per-request HTML/headers and `run.log`; full commands, exact failed-build URLs, initial automatic-approval rejection and accepted scope-evidence retry are recorded in `docs/task-ledger.md`. Screenshots were emitted through CUA. The final documentation-only successor must record its own automatic build/full SHA and preview smoke in PR #57, after confirming its app tree is identical.
+
+### Historical offline phase
+
+
 Scope: visible SSR feed content and at most 24 matching entries per page. The original local validation below preceded publication; the user subsequently authorized a PR and Cloudflare preview validation. Production deployment is not included.
 
 Publication-time recheck on November 9: the installed Vitest binary passed all 38 files / 142 tests, followed by TypeScript, ESLint and diff checks. A fresh local Next production build could not complete because the current network policy denied required `fonts.googleapis.com` access. No retry or alternate route to the denied endpoint was attempted. The earlier complete local build result below remains historical evidence for the unchanged application source; Cloudflare preview build/runtime checks remain to be collected.
 
-Current publication state: application commit `735f0a8b1ee386da8e8a14769a19a21a7db11647` is local only. The attempted branch push was denied at `socks5-tcp://ssh.github.com:443`; no successful push, draft PR or actual preview is recorded. The independent follow-up changed documentation only and made no network requests. Full PR text, review results, exact-deployed-SHA requirements and the pending acceptance matrix are in `docs/plans/2026-11-09-home-performance-release.md`.
+Publication state at the offline checkpoint (superseded by the resumed-publication evidence above): application commit `735f0a8b1ee386da8e8a14769a19a21a7db11647` is local only. The attempted branch push was denied at `socks5-tcp://ssh.github.com:443`; no successful push, draft PR or actual preview is recorded. The independent follow-up changed documentation only and made no network requests. Full PR text, review results, exact-deployed-SHA requirements and the pending acceptance matrix are in `docs/plans/2026-11-09-home-performance-release.md`.
 
 | Stage | Status and provenance |
 | --- | --- |
