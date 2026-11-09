@@ -16,20 +16,43 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-09 - Independent Review and Offline Release Preparation (BOT-135)
+
+Status: offline preparation complete and committed locally; branch publication, actual Cloudflare preview and comparable performance measurements remain blocked/pending.
+
+- Confirmed the correct worktree and branch, clean start, HEAD `735f0a8b1ee386da8e8a14769a19a21a7db11647`, base `c2bc171cdf1a21f5621de1decf1b543b275b603d`.
+- Independently reviewed the application diff and connected feed parsing/filtering, serializers, SEO helpers, media rendering and provider-cache wrappers. No application defect requiring a source fix was found. Rapid-navigation timeout cleanup exists both on dependency change and unmount; route props own filter state. Server serialization and JSON-LD receive only the current slice. Provider keys/TTL and complete-source fan-in are unchanged.
+- Documented limits: 24 items is not a fixed byte budget; transitions briefly retain outgoing cards; CSS column-major desktop packing is deliberate; cold provider latency and live font/image reflow still require real-preview evidence.
+- Added `docs/plans/2026-11-09-home-performance-release.md` with full draft PR title/body, independent review, exact-commit publication handoff, HTTP/SEO boundary matrix, real-browser steps and comparable five-run laboratory performance procedure. No URL or performance number was fabricated.
+- Updated `docs/plans/2026-11-09-home-performance.md`, `docs/roadmap.md`, this ledger and `docs/verification.md`. No application source, dependencies or production resources changed.
+
+Verification performed in this follow-up:
+
+- Installed Vitest targeted run over `src/domains/feed/feed-pagination.test.ts`, `src/app/page.test.ts`, `src/components/feed/overview-feed-view.test.tsx`, `src/integrations/kv/provider-cache.test.ts` and `src/integrations/kv/provider-wrappers.test.ts`, with `--maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`: PASS, 5 files / 31 tests, exit 0.
+- Initial same run without `--no-cache`: all 31 assertions passed, but command FAILED (exit 1) when sandbox permissions prevented writing `node_modules/.vite/vitest/results.json` (`EPERM`). Read current parent-room history; no new network authorization was found. Disabling the optional test results cache avoided the filesystem write; no denied network request was retried.
+- `git diff --check`: PASS for the final documentation changes. Earlier full suite/typecheck/lint/build/fixture HTTP/browser results are inherited evidence; no fresh full suite, typecheck, lint, build, HTTP or browser validation was needed for this documentation-only follow-up. Fresh build/real-preview validation remain uncompleted, not passed.
+
+Blockers and next step:
+
+- Inherited denied action: `git push -u origin codex/bot-135-home-performance-verify`, target `socks5-tcp://ssh.github.com:443`, reason network policy. Handoff read-only branch lookup returned 404; no successful push, PR or preview is recorded. No retry was attempted here.
+- Other inherited denials: fresh build request to `https://fonts.googleapis.com:443`; pnpm launcher request to `https://registry.npmjs.org:443`; earlier optional telemetry to `sparrow.cloudflare.com`. No protocol/proxy/tool/environment fallback or equivalent denied operation was attempted.
+- After materially new evidence resolves the relevant denial, verify the prior outcome, publish the committed branch once, create the draft PR from the saved text, confirm its actual Cloudflare full SHA, then run the saved acceptance procedure. Stop again if denied. Do not merge or deploy production as part of this task.
+
 ## 2026-11-09 - PR Publication and Cloudflare Preview (BOT-135)
 
-Status: publishing the reviewed implementation as a draft PR, then validating the real Cloudflare preview.
+Status: implementation committed locally at `735f0a8b1ee386da8e8a14769a19a21a7db11647`; push denied by network policy. Draft PR creation and real Cloudflare preview validation have not completed.
 
 - User requested PR publication and autonomous verification on the Cloudflare preview.
 - Confirmed remote `main` remains `c2bc171cdf1a21f5621de1decf1b543b275b603d` and no existing PR uses this worktree branch.
 - Publication-time recheck: `node_modules/.bin/vitest run --maxWorkers=2 --minWorkers=1 --reporter=dot` PASS (38 files, 142 tests); `node_modules/.bin/tsc --noEmit`, `node_modules/.bin/eslint`, and `git diff --check` PASS.
 - The pnpm launcher attempted npm-registry access, which was denied. Existing installed binaries were used for local checks without a package download.
-- A fresh production build was attempted with existing Next.js and optional telemetry disabled, but required Google Fonts access was denied by the current network policy. This build did not complete. The prior successful build above applies to the same application source; live Cloudflare build/preview validation is still required. Neither denied endpoint was retried.
+- A fresh production build was attempted with existing Next.js and optional telemetry disabled, but required Google Fonts access was denied by the current network policy. This build did not complete. The prior successful build recorded in the implementation entry below applies to the same application source; live Cloudflare build/preview validation is still required. Neither denied endpoint was retried.
+- `git push -u origin codex/bot-135-home-performance-verify` was denied at `socks5-tcp://ssh.github.com:443`; the handoff read-only branch lookup returned 404. No successful push, PR creation or actual preview URL is recorded. This operation was not retried.
 - No source behavior changes were made during publication preparation. Production deployment and merge are not authorized by this step.
 
 ## 2026-11-09 - Homepage Visibility and Pagination (BOT-135)
 
-Status: implemented and verified locally; awaiting publication decision and production performance remeasurement
+Status: implemented and verified locally, then committed at `735f0a8b1ee386da8e8a14769a19a21a7db11647`; user authorized PR publication, but push was denied. Actual preview and comparable performance remeasurement remain pending.
 
 Summary:
 
@@ -42,9 +65,9 @@ Verification: 38 files / 142 tests, typecheck, lint, diff check and production b
 
 Tradeoff: desktop CSS column-major packing differs from the former shortest-column layout. Production performance is not yet remeasured, and synthetic fixture timings are not presented as live-site improvements.
 
-Final worktree: `/Users/sorcererxw/repo/sorcererxw/blog-worktrees/bot-135-home-performance`, branch `codex/bot-135-home-performance-verify`, base `c2bc171cd`. The initial Documents worktree remains preserved after filesystem timeouts. No commit/push/deployment. All local servers/build/test tasks stopped after validation due to low Mac disk space; no cleanup deletion performed.
+Final worktree: `/Users/sorcererxw/repo/sorcererxw/blog-worktrees/bot-135-home-performance`, branch `codex/bot-135-home-performance-verify`, base `c2bc171cd`. The initial Documents worktree remains preserved after filesystem timeouts. Implementation was subsequently committed locally at `735f0a8b1ee386da8e8a14769a19a21a7db11647`; push was denied and no PR/preview/production deployment completed. At the end of the original validation, all local servers/build/test tasks were stopped due to low Mac disk space; no cleanup deletion was performed.
 
-Next: review the local diff, decide whether to publish, then remeasure the original mobile LCP/desktop blocking/CLS conditions against live data.
+Next: follow the saved publication/acceptance procedure after the relevant network denial is resolved. The independent review and draft PR text are complete; actual preview checks and comparable mobile LCP/desktop blocking/CLS measurements remain pending.
 
 ## 2026-05-21 - Homepage Metadata Feed Decoupling
 

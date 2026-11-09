@@ -2,7 +2,7 @@
 
 ## Current Performance Slice
 
-BOT-135: implement immediate SSR visibility and 24-item filtered pagination under `docs/specs/2026-11-09-home-performance-design.md`. Implementation and local aggregate/HTTP/browser validation are complete in the independent verification worktree. The user has authorized a PR and validation on its Cloudflare preview. Preview validation and comparable performance remeasurement are the next step; production deployment and merge are not included.
+BOT-135: immediate SSR visibility and 24-item filtered pagination are implemented and committed locally at `735f0a8b1ee386da8e8a14769a19a21a7db11647`, with earlier local test/HTTP/browser validation. Independent application review found no required source fix; a follow-up targeted run passed 5 files / 31 tests. The user authorized a draft PR and Cloudflare preview verification, but branch push was denied by network policy, so publication and a real preview remain blocked. A fresh build was also blocked at Google Fonts; earlier build evidence is historical. Ready-to-use PR text and exact-commit acceptance steps are in `docs/plans/2026-11-09-home-performance-release.md`. Next: once the denied operation is permitted, push, create the draft PR, verify its actual deployed SHA, and collect preview/live-data and comparable performance evidence. Production deployment and merge are not included.
 
 ## Mission
 
@@ -195,7 +195,7 @@ Exit criteria:
 - Overview Feed uses visible SSR and CSS columns for its bounded page; the previous client-estimated Pretext layout is superseded by the 2026-11-09 performance amendment
 - Overview Feed cards use client-side card-surface navigation, while the SEO-visible destination anchor lives on the timestamp to avoid nested `<a>` markup around rich-text links
 - ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
-- current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs
+- current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`; unfiltered numbered feed pages self-canonicalize under the November 9 amendment, while sitemap discovery remains `/` plus article detail URLs
 - homepage browser/social metadata stays on a minimal intro-derived path; feed-backed `CollectionPage` / `ItemList` JSON-LD is assembled in the rendered route body, not in `generateMetadata()`
 - homepage agent discovery uses `Link` headers for `api-catalog`, `service-doc`, and `describedby`; the API catalog remains a narrow linkset over existing public resources
 

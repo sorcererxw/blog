@@ -6,6 +6,21 @@ Scope: visible SSR feed content and at most 24 matching entries per page. The or
 
 Publication-time recheck on November 9: the installed Vitest binary passed all 38 files / 142 tests, followed by TypeScript, ESLint and diff checks. A fresh local Next production build could not complete because the current network policy denied required `fonts.googleapis.com` access. No retry or alternate route to the denied endpoint was attempted. The earlier complete local build result below remains historical evidence for the unchanged application source; Cloudflare preview build/runtime checks remain to be collected.
 
+Current publication state: application commit `735f0a8b1ee386da8e8a14769a19a21a7db11647` is local only. The attempted branch push was denied at `socks5-tcp://ssh.github.com:443`; no successful push, draft PR or actual preview is recorded. The independent follow-up changed documentation only and made no network requests. Full PR text, review results, exact-deployed-SHA requirements and the pending acceptance matrix are in `docs/plans/2026-11-09-home-performance-release.md`.
+
+| Stage | Status and provenance |
+| --- | --- |
+| Full tests, TypeScript, ESLint | Previously passed, 38 files / 142 tests; publication-time recheck recorded above. Not repeated by this documentation follow-up. |
+| Independent review | Complete; no required application source fix found. Cache keys/TTL and complete-source fan-in preserved. |
+| Follow-up targeted tests | PASS, exit 0: 5 files / 31 tests using installed Vitest with `--maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`; command and files in the ledger. |
+| Initial targeted command | FAILED, exit 1 after 31 passing assertions: `EPERM` writing optional Vitest results cache. Resolved by disabling that cache; the denied write was not repeated. |
+| Final documentation diff check | PASS: `git diff --check`. |
+| Earlier production build and fixture HTTP/browser | Historical PASS for unchanged application source; fixture evidence below is not a real-preview result. |
+| Fresh production build | Did not complete: Google Fonts network request denied. Not retried. |
+| Branch push | Denied by network policy; no successful publication recorded. |
+| PR, real Cloudflare build/preview, exact deployed SHA, live-data HTTP/browser | Pending; not run/completed. |
+| Comparable laboratory performance | Pending; no new performance figures or real-user CWV claim. |
+
 Original local evidence on `codex/bot-135-home-performance-verify`:
 
 - `pnpm install --offline --frozen-lockfile`: PASS, reused the approved pnpm 10.33.0 dependency cache without downloading packages.
