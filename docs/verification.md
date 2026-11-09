@@ -1,6 +1,19 @@
 # Blog2 Verification Guide
 
-## 2026-11-09 Homepage Visibility and Pagination (BOT-135)
+## 2026-11-09 Continuous Feed Replacement (BOT-135)
+
+The user rejected numbered pages and requested continuous loading. Active design: `docs/specs/2026-11-09-home-feed-streaming-design.md`; plan: `docs/plans/2026-11-09-home-feed-streaming.md`. Prior pagination/preview evidence below is historical and does not validate this replacement.
+
+Local replacement evidence:
+
+- Targeted cursor/domain, API, homepage SSR and feed SSR tests: PASS, 4 files / 26 tests.
+- Full installed Vitest suite: PASS, 39 files / 143 tests with `--maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`; after aligning anchors with NextLink, the feed SSR suite passed again (10 tests).
+- ESLint, TypeScript with `--incremental false`, and diff checks: PASS.
+- Production Next standalone build and OpenNext packaging: PASS. `/api/feed` is emitted as a dynamic route; existing warnings are unchanged.
+- Actual continuous-feed preview HTTP/browser acceptance is pending at this local checkpoint. Record exact source SHA, API traversal/order and automatic/manual append, cancellation/retry, stable earlier-card geometry, no-JS continuation, mobile/desktop and console results before claiming this phase complete.
+
+## 2026-11-09 Prior Homepage Pagination (Superseded Interaction)
+
 
 ### Resumed publication: current evidence
 

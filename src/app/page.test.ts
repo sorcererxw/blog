@@ -10,8 +10,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/feed/overview-feed-view", () => ({
-  OverviewFeed: ({ items, pagination }: { items: Array<{ id: string }>; pagination: { page: number } }) =>
-    createElement("div", { "data-feed-page": pagination.page }, items.map((item) => createElement("article", { key: item.id }, item.id))),
+  OverviewFeed: ({ items, nextCursor }: { items: Array<{ id: string }>; nextCursor: string | null }) =>
+    createElement("div", { "data-next-cursor": nextCursor }, items.map((item) => createElement("article", { key: item.id }, item.id))),
 }));
 
 vi.mock("@/components/home/profile-hero", () => ({
@@ -62,7 +62,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("homepage metadata", () => {
   it("does not load the provider-backed Overview Feed", async () => {
-    const metadata = await generateMetadata({});
+    const metadata = await generateMetadata();
 
     expect(metadata.description).toBe("Home intro description");
     expect(mocks.loadNotionHomePage).toHaveBeenCalledTimes(1);
@@ -74,24 +74,38 @@ describe("homepage metadata", () => {
 });
 
 
-describe("homepage paged response", () => {
-  it("keeps page metadata independent of feed data and gives page two its own canonical", async () => {
-    const metadata = await generateMetadata({ searchParams: Promise.resolve({ page: "2" }) });
-    expect(metadata.alternates?.canonical).toBe("https://sorcererxw.com/?page=2");
+describe("homepage continuous feed response", () => {
+  const seedArticles = () => vi.mocked(listArticles).mockResolvedValueOnce(Array.from({ length: 59 }, (_, index) => ({
+    slug: `entry-${index}`, title: `Entry ${index}`, summary: `Summary ${index}`,
+    date: new Date(2026, 0, 59 - index),
+  })));
+
+  it("keeps root metadata independent of feed data", async () => {
+    const metadata = await generateMetadata();
+    expect(metadata.alternates?.canonical).toBe("https://sorcererxw.com/");
     expect(listArticles).not.toHaveBeenCalled();
     expect(listThoughts).not.toHaveBeenCalled();
   });
-
-  it("passes only the requested page into rendering and JSON-LD", async () => {
-    vi.mocked(listArticles).mockResolvedValueOnce(Array.from({ length: 59 }, (_, index) => ({
-      slug: `entry-${index}`, title: `Entry ${index}`, summary: `Summary ${index}`,
-      date: new Date(2026, 0, 59 - index),
-    })));
+  it("renders only the first batch and ignores withdrawn page numbers", async () => {
+    seedArticles();
     const markup = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ page: "2" }) }));
+    expect(markup.match(/<article>/g)).toHaveLength(24);
+    expect(markup).toContain("article:entry-0");
+    expect(markup).toContain("article:entry-23");
+    expect(markup).not.toContain("entry-24");
+    expect(markup).toContain('data-next-cursor="article:entry-23"');
+  });
+  it("provides a native SSR continuation without serializing other batches", async () => {
+    seedArticles();
+    const markup = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ after: "article:entry-23" }) }));
     expect(markup.match(/<article>/g)).toHaveLength(24);
     expect(markup).toContain("article:entry-24");
     expect(markup).toContain("article:entry-47");
     expect(markup).not.toContain("entry-23");
     expect(markup).not.toContain("entry-48");
+    expect(markup).toContain('"url":"https://sorcererxw.com/"');
+  });
+  it("rejects an invalid native continuation with the route's 404 boundary", async () => {
+    await expect(HomePage({ searchParams: Promise.resolve({ after: "missing" }) })).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
   });
 });

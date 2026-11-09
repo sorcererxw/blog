@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { listArticles } from "@/domains/article/list-articles";
-import { buildOverviewFeedIndex } from "@/domains/feed/overview-feed";
-import {
-  getFeedRequest,
-  getFeedCanonicalPath,
-  paginateFeed,
-  type FeedSearchParams,
-} from "@/domains/feed/feed-pagination";
+import { getFeedRequest, getFeedBatch, type FeedSearchParams } from "@/domains/feed/feed-batch";
 import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-serialization";
-import { listStoredXSocialPosts } from "@/domains/social/x-sync";
 import { OverviewFeed } from "@/components/feed/overview-feed-view";
 import { ProfileHero } from "@/components/home/profile-hero";
 import {
@@ -20,30 +12,18 @@ import {
 } from "@/domains/seo/build-structured-data";
 import { buildSeo } from "@/domains/seo/build-seo";
 import { SITE_NAME } from "@/domains/seo/site";
-import { listProjects } from "@/domains/projects/list-projects";
-import { listThoughts } from "@/domains/thoughts/list-thoughts";
 import {
   createPublicProviderCache,
-  withCachedArticleSource,
   withCachedHomeSource,
-  withCachedProjectSource,
-  withCachedThoughtProvider,
 } from "@/integrations/kv/provider-wrappers";
-import { createKvXSocialPostStore } from "@/integrations/kv/x-social-post-store";
-import { createBlogArticleSource } from "@/integrations/notion/articles";
 import {
   createNotionHomeSource,
   getHomeDescription,
   loadNotionHomePage,
   type HomePageRecord,
 } from "@/integrations/notion/home";
-import {
-  createNotionProjectSource,
-  listProjectsFromNotion,
-} from "@/integrations/notion/projects";
-import { getWorkerEnv } from "@/lib/cloudflare-env";
-
 import { seoToMetadata, StructuredDataScripts } from "./seo";
+import { loadOverviewFeed } from "./feed-data";
 
 export const revalidate = 600;
 
@@ -108,38 +88,20 @@ async function loadHomeMetadataSeo(pathname: string) {
 }
 
 async function loadHomeData(searchParams?: FeedSearchParams) {
+  const { filter, after, invalidCursor } = getFeedRequest(searchParams);
+  if (invalidCursor) notFound();
   const providerCache = await createPublicProviderCache();
-  const env = await getWorkerEnv();
   const homeSource = withCachedHomeSource(
     createNotionHomeSource(loadNotionHomePage),
     providerCache,
   );
-  const articleSource = withCachedArticleSource(createBlogArticleSource(), providerCache);
-  const projectSource = withCachedProjectSource(
-    createNotionProjectSource(listProjectsFromNotion),
-    providerCache,
-  );
-  const thoughtProvider = withCachedThoughtProvider(listThoughts, providerCache);
-  const xPostsPromise = env.BLOG_CACHE
-    ? listStoredXSocialPosts(createKvXSocialPostStore(env.BLOG_CACHE))
-    : Promise.resolve([]);
-  const [homePage, articles, projects, thoughts, xPosts] = await Promise.all([
+  const [homePage, overviewFeedItems] = await Promise.all([
     homeSource.loadHomePage(),
-    listArticles({ source: articleSource }),
-    listProjects({ source: projectSource }),
-    thoughtProvider(),
-    xPostsPromise,
+    loadOverviewFeed(providerCache),
   ]);
-  const { filter, page } = getFeedRequest(searchParams);
-  const overviewFeedItems = buildOverviewFeedIndex({
-    articles,
-    projects,
-    thoughts,
-    xPosts,
-  });
-  const feedPage = paginateFeed(overviewFeedItems, filter, page);
-  if (feedPage.outOfRange) notFound();
-  const feedStructuredDataItems = feedPage.items
+  const feedBatch = getFeedBatch(overviewFeedItems, filter, after);
+  if (feedBatch.invalidCursor) notFound();
+  const feedStructuredDataItems = feedBatch.items
     .flatMap((item) => {
       if (item.destination.kind === "none") {
         return [];
@@ -162,23 +124,21 @@ async function loadHomeData(searchParams?: FeedSearchParams) {
   const seo = buildHomePageSeo({
     feedStructuredDataItems,
     homePage,
-    pathname: getFeedCanonicalPath(filter, page),
+    pathname: "/",
   });
 
   return {
-    feedItems: serializeOverviewFeedItems(feedPage.items),
+    feedItems: serializeOverviewFeedItems(feedBatch.items),
     filter,
-    pagination: feedPage.pagination,
+    nextCursor: feedBatch.nextCursor,
+    after,
     homePage,
     seo,
   };
 }
 
-export async function generateMetadata(
-  { searchParams }: { searchParams?: HomeSearchParams },
-): Promise<Metadata> {
-  const { filter, page } = getFeedRequest(await searchParams);
-  return seoToMetadata(await loadHomeMetadataSeo(getFeedCanonicalPath(filter, page)));
+export async function generateMetadata(): Promise<Metadata> {
+  return seoToMetadata(await loadHomeMetadataSeo("/"));
 }
 
 export default async function HomePage({
@@ -187,13 +147,13 @@ export default async function HomePage({
   searchParams: HomeSearchParams;
 }) {
   const params = await searchParams;
-  const { feedItems, filter, pagination, homePage, seo } = await loadHomeData(params);
+  const { feedItems, filter, nextCursor, after, homePage, seo } = await loadHomeData(params);
 
   return (
     <>
       <StructuredDataScripts seo={seo} />
       <ProfileHero blocks={homePage.blocks} />
-      <OverviewFeed initialFilter={filter} items={feedItems} pagination={pagination} />
+      <OverviewFeed key={JSON.stringify([filter.type, filter.source, after])} initialFilter={filter} items={feedItems} nextCursor={nextCursor} />
     </>
   );
 }

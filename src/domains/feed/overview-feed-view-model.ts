@@ -23,3 +23,8 @@ export type OverviewFeedViewItem = {
   titleEmoji?: string | null;
   type: FeedItemType;
 };
+
+export type FeedBatchResponse = {
+  items: OverviewFeedViewItem[];
+  nextCursor: string | null;
+};

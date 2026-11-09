@@ -114,17 +114,27 @@ describe("OverviewFeed", () => {
     expect(markup.indexOf("Feed item summary")).toBeLessThan(markup.indexOf("May 1, 2026"));
   });
 
-  it("renders crawlable pagination without sending hidden pages to the client", () => {
+  it("renders a real Load more fallback without numbered navigation", () => {
     const markup = renderToStaticMarkup(
-      <OverviewFeed initialFilter={{}} items={serializeOverviewFeedItems([item()])}
-        pagination={{ page: 2, totalPages: 3, previousHref: "/", nextHref: "/?page=3" }} />,
+      <OverviewFeed initialFilter={{ type: "writing" }} items={serializeOverviewFeedItems([item()])}
+        nextCursor="article:one" />,
     );
-    expect(markup).toContain('aria-label="Feed pagination"');
-    expect(markup).toContain('rel="prev"');
-    expect(markup).toContain('rel="next"');
-    expect(markup).toContain('href="/?page=3"');
-    expect(markup).toContain('Page 2 of 3');
+    expect(markup).toContain('data-feed-load-more');
+    expect(markup).toContain('href="/?type=writing&amp;after=article%3Aone"');
+    expect(markup).toContain('>Load more</a>');
+    expect(markup).not.toContain('Feed pagination');
+    expect(markup).not.toContain('rel="next"');
+    expect(markup).not.toContain('Page 2');
     expect(markup.match(/<article>/g)).toHaveLength(1);
+  });
+
+  it("keeps previously loaded masonry batches independent when more cards are appended", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed initialFilter={{}} items={serializeOverviewFeedItems(Array.from({ length: 48 }, (_, index) => item({id: `article:${index}`})))} />,
+    );
+    expect(markup.match(/data-feed-batch/g)).toHaveLength(2);
+    expect(markup.match(/<article>/g)).toHaveLength(48);
+    expect(markup).toContain('data-feed-end');
   });
 
   it("renders Notion project emoji before the overview title", () => {

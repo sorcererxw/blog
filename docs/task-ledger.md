@@ -16,7 +16,31 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
-## 2026-11-09 - Draft PR Publication, Preview Repairs and Live QA (BOT-135)
+## 2026-11-09 - Replace Numbered Pages with Continuous Loading (BOT-135)
+
+Status: replacement implemented and verified locally; exact-commit real-preview acceptance still pending at this checkpoint.
+
+Requirement: user said “我不同意改成page，就应该流式加载”. This overrides the earlier numbered-page contract. Keep the same draft PR #57 and branch; retain the working font/image-zone/preview-build repairs. Previous pagination acceptance is historical only.
+
+Changes:
+
+- New active design/plan: `docs/specs/2026-11-09-home-feed-streaming-design.md`, `docs/plans/2026-11-09-home-feed-streaming.md`; updated overview/SEO specs, roadmap and verification. Marked the prior release procedure superseded.
+- Replaced `feed-pagination.ts` and tests with cursor batches in `feed-batch.ts`. Filter the full ordered index first; use the last item ID as `after`, so insertions before the cursor do not repeat earlier items. A final cursor terminates; unknown/repeated cursors are explicit errors.
+- Extracted provider assembly to server-only `src/app/feed-data.ts`, shared by the homepage and new thin `GET /api/feed`. Existing cache wrappers/keys/TTL and X KV reads remain unchanged; responses serialize at most 24 items. Metadata still avoids feed providers.
+- Homepage SSR renders 24 items and the real Load more continuation anchor. `page` is ignored; all browse states canonicalize to `/`. JSON-LD contains only the SSR batch. Native continuation supports no-JS browsing without numbered controls.
+- Client appends batches automatically with IntersectionObserver and keeps a manual/keyboard link. It locks one append request, aborts on reset/unmount, ignores stale responses, deduplicates IDs, suspends automatic retry on errors and exposes Try again/reload. URL-owned filter changes reset stream state; appends do not create history entries.
+- CSS columns balance each invisible batch independently so earlier cards do not repack when another batch arrives. Existing SSR visibility, aspect-ratio reservations, card links, lightweight entry transitions and reduced motion remain.
+
+Local verification:
+
+- `node_modules/.bin/vitest run src/domains/feed/feed-batch.test.ts src/app/page.test.ts src/app/api/feed/route.test.ts src/components/feed/overview-feed-view.test.tsx --maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`: PASS, 4 files / 26 tests.
+- Full `node_modules/.bin/vitest run --maxWorkers=2 --minWorkers=1 --reporter=dot --no-cache`: PASS, 39 files / 143 tests. Subsequent NextLink alignment: targeted feed SSR rerun PASS, 10 tests.
+- Initial lint caught two raw anchors under repository rule `local/require-next-link-and-image`. Replaced them with NextLink, preserving normal continuation hrefs and explicit reload semantics. Final `node_modules/.bin/eslint`, `node_modules/.bin/tsc --noEmit --incremental false`, and `git diff --check`: PASS.
+- `NEXT_PRIVATE_STANDALONE=true NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false node_modules/.bin/next build --webpack` then `NEXT_TELEMETRY_DISABLED=1 WRANGLER_SEND_METRICS=false node_modules/.bin/opennextjs-cloudflare build --skipNextBuild`: PASS. Dynamic `/api/feed` and Worker/assets generated; existing non-fatal adapter/template-copy, secret/compat-date and middleware warnings remain.
+
+Next: push the replacement, confirm exact-SHA automatic Cloudflare preview, run cursor API/native HTML traversal and real-browser append/retry/filter/cancellation/stability/no-JS checks, then update the current evidence and PR. No production merge/deploy. Comparable LCP/TBT/CLS measurement remains unrun; no speed-up claim.
+
+## 2026-11-09 - Prior Pagination Publication, Preview Repairs and Live QA (Superseded Interaction)
 
 Status: draft PR published; application source `907004c1f0458eb658c16eb7ae836e770b4146ba` functionally verified on the real Cloudflare preview. Corrected automatic build/version upload also PASS on documentation-only successor `eb11f222ba31a1d6ce88902648707417db7b1684`; exact current-HEAD check/URL/smoke results are tracked in PR #57. Comparable laboratory measurement remains pending.
 

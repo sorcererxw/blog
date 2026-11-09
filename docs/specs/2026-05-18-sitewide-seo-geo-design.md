@@ -41,7 +41,7 @@ Indexable discovery surfaces:
 - `/robots.txt`
 - `/llms.txt`
 
-Filter URLs such as `/?type=writing`, `/?type=projects`, and `/?source=telegram` may be linked from human and AI guidance surfaces, but they canonicalize to `/` and stay out of the sitemap. As of the 2026-11-09 performance slice, unfiltered numbered feed pages such as `/?page=2` have self-referencing canonicals and are discoverable through normal Previous/Next links; query pages still stay outside the sitemap. Feed JSON-LD describes only the items on the rendered page.
+Filter URLs such as `/?type=writing`, `/?type=projects`, and `/?source=telegram` may be linked from human and AI guidance surfaces, but they canonicalize to `/` and stay out of the sitemap. The active 2026-11-09 continuous-loading amendment replaces the withdrawn numbered pages: continuation URLs such as `/?after=...` also canonicalize to `/` and stay outside the sitemap. A real Load more anchor exposes native HTML continuation; the JSON `/api/feed` endpoint has an explicit noindex header. Feed JSON-LD describes only the current server-rendered batch.
 
 Compatibility routes:
 

@@ -4,6 +4,7 @@ import NextLink from "next/link";
 import { Card, Chip, Tabs } from "@heroui/react";
 import {
   Fragment,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -16,8 +17,8 @@ import {
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import { getFeedModuleSize } from "@/domains/feed/feed-module-size";
-import type { FeedPagination } from "@/domains/feed/feed-pagination";
-import type { OverviewFeedViewItem } from "@/domains/feed/overview-feed-view-model";
+import { buildFeedContinuationHref, FEED_BATCH_SIZE } from "@/domains/feed/feed-batch";
+import type { FeedBatchResponse, OverviewFeedViewItem } from "@/domains/feed/overview-feed-view-model";
 import { cn } from "@/lib/utils";
 
 import masonryStyles from "./masonry-feed.module.css";
@@ -33,7 +34,7 @@ import type {
 type OverviewFeedProps = {
   initialFilter: FeedFilter;
   items: OverviewFeedViewItem[];
-  pagination?: FeedPagination;
+  nextCursor?: string | null;
 };
 
 type TransitionState = "active" | "enter" | "exit";
@@ -468,12 +469,73 @@ function mergeItemsForExit(
   return [...nextItems, ...exitingItems];
 }
 
-export function OverviewFeed({ initialFilter, items, pagination }: OverviewFeedProps) {
+export function OverviewFeed({ initialFilter, items, nextCursor = null }: OverviewFeedProps) {
+  const [streamItems, setStreamItems] = useState(items);
+  const [cursor, setCursor] = useState(nextCursor);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const requestRef = useRef<AbortController | null>(null);
+  const continuationRef = useRef<HTMLAnchorElement | null>(null);
   const filter = useMemo(() => normalizeFilter(initialFilter), [initialFilter]);
   const filteredItems = useMemo(
-    () => items.filter((item) => matchesFilter(item, filter)),
-    [filter, items],
+    () => streamItems.filter((item) => matchesFilter(item, filter)),
+    [filter, streamItems],
   );
+  useEffect(() => {
+    requestRef.current?.abort();
+    requestRef.current = null;
+    setStreamItems(items);
+    setCursor(nextCursor);
+    setIsLoading(false);
+    setLoadError(false);
+    return () => {
+      const request = requestRef.current;
+      requestRef.current = null;
+      request?.abort();
+    };
+  }, [items, nextCursor]);
+
+  const loadMore = useCallback(async () => {
+    if (!cursor || requestRef.current) return;
+    const request = new AbortController();
+    requestRef.current = request;
+    setIsLoading(true);
+    setLoadError(false);
+    try {
+      const href = buildFeedContinuationHref(filter, cursor);
+      const response = await fetch(`/api/feed${href.slice(1)}`, { signal: request.signal });
+      if (!response.ok) throw new Error("Feed request failed");
+      const batch: FeedBatchResponse = await response.json();
+      if (requestRef.current !== request || request.signal.aborted) return;
+      setStreamItems((current) => {
+        const ids = new Set(current.map((item) => item.id));
+        return [...current, ...batch.items.filter((item) => {
+          if (ids.has(item.id)) return false;
+          ids.add(item.id);
+          return true;
+        })];
+      });
+      setCursor(batch.nextCursor);
+    } catch {
+      if (requestRef.current === request && !request.signal.aborted) setLoadError(true);
+    } finally {
+      if (requestRef.current === request) {
+        requestRef.current = null;
+        setIsLoading(false);
+      }
+    }
+  }, [cursor, filter]);
+
+  useEffect(() => {
+    const anchor = continuationRef.current;
+    if (!cursor || loadError || !anchor || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) void loadMore();
+    }, { rootMargin: "600px" });
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [cursor, loadError, loadMore]);
+
   const eagerMediaIds = useMemo(
     () =>
       new Set(
@@ -578,17 +640,21 @@ export function OverviewFeed({ initialFilter, items, pagination }: OverviewFeedP
           </Tabs.ListContainer>
         </Tabs>
       </div>
-      <div aria-live="polite" data-overview-feed-region>
+      <div aria-busy={isLoading} aria-live="polite" data-overview-feed-region>
         {renderedItems.length > 0 ? (
           <div data-overview-feed-reveal="ready">
-            <div className={masonryStyles.paginatedGrid} data-feed-layout="css-masonry">
-              {renderedItems.map((item) => (
-                <div
-                  className={masonryStyles.cell}
-                  data-feed-transition={transitionStates[item.id]}
-                  key={item.id}
-                >
-                  <FeedModule eagerMedia={eagerMediaIds.has(item.id)} item={item} />
+            <div className="mt-4" data-feed-layout="css-masonry">
+              {Array.from({ length: Math.ceil(renderedItems.length / FEED_BATCH_SIZE) }, (_, index) => (
+                <div className={masonryStyles.streamBatch} data-feed-batch key={index}>
+                  {renderedItems.slice(index * FEED_BATCH_SIZE, (index + 1) * FEED_BATCH_SIZE).map((item) => (
+                    <div
+                      className={masonryStyles.cell}
+                      data-feed-transition={transitionStates[item.id]}
+                      key={item.id}
+                    >
+                      <FeedModule eagerMedia={eagerMediaIds.has(item.id)} item={item} />
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -599,21 +665,42 @@ export function OverviewFeed({ initialFilter, items, pagination }: OverviewFeedP
           </div>
         )}
       </div>
-      {pagination && pagination.totalPages > 1 ? (
-        <nav aria-label="Feed pagination" className="mt-6 flex items-center justify-between gap-4">
-          {pagination.previousHref ? (
-            <NextLink href={pagination.previousHref} prefetch={false} rel="prev" className="underline underline-offset-4">
-              Previous
-            </NextLink>
-          ) : <span />}
-          <span aria-current="page">Page {pagination.page} of {pagination.totalPages}</span>
-          {pagination.nextHref ? (
-            <NextLink href={pagination.nextHref} prefetch={false} rel="next" className="underline underline-offset-4">
-              Next
-            </NextLink>
-          ) : <span />}
-        </nav>
+      {cursor ? (
+        <div className="mt-6 text-center">
+          {loadError ? (
+            <p className="mb-3 text-sm text-muted" role="alert">
+              Couldn&apos;t load more. Try again, or <NextLink
+                className="underline"
+                href={buildFeedContinuationHref(filter, null)}
+                prefetch={false}
+                onNavigate={(event) => {
+                  event.preventDefault();
+                  window.location.assign(buildFeedContinuationHref(filter, null));
+                }}
+              >reload the feed</NextLink>.
+            </p>
+          ) : null}
+          <NextLink
+            aria-disabled={isLoading}
+            className="underline underline-offset-4"
+            data-feed-load-more
+            href={buildFeedContinuationHref(filter, cursor)}
+            prefetch={false}
+            scroll={false}
+            onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              void loadMore();
+            }}
+            ref={continuationRef}
+          >
+            {isLoading ? "Loading…" : loadError ? "Try again" : "Load more"}
+          </NextLink>
+        </div>
+      ) : filteredItems.length > 0 ? (
+        <p className="mt-6 text-center text-sm text-muted" data-feed-end role="status">No more items.</p>
       ) : null}
+
     </section>
   );
 }

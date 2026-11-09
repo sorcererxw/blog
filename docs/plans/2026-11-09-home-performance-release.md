@@ -1,6 +1,8 @@
-# BOT-135 Draft PR and Cloudflare Preview Acceptance
+# BOT-135 Prior Pagination Release Record (Superseded)
 
-## Publication state
+> The user rejected numbered pages after this phase. Active behavior and acceptance now follow `2026-11-09-home-feed-streaming.md` and `../specs/2026-11-09-home-feed-streaming-design.md`. The records below are historical, not proof of continuous-loading behavior.
+
+## Prior publication state
 
 - Repository `sorcererxw/blog`, base `main` at `c2bc171cdf1a21f5621de1decf1b543b275b603d`; branch `codex/bot-135-home-performance-verify`.
 - Draft PR https://github.com/sorcererxw/blog/pull/57 is published after the user confirmed the restriction was lifted. Original performance implementation: `735f0a8b1ee386da8e8a14769a19a21a7db11647`; preview repairs: local fonts at `a85d3aa6deaf874b5c433c618ff8db71b2c92d84` and image-zone URLs at `907004c1f0458eb658c16eb7ae836e770b4146ba`.

@@ -1,6 +1,8 @@
-# Homepage Visibility and Pagination
+# Homepage Visibility and Pagination (Superseded Interaction)
 
-## Scope
+> The user subsequently rejected numbered pages. `2026-11-09-home-feed-streaming-design.md` is the active feed-loading contract. The build/font/image-origin repairs below still apply.
+
+## Historical scope
 
 BOT-135 implements the approved first two performance improvements: visible server-rendered content and a 24-item homepage page. This amendment supersedes the no-pagination and hydration-owned layout sections of the overview spec. Notion/Telegram/X ingestion, cache policy, card meaning and destinations, and production routing are unchanged.
 

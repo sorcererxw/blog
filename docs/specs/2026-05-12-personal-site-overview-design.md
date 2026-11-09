@@ -1,6 +1,6 @@
 # Personal Site Overview Design Spec
 
-> Amendment: `2026-11-09-home-performance-design.md` supersedes the no-pagination and hydration-owned layout requirements for this slice.
+> Current amendment: `2026-11-09-home-feed-streaming-design.md` requires visible SSR and continuous loading. The earlier numbered-pagination proposal in `2026-11-09-home-performance-design.md` was rejected; its font/image/preview-build repairs still apply.
 
 ## Summary
 

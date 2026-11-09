@@ -93,22 +93,21 @@
 }
 
 /* One DOM timeline stays visible before and after hydration. */
-.paginatedGrid {
+.streamBatch {
   columns: 1;
   column-gap: 0.5rem;
-  margin-top: 1rem;
 }
 
-.paginatedGrid > .cell {
+.streamBatch > .cell {
   break-inside: avoid;
   display: flow-root;
   margin-bottom: 0.5rem;
 }
 
 @media (min-width: 680px) {
-  .paginatedGrid { columns: 2; }
+  .streamBatch { columns: 2; }
 }
 
 @media (min-width: 1064px) {
-  .paginatedGrid { columns: 3; }
+  .streamBatch { columns: 3; }
 }
