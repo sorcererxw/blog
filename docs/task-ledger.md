@@ -18,7 +18,7 @@ Write concrete entries so future agents can continue work without replaying prio
 
 ## 2026-11-09 - Draft PR Publication, Preview Repairs and Live QA (BOT-135)
 
-Status: draft PR published; application source `907004c1f0458eb658c16eb7ae836e770b4146ba` functionally verified on the real Cloudflare preview. Final documentation-only automatic pipeline check and comparable laboratory measurements remain pending at this checkpoint.
+Status: draft PR published; application source `907004c1f0458eb658c16eb7ae836e770b4146ba` functionally verified on the real Cloudflare preview. Corrected automatic build/version upload also PASS on documentation-only successor `eb11f222ba31a1d6ce88902648707417db7b1684`; exact current-HEAD check/URL/smoke results are tracked in PR #57. Comparable laboratory measurement remains pending.
 
 Publication and changes:
 
@@ -51,7 +51,7 @@ Automatic build configuration and approval evidence:
 
 Remaining work/limits:
 
-- Final documentation-only push must prove corrected automatic version upload on its exact SHA; update PR #57 with the resulting preview/check and smoke result. The 38-request/browser result above belongs to source `907004c1f0458eb658c16eb7ae836e770b4146ba` and version `198ff516-2501-40fa-ad67-02ac34fd3a26`; application-tree identity must be checked before reusing it for a documentation-only successor.
+- Corrected automatic build `97d98df2-7d80-4c54-b80a-8e37fccd88d1`: PASS for `eb11f222ba31a1d6ce88902648707417db7b1684`; version `a52ccd05-1b27-4c73-a4ff-0d6919a493fc`, https://a52ccd05-blog.xw.workers.dev/, branch alias https://codex-bot-135-home-performance-verify-blog.xw.workers.dev/. GitHub check-run output confirms successful upload and exact SHA. Current-HEAD check and smoke results are maintained in PR #57 for subsequent documentation-only commits. The 38-request/browser result above belongs to source `907004c1f0458eb658c16eb7ae836e770b4146ba` and version `198ff516-2501-40fa-ad67-02ac34fd3a26`; application-tree identity must be checked before reusing it for a documentation-only successor.
 - Comparable five-run mobile/desktop LCP/TBT/CLS reports were not run; no installed Lighthouse CLI or matching base-commit preview was available. No live speed-up or real-user CWV claim is made. Cold provider latency is still unchanged.
 - Desktop column-major packing remains the documented tradeoff. No production deployment, merge, manual remote KV purge/write or content edit was performed; normal public request cache behavior was left intact.
 
