@@ -1,5 +1,7 @@
 # Personal Site Overview Design Spec
 
+> Amendment: `2026-11-09-home-performance-design.md` supersedes the no-pagination and hydration-owned layout requirements for this slice.
+
 ## Summary
 
 Reframe this repository from a standalone public blog into a Personal Site whose primary public surface is one homepage: a Profile Hero followed by a unified masonry Overview Feed.

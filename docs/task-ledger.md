@@ -16,6 +16,36 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-09 - PR Publication and Cloudflare Preview (BOT-135)
+
+Status: publishing the reviewed implementation as a draft PR, then validating the real Cloudflare preview.
+
+- User requested PR publication and autonomous verification on the Cloudflare preview.
+- Confirmed remote `main` remains `c2bc171cdf1a21f5621de1decf1b543b275b603d` and no existing PR uses this worktree branch.
+- Publication-time recheck: `node_modules/.bin/vitest run --maxWorkers=2 --minWorkers=1 --reporter=dot` PASS (38 files, 142 tests); `node_modules/.bin/tsc --noEmit`, `node_modules/.bin/eslint`, and `git diff --check` PASS.
+- The pnpm launcher attempted npm-registry access, which was denied. Existing installed binaries were used for local checks without a package download.
+- A fresh production build was attempted with existing Next.js and optional telemetry disabled, but required Google Fonts access was denied by the current network policy. This build did not complete. The prior successful build above applies to the same application source; live Cloudflare build/preview validation is still required. Neither denied endpoint was retried.
+- No source behavior changes were made during publication preparation. Production deployment and merge are not authorized by this step.
+
+## 2026-11-09 - Homepage Visibility and Pagination (BOT-135)
+
+Status: implemented and verified locally; awaiting publication decision and production performance remeasurement
+
+Summary:
+
+- added server-side filter-before-pagination at 24 items, direct previous/next URLs, and per-page serialization/JSON-LD
+- made SSR content visible immediately using CSS columns and extracted card sizing so the feed does not import the Pretext layout engine
+- retained existing provider/cache behavior, card destinations, chronological DOM order, and reduced-motion support
+- added pagination, metadata and SSR regression coverage; updated the design amendment, plan, SEO spec and roadmap
+
+Verification: 38 files / 142 tests, typecheck, lint, diff check and production build pass. Local HTTP and real desktop/mobile Chrome checks cover page/filter boundaries, history/repeated navigation, no-JavaScript Next navigation, empty state and reduced motion. See `docs/verification.md` for exact evidence and limitations.
+
+Tradeoff: desktop CSS column-major packing differs from the former shortest-column layout. Production performance is not yet remeasured, and synthetic fixture timings are not presented as live-site improvements.
+
+Final worktree: `/Users/sorcererxw/repo/sorcererxw/blog-worktrees/bot-135-home-performance`, branch `codex/bot-135-home-performance-verify`, base `c2bc171cd`. The initial Documents worktree remains preserved after filesystem timeouts. No commit/push/deployment. All local servers/build/test tasks stopped after validation due to low Mac disk space; no cleanup deletion performed.
+
+Next: review the local diff, decide whether to publish, then remeasure the original mobile LCP/desktop blocking/CLS conditions against live data.
+
 ## 2026-05-21 - Homepage Metadata Feed Decoupling
 
 Status: done locally

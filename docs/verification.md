@@ -1,5 +1,31 @@
 # Blog2 Verification Guide
 
+## 2026-11-09 Homepage Visibility and Pagination (BOT-135)
+
+Scope: visible SSR feed content and at most 24 matching entries per page. The original local validation below preceded publication; the user subsequently authorized a PR and Cloudflare preview validation. Production deployment is not included.
+
+Publication-time recheck on November 9: the installed Vitest binary passed all 38 files / 142 tests, followed by TypeScript, ESLint and diff checks. A fresh local Next production build could not complete because the current network policy denied required `fonts.googleapis.com` access. No retry or alternate route to the denied endpoint was attempted. The earlier complete local build result below remains historical evidence for the unchanged application source; Cloudflare preview build/runtime checks remain to be collected.
+
+Original local evidence on `codex/bot-135-home-performance-verify`:
+
+- `pnpm install --offline --frozen-lockfile`: PASS, reused the approved pnpm 10.33.0 dependency cache without downloading packages.
+- `pnpm exec vitest run --maxWorkers=2 --minWorkers=1 --reporter=dot`: PASS (38 files, 142 tests). Includes pagination/order/filter boundaries, SSR links/visibility, bounded route output, metadata/provider separation, and existing article/social/media tests.
+- `pnpm typecheck`, `pnpm lint`, `git diff --check`: PASS.
+- `pnpm build`: PASS. An initial Next generated-type failure for an optional metadata argument was fixed, then tests/typecheck/lint/build were rerun. Existing Wrangler missing-secret/experimental-secret and Next middleware warnings remain. Runtime tests used synthetic local cache data, not real credentials.
+- Local production server `127.0.0.1:3315`: PASS with 90 synthetic entries in local-only KV. Root and page 2 return 24 cards; final page 4 returns 18; page 5 returns 404. Writing page 3 returns 11; Telegram page 2 returns 6; X is a valid empty state; page 0 normalizes to page 1. Root HTML is 71,576 bytes for this fixture and includes the ready feed markup and discovery header. These bytes are not comparable with the production content baseline.
+- Canonicals: unfiltered page 2 is `https://sorcererxw.com/?page=2`; filtered pages retain `https://sorcererxw.com/`. Real previous/next anchors preserve filters. Pagination and SSR JSON-LD include only the current page.
+- Real Chrome QA: 1280x900 shows 3 columns and 390x844 shows 1, with no horizontal document overflow and opacity 1. Next, filter-reset-to-first-page, Back/Forward, repeated filter changes, Telegram final page, and empty X state passed.
+- JavaScript-disabled reload rendered readable cards; native Next activation navigated Writing page 1 to page 2 and showed entry 24. DOM-based automation needs JavaScript, so native browser activation was used for that check. JavaScript and viewport overrides were restored afterward.
+- Reduced motion: confirmed `animation: none` and `transition-duration: 0s`. Captured console warnings/errors were from installed Chrome extensions, not the local application.
+
+Limits and follow-up:
+
+- Production LCP/TBT/CLS have not been remeasured under the original PSI conditions because this slice is not deployed. No numerical performance improvement is claimed. Image-heavy live data and provider cold-cache behavior still need deployment/staging validation.
+- CSS columns read down each column then across, so desktop packing differs from the former shortest-column layout; DOM/keyboard chronology is preserved. The feed client no longer imports Pretext layout code or waits for width measurement/hydration to become visible.
+- The initial Documents worktree developed macOS Errno 60 read/write timeouts. It was preserved; final work is in `/Users/sorcererxw/repo/sorcererxw/blog-worktrees/bot-135-home-performance`. A fresh worktree there removed the filesystem stalls.
+- The local fixture write completed before optional Wrangler telemetry to `sparrow.cloudflare.com` was denied. No retry was made to that endpoint; all four local fixture blob hashes were verified. No remote KV writes were performed.
+- The QA server and all build/test commands were stopped after validation when the Mac reported low disk space. No files were deleted for cleanup.
+
 ## 2026-05-21 Homepage Metadata / Feed Boundary
 
 Current homepage metadata shape:

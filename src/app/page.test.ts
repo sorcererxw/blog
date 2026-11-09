@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   loadNotionHomePage: vi.fn(async () => ({
@@ -8,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/components/feed/overview-feed-view", () => ({
-  OverviewFeed: () => null,
+  OverviewFeed: ({ items, pagination }: { items: Array<{ id: string }>; pagination: { page: number } }) =>
+    createElement("div", { "data-feed-page": pagination.page }, items.map((item) => createElement("article", { key: item.id }, item.id))),
 }));
 
 vi.mock("@/components/home/profile-hero", () => ({
@@ -53,11 +56,13 @@ import { listProjects } from "@/domains/projects/list-projects";
 import { listStoredXSocialPosts } from "@/domains/social/x-sync";
 import { listThoughts } from "@/domains/thoughts/list-thoughts";
 
-import { generateMetadata } from "./page";
+import HomePage, { generateMetadata } from "./page";
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("homepage metadata", () => {
   it("does not load the provider-backed Overview Feed", async () => {
-    const metadata = await generateMetadata();
+    const metadata = await generateMetadata({});
 
     expect(metadata.description).toBe("Home intro description");
     expect(mocks.loadNotionHomePage).toHaveBeenCalledTimes(1);
@@ -65,5 +70,28 @@ describe("homepage metadata", () => {
     expect(listProjects).not.toHaveBeenCalled();
     expect(listThoughts).not.toHaveBeenCalled();
     expect(listStoredXSocialPosts).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("homepage paged response", () => {
+  it("keeps page metadata independent of feed data and gives page two its own canonical", async () => {
+    const metadata = await generateMetadata({ searchParams: Promise.resolve({ page: "2" }) });
+    expect(metadata.alternates?.canonical).toBe("https://sorcererxw.com/?page=2");
+    expect(listArticles).not.toHaveBeenCalled();
+    expect(listThoughts).not.toHaveBeenCalled();
+  });
+
+  it("passes only the requested page into rendering and JSON-LD", async () => {
+    vi.mocked(listArticles).mockResolvedValueOnce(Array.from({ length: 59 }, (_, index) => ({
+      slug: `entry-${index}`, title: `Entry ${index}`, summary: `Summary ${index}`,
+      date: new Date(2026, 0, 59 - index),
+    })));
+    const markup = renderToStaticMarkup(await HomePage({ searchParams: Promise.resolve({ page: "2" }) }));
+    expect(markup.match(/<article>/g)).toHaveLength(24);
+    expect(markup).toContain("article:entry-24");
+    expect(markup).toContain("article:entry-47");
+    expect(markup).not.toContain("entry-23");
+    expect(markup).not.toContain("entry-48");
   });
 });

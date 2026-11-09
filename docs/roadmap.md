@@ -1,5 +1,9 @@
 # Personal Site Roadmap
 
+## Current Performance Slice
+
+BOT-135: implement immediate SSR visibility and 24-item filtered pagination under `docs/specs/2026-11-09-home-performance-design.md`. Implementation and local aggregate/HTTP/browser validation are complete in the independent verification worktree. The user has authorized a PR and validation on its Cloudflare preview. Preview validation and comparable performance remeasurement are the next step; production deployment and merge are not included.
+
 ## Mission
 
 Maintain the standalone Personal Site application in `/Users/sorcererxw/repo/sorcererxw/blog`, deployed on Cloudflare.
@@ -188,7 +192,7 @@ Exit criteria:
 - compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
 - article detail pages may render trusted authored HTML only from Notion `html` code blocks whose text starts with `<!--render-->`; all other code blocks remain display code
 - feed UI primitives and tokens have migrated from the local shadcn/Base UI component set to HeroUI v3 under `docs/specs/2026-05-18-heroui-design-system-migration-design.md`; `src/components/ui/*`, `components.json`, `shadcn/tailwind.css`, and the old shadcn/Base UI dependencies are no longer part of the active source tree
-- Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
+- Overview Feed uses visible SSR and CSS columns for its bounded page; the previous client-estimated Pretext layout is superseded by the 2026-11-09 performance amendment
 - Overview Feed cards use client-side card-surface navigation, while the SEO-visible destination anchor lives on the timestamp to avoid nested `<a>` markup around rich-text links
 - ordinary app/domain component styling should use inline Tailwind utilities; CSS modules are reserved for rich text selectors, generated markup selectors, animation keyframes, and documented exceptions; font size, tracking, leading, padding, margin, gap, rounded, and ring utilities should use named Tailwind/HeroUI tokens rather than arbitrary values
 - current SEO/GEO discovery is defined by `docs/specs/2026-05-18-sitewide-seo-geo-design.md`; filter URLs are browse states that canonicalize to `/`, while sitemap discovery remains `/` plus article detail URLs

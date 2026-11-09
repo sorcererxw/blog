@@ -1,3 +1,6 @@
+import { getFeedModuleSize } from "./feed-module-size";
+export { getFeedModuleSize } from "./feed-module-size";
+
 import { layout, prepare, type PreparedText } from "@chenglou/pretext";
 
 import type {
@@ -87,17 +90,7 @@ const DEFAULT_MEDIA_RATIO = 10 / 16;
 
 const preparedTextCache = new Map<string, PreparedText>();
 
-export function getFeedModuleSize(item: FeedLayoutItem): ModuleSize {
-  if (item.presentationIntent === "feature") {
-    return "feature";
-  }
 
-  if (item.type === "social" && item.media.length === 0) {
-    return "compact";
-  }
-
-  return "standard";
-}
 
 export const flattenFeedRichText = (segments: FeedRichTextSegment[] = []) =>
   segments.map((segment) => segment.plainText).join("");

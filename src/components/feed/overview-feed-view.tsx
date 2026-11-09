@@ -15,10 +15,8 @@ import {
 } from "react";
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
-import {
-  assignFeedLayout,
-  getFeedModuleSize,
-} from "@/domains/feed/feed-layout-engine";
+import { getFeedModuleSize } from "@/domains/feed/feed-module-size";
+import type { FeedPagination } from "@/domains/feed/feed-pagination";
 import type { OverviewFeedViewItem } from "@/domains/feed/overview-feed-view-model";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +33,7 @@ import type {
 type OverviewFeedProps = {
   initialFilter: FeedFilter;
   items: OverviewFeedViewItem[];
+  pagination?: FeedPagination;
 };
 
 type TransitionState = "active" | "enter" | "exit";
@@ -81,19 +80,6 @@ function normalizeFilter(filter: FeedFilter): FeedFilter {
     source: filter.source || null,
     type: filter.type || null,
   };
-}
-
-function parseFilterFromLocation() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const type = searchParams.get("type");
-
-  return normalizeFilter({
-    source: searchParams.get("source"),
-    type:
-      type === "writing" || type === "projects" || type === "social"
-        ? type
-        : null,
-  });
 }
 
 function matchesFilter(item: OverviewFeedViewItem, filter: FeedFilter) {
@@ -465,18 +451,6 @@ function FeedModule({
   return <article>{surface}</article>;
 }
 
-function getColumnCount(width: number) {
-  if (width >= 1024) {
-    return 3;
-  }
-
-  if (width >= 640) {
-    return 2;
-  }
-
-  return 1;
-}
-
 function buildTransitionStates(
   items: OverviewFeedViewItem[],
   state: TransitionState,
@@ -494,10 +468,8 @@ function mergeItemsForExit(
   return [...nextItems, ...exitingItems];
 }
 
-export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
-  const [filter, setFilter] = useState<FeedFilter>(() =>
-    normalizeFilter(initialFilter),
-  );
+export function OverviewFeed({ initialFilter, items, pagination }: OverviewFeedProps) {
+  const filter = useMemo(() => normalizeFilter(initialFilter), [initialFilter]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesFilter(item, filter)),
     [filter, items],
@@ -517,42 +489,8 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
     Record<string, TransitionState>
   >(() => buildTransitionStates(filteredItems, "active"));
   const previousItemsRef = useRef(filteredItems);
-  const feedRegionRef = useRef<HTMLDivElement | null>(null);
   const didMountRef = useRef(false);
   const transitionTimerRef = useRef<number | null>(null);
-  const [containerWidth, setContainerWidth] = useState<number | null>(null);
-
-  useEffect(() => {
-    const handlePopState = () => {
-      setFilter(parseFilterFromLocation());
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
-  useEffect(() => {
-    const node = feedRegionRef.current;
-
-    if (!node) {
-      return;
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const [entry] = entries;
-
-      if (entry) {
-        setContainerWidth(entry.contentRect.width);
-      }
-    });
-
-    observer.observe(node);
-    setContainerWidth(node.getBoundingClientRect().width);
-
-    return () => observer.disconnect();
-  }, []);
-
   useEffect(() => {
     if (!didMountRef.current) {
       didMountRef.current = true;
@@ -589,34 +527,12 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
       setRenderedItems(filteredItems);
       setTransitionStates(buildTransitionStates(filteredItems, "active"));
     }, 220);
+
+    return () => {
+      if (transitionTimerRef.current) window.clearTimeout(transitionTimerRef.current);
+    };
   }, [filteredItems]);
 
-  const handleFilterClick =
-    (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-      event.preventDefault();
-      const url = new URL(href, window.location.origin);
-
-      window.history.pushState(
-        null,
-        "",
-        `${url.pathname}${url.search}${url.hash}`,
-      );
-      setFilter(parseFilterFromLocation());
-    };
-  const columnCount = containerWidth ? getColumnCount(containerWidth) : 1;
-  const hydratedLayout = useMemo(
-    () =>
-      containerWidth && columnCount > 1
-        ? assignFeedLayout(renderedItems, {
-            columnCount,
-            containerWidth,
-            gap: 8,
-          })
-        : null,
-    [columnCount, containerWidth, renderedItems],
-  );
-  const isFeedLayoutReady =
-    containerWidth !== null && (columnCount === 1 || hydratedLayout !== null);
   const activeFilterKey =
     filterLinks.find((link) => link.matches(filter))?.key ?? "all";
 
@@ -647,7 +563,8 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                           {...linkProps}
                           data-overview-filter-link
                           href={link.href}
-                          onClick={handleFilterClick(link.href)}
+                          prefetch={false}
+                          scroll={false}
                         />
                       );
                     }}
@@ -661,62 +578,20 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
           </Tabs.ListContainer>
         </Tabs>
       </div>
-      <div aria-live="polite" data-overview-feed-region ref={feedRegionRef}>
-        <noscript>
-          <style>{`[data-overview-feed-reveal="pending"]{opacity:1!important}`}</style>
-        </noscript>
+      <div aria-live="polite" data-overview-feed-region>
         {renderedItems.length > 0 ? (
-          <div
-            className={cn(
-              "transition-opacity duration-300 ease-out",
-              isFeedLayoutReady ? "opacity-100" : "opacity-0",
-            )}
-            data-overview-feed-reveal={isFeedLayoutReady ? "ready" : "pending"}
-          >
-            {hydratedLayout ? (
-              <div
-                className="mt-4 grid gap-2"
-                data-feed-layout="hydrated-masonry"
-                style={{
-                  gridTemplateColumns: `repeat(${hydratedLayout.columns.length}, minmax(0, 1fr))`,
-                }}
-              >
-                {hydratedLayout.columns.map((column, columnIndex) => (
-                  <div className="flex flex-col gap-2" key={columnIndex}>
-                    {column.items.map(({ item }) => (
-                      <div
-                        className={masonryStyles.cell}
-                        data-feed-transition={transitionStates[item.id]}
-                        key={item.id}
-                      >
-                        <FeedModule
-                          eagerMedia={eagerMediaIds.has(item.id)}
-                          item={item}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div
-                className="mt-4 flex flex-col gap-2"
-                data-feed-layout="fallback-single-column"
-              >
-                {renderedItems.map((item) => (
-                  <div
-                    className={masonryStyles.cell}
-                    data-feed-transition={transitionStates[item.id]}
-                    key={item.id}
-                  >
-                    <FeedModule
-                      eagerMedia={eagerMediaIds.has(item.id)}
-                      item={item}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+          <div data-overview-feed-reveal="ready">
+            <div className={masonryStyles.paginatedGrid} data-feed-layout="css-masonry">
+              {renderedItems.map((item) => (
+                <div
+                  className={masonryStyles.cell}
+                  data-feed-transition={transitionStates[item.id]}
+                  key={item.id}
+                >
+                  <FeedModule eagerMedia={eagerMediaIds.has(item.id)} item={item} />
+                </div>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-separator p-8 text-muted">
@@ -724,6 +599,21 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
           </div>
         )}
       </div>
+      {pagination && pagination.totalPages > 1 ? (
+        <nav aria-label="Feed pagination" className="mt-6 flex items-center justify-between gap-4">
+          {pagination.previousHref ? (
+            <NextLink href={pagination.previousHref} prefetch={false} rel="prev" className="underline underline-offset-4">
+              Previous
+            </NextLink>
+          ) : <span />}
+          <span aria-current="page">Page {pagination.page} of {pagination.totalPages}</span>
+          {pagination.nextHref ? (
+            <NextLink href={pagination.nextHref} prefetch={false} rel="next" className="underline underline-offset-4">
+              Next
+            </NextLink>
+          ) : <span />}
+        </nav>
+      ) : null}
     </section>
   );
 }

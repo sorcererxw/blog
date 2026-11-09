@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 
 import { listArticles } from "@/domains/article/list-articles";
+import { buildOverviewFeedIndex } from "@/domains/feed/overview-feed";
 import {
-  buildOverviewFeedIndex,
-  parseFeedFilter,
-} from "@/domains/feed/overview-feed";
+  getFeedRequest,
+  getFeedCanonicalPath,
+  paginateFeed,
+  type FeedSearchParams,
+} from "@/domains/feed/feed-pagination";
 import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-serialization";
 import { listStoredXSocialPosts } from "@/domains/social/x-sync";
 import { OverviewFeed } from "@/components/feed/overview-feed-view";
@@ -43,7 +47,7 @@ import { seoToMetadata, StructuredDataScripts } from "./seo";
 
 export const revalidate = 600;
 
-type HomeSearchParams = Promise<Record<string, string | string[] | undefined>>;
+type HomeSearchParams = Promise<FeedSearchParams>;
 
 const FALLBACK_HOME_DESCRIPTION =
   "A personal site overview with writing, projects, and public notes from sorcererxw.";
@@ -56,34 +60,36 @@ const getHomeSeoDescription = (homePage: HomePageRecord) => {
     : description;
 };
 
-const buildHomeMetadataSeo = (homePage: HomePageRecord) =>
+const buildHomeMetadataSeo = (homePage: HomePageRecord, pathname = "/") =>
   buildSeo({
     description: getHomeSeoDescription(homePage),
     kind: "home",
-    pathname: "/",
+    pathname,
     title: SITE_NAME,
   });
 
 const buildHomePageSeo = ({
   feedStructuredDataItems,
   homePage,
+  pathname,
 }: {
   feedStructuredDataItems: Array<{ name: string; url: string }>;
   homePage: HomePageRecord;
+  pathname: string;
 }) => {
   const seoDescription = getHomeSeoDescription(homePage);
 
   return buildSeo({
     description: seoDescription,
     kind: "home",
-    pathname: "/",
+    pathname,
     structuredData: [
       buildWebsiteStructuredData(seoDescription),
       buildPersonStructuredData(seoDescription),
       ...buildCollectionPageStructuredData({
         description: seoDescription,
         items: feedStructuredDataItems,
-        pathname: "/",
+        pathname,
         title: "Personal Site overview feed",
       }),
     ],
@@ -91,17 +97,17 @@ const buildHomePageSeo = ({
   });
 };
 
-async function loadHomeMetadataSeo() {
+async function loadHomeMetadataSeo(pathname: string) {
   const providerCache = await createPublicProviderCache();
   const homeSource = withCachedHomeSource(
     createNotionHomeSource(loadNotionHomePage),
     providerCache,
   );
 
-  return buildHomeMetadataSeo(await homeSource.loadHomePage());
+  return buildHomeMetadataSeo(await homeSource.loadHomePage(), pathname);
 }
 
-async function loadHomeData(searchParams?: Record<string, string | string[] | undefined>) {
+async function loadHomeData(searchParams?: FeedSearchParams) {
   const providerCache = await createPublicProviderCache();
   const env = await getWorkerEnv();
   const homeSource = withCachedHomeSource(
@@ -124,21 +130,16 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     thoughtProvider(),
     xPostsPromise,
   ]);
-  const url = new URL("https://sorcererxw.com/");
-
-  for (const [key, value] of Object.entries(searchParams ?? {})) {
-    if (typeof value === "string") {
-      url.searchParams.set(key, value);
-    }
-  }
-
+  const { filter, page } = getFeedRequest(searchParams);
   const overviewFeedItems = buildOverviewFeedIndex({
     articles,
     projects,
     thoughts,
     xPosts,
   });
-  const feedStructuredDataItems = overviewFeedItems
+  const feedPage = paginateFeed(overviewFeedItems, filter, page);
+  if (feedPage.outOfRange) notFound();
+  const feedStructuredDataItems = feedPage.items
     .flatMap((item) => {
       if (item.destination.kind === "none") {
         return [];
@@ -161,18 +162,23 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
   const seo = buildHomePageSeo({
     feedStructuredDataItems,
     homePage,
+    pathname: getFeedCanonicalPath(filter, page),
   });
 
   return {
-    feedItems: serializeOverviewFeedItems(overviewFeedItems),
-    filter: parseFeedFilter(url),
+    feedItems: serializeOverviewFeedItems(feedPage.items),
+    filter,
+    pagination: feedPage.pagination,
     homePage,
     seo,
   };
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  return seoToMetadata(await loadHomeMetadataSeo());
+export async function generateMetadata(
+  { searchParams }: { searchParams?: HomeSearchParams },
+): Promise<Metadata> {
+  const { filter, page } = getFeedRequest(await searchParams);
+  return seoToMetadata(await loadHomeMetadataSeo(getFeedCanonicalPath(filter, page)));
 }
 
 export default async function HomePage({
@@ -181,13 +187,13 @@ export default async function HomePage({
   searchParams: HomeSearchParams;
 }) {
   const params = await searchParams;
-  const { feedItems, filter, homePage, seo } = await loadHomeData(params);
+  const { feedItems, filter, pagination, homePage, seo } = await loadHomeData(params);
 
   return (
     <>
       <StructuredDataScripts seo={seo} />
       <ProfileHero blocks={homePage.blocks} />
-      <OverviewFeed initialFilter={filter} items={feedItems} />
+      <OverviewFeed initialFilter={filter} items={feedItems} pagination={pagination} />
     </>
   );
 }

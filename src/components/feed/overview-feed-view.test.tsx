@@ -100,10 +100,10 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
     expect(markup).toContain('data-size="standard"');
     expect(markup).not.toContain('data-size="compact"');
-    expect(markup).toContain('data-feed-layout="fallback-single-column"');
-    expect(markup).toContain('data-overview-feed-reveal="pending"');
-    expect(markup).toContain("opacity-0");
-    expect(markup).toContain('[data-overview-feed-reveal="pending"]{opacity:1!important}');
+    expect(markup).toContain('data-feed-layout="css-masonry"');
+    expect(markup).toContain('data-overview-feed-reveal="ready"');
+    expect(markup).not.toContain("opacity-0");
+    expect(markup).not.toContain("<noscript>");
     expect(markup).toMatch(/class="[^"]*_cell_[^"]*"/);
     expect(markup).toContain('data-feed-transition="active"');
     expect(markup).not.toContain("content-visibility");
@@ -112,6 +112,19 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain("Hidden Telegram title");
     expect(markup).toMatch(/✦[\s\S]*A feed item/);
     expect(markup.indexOf("Feed item summary")).toBeLessThan(markup.indexOf("May 1, 2026"));
+  });
+
+  it("renders crawlable pagination without sending hidden pages to the client", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed initialFilter={{}} items={serializeOverviewFeedItems([item()])}
+        pagination={{ page: 2, totalPages: 3, previousHref: "/", nextHref: "/?page=3" }} />,
+    );
+    expect(markup).toContain('aria-label="Feed pagination"');
+    expect(markup).toContain('rel="prev"');
+    expect(markup).toContain('rel="next"');
+    expect(markup).toContain('href="/?page=3"');
+    expect(markup).toContain('Page 2 of 3');
+    expect(markup.match(/<article>/g)).toHaveLength(1);
   });
 
   it("renders Notion project emoji before the overview title", () => {
