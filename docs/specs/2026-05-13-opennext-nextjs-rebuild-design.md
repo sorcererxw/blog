@@ -22,7 +22,7 @@ This is a framework and deployment-layer replacement. It keeps the current Perso
 - local app development: `next dev`
 - worker preview/deploy: OpenNext Cloudflare CLI
 - styling: keep Tailwind 4 and existing CSS modules where already approved
-- fonts: load Google font families through `next/font/google` in the root layout and expose them as CSS variables consumed by Tailwind theme tokens
+- fonts: as amended by `2026-11-09-home-performance-design.md`, load vendored Libre Bodoni/Courier Prime Latin fonts through `next/font/local` in the root layout and expose them as the existing CSS variables consumed by Tailwind theme tokens; builds do not fetch Google font assets
 - UI reuse: keep existing React domain components
 
 OpenNext Cloudflare requirements for this rebuild:

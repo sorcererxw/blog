@@ -1,22 +1,25 @@
 import "./globals.css";
 
 import type { ReactNode } from "react";
-import { Courier_Prime, Libre_Bodoni } from "next/font/google";
+import localFont from "next/font/local";
 
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteHeader } from "@/components/shell/site-header";
 import { cn } from "@/lib/utils";
 
-const headingFont = Libre_Bodoni({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const headingFont = localFont({
+  src: "./fonts/libre-bodoni-latin-variable.woff2",
+  weight: "400 600",
+  adjustFontFallback: "Times New Roman",
   variable: "--font-heading-system",
   display: "swap",
 });
 
-const courierPrimeFont = Courier_Prime({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const courierPrimeFont = localFont({
+  src: [
+    { path: "./fonts/courier-prime-latin-400.woff2", weight: "400" },
+    { path: "./fonts/courier-prime-latin-700.woff2", weight: "700" },
+  ],
   variable: "--font-courier-prime-system",
   display: "swap",
 });

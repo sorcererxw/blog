@@ -2,7 +2,7 @@
 
 ## Scope
 
-BOT-135 implements the approved first two performance improvements: visible server-rendered content and a 24-item homepage page. This amendment supersedes the no-pagination and hydration-owned layout sections of the overview spec. Notion/Telegram/X ingestion, cache policy, card meaning and destinations, and deployment are unchanged.
+BOT-135 implements the approved first two performance improvements: visible server-rendered content and a 24-item homepage page. This amendment supersedes the no-pagination and hydration-owned layout sections of the overview spec. Notion/Telegram/X ingestion, cache policy, card meaning and destinations, and production routing are unchanged.
 
 ## Behavior
 
@@ -18,3 +18,11 @@ BOT-135 implements the approved first two performance improvements: visible serv
 ## Verification
 
 Cover all-page traversal/order, filtering before slicing, final/empty/invalid pages, href/canonical behavior, bounded route output, and metadata/provider separation. Run full tests, lint, typecheck, production build, HTTP and real-browser navigation/no-JS/mobile/desktop QA. Report any unrun stage and do not infer LCP/TBT/CLS improvements without comparable measurements.
+
+## Preview build repair amendment
+
+After network restrictions were lifted, the exact candidate `aabe11714cbd2956b4bfbfbc35b4561e841e8fb3` reached Cloudflare build `3dc0dd3f-6c8a-49ac-ad35-2ab16fcccbe4`. It failed inside Next 16.2.6's Google font loader at extension extraction (`Cannot read properties of null (reading '1')`). Local Google CSS requests now succeed, so this is not reported as another network-policy denial or as a locally reproduced font API regression.
+
+Keep Libre Bodoni heading weights 400–600 and Courier Prime display/code weights 400/700, existing CSS variables and `display: swap`. Vendor the requested Latin WOFF2 fonts with upstream OFL licenses/provenance and load them through `next/font/local`, removing Google font fetching from future builds. Other scripts, CJK and unsupported glyphs continue to use fallback fonts. Verify rendered typography, generated assets and font loading on the real preview.
+
+A preview version must include OpenNext-generated `.open-next/worker.js` and assets. Saving a shared Cloudflare version-command change was rejected by automatic review because the production-service settings page made its blast radius unclear; the edit was discarded and the original command retained. The safer path builds locally in standalone mode, packages with OpenNext, and runs only `wrangler versions upload` for a preview version, without changing shared build settings or deploying production. This is a preview prerequisite, not a redesign of the content/cache path.
