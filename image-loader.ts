@@ -1,5 +1,7 @@
 import type { ImageLoaderProps } from "next/image";
 
+import { CLOUDFLARE_IMAGE_ORIGIN } from "./src/lib/images/transform-origin";
+
 const VOLATILE_HOST_PATTERNS = [
   /^cdn\d+\.telesco\.pe$/i,
   /^secure\.notion-static\.com$/i,
@@ -122,5 +124,5 @@ export default function cloudflareLoader({ src, width, quality }: ImageLoaderPro
     params.push(`quality=${quality}`);
   }
 
-  return `/cdn-cgi/image/${params.join(",")}/${normalizeSrc(targetSrc)}`;
+  return `${CLOUDFLARE_IMAGE_ORIGIN}/cdn-cgi/image/${params.join(",")}/${normalizeSrc(targetSrc)}`;
 }

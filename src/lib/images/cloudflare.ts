@@ -3,6 +3,8 @@ import {
   resolveCanonicalImageAsset,
 } from "@/domains/media/canonical-image";
 
+import { CLOUDFLARE_IMAGE_ORIGIN } from "./transform-origin";
+
 export type CloudflareImagePreset =
   | "hero"
   | "article-card"
@@ -128,7 +130,7 @@ export function buildCloudflareImageUrl(
     width,
   });
 
-  return `/cdn-cgi/image/${imageOptions}/${encodeSourceForCloudflare(targetUrl)}`;
+  return `${CLOUDFLARE_IMAGE_ORIGIN}/cdn-cgi/image/${imageOptions}/${encodeSourceForCloudflare(targetUrl)}`;
 }
 
 export function buildCloudflareImageSrcSet(

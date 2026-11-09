@@ -26,3 +26,11 @@ The user confirmed the network restriction was lifted. The original push succeed
 2. Run installed tests, lint, typecheck and a production/OpenNext build. Do not use mocked font responses or suppress build errors.
 3. Keep the shared Cloudflare configuration unchanged: automatic review rejected saving the version-command edit, and the unsaved edit was discarded. Build locally with `NEXT_PRIVATE_STANDALONE=true`, package with `opennextjs-cloudflare build --skipNextBuild`, then use preview-only `wrangler versions upload` with exact-commit metadata. Record the current production deployment before/after; do not run `deploy` or `versions deploy`.
 4. Commit and push the repair, confirm the new exact SHA and successful Cloudflare version upload, then run HTTP/browser acceptance on the actual preview URL. Update PR description and living docs with results and limitations.
+
+## Real-preview image repair
+
+Preview version `f2b5d71e-0ab9-4f37-b5c5-73501b29ef3b` maps to source `a85d3aa6deaf874b5c433c618ff8db71b2c92d84`. HTTP pagination and SEO pass on real content, but stable image transforms are 404 under workers.dev and 200 under the existing public image zone.
+
+1. Share a small fixed Cloudflare image origin between both image URL builders; leave bypass/canonical-media behavior intact.
+2. Add a regression assertion for workers.dev URL resolution, run image/feed tests, lint, typecheck and the standalone/OpenNext build.
+3. Push the repair and upload another preview-only version with exact-SHA metadata. Recheck decoded media, responsive rendering, links, no-JS and history; record earlier failing and final evidence separately.

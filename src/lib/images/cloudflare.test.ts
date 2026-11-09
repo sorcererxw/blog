@@ -15,6 +15,7 @@ describe("cloudflare image loader", () => {
 
     expect(url).toContain("/cdn-cgi/image/");
     expect(url).toContain("format=auto");
+    expect(new URL(url, "https://preview-blog.xw.workers.dev/").origin).toBe("https://sorcererxw.com");
     expect(url).toContain("images.unsplash.com");
   });
 
@@ -26,7 +27,7 @@ describe("cloudflare image loader", () => {
     );
 
     expect(url).toBe(
-      "/cdn-cgi/image/fit=cover,format=auto,quality=82,width=384/https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
+      "https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=384/https://pbs.twimg.com/media/HIv1eC8bYAARyvw.jpg",
     );
   });
 
