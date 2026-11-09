@@ -2,7 +2,7 @@
 
 ## Current Performance Slice
 
-BOT-135: the user rejected numbered pagination and requested continuous loading. The active replacement is `docs/specs/2026-11-09-home-feed-streaming-design.md`, planned in `docs/plans/2026-11-09-home-feed-streaming.md`: visible SSR first batch, scroll-triggered append, filter reset and real Load more fallback. PR #57 remains draft while this replacement is implemented and verified on its exact Cloudflare preview. Earlier pagination QA is historical; retain the verified font/image-origin and preview-build repairs. Production deployment/merge remain outside scope; comparable LCP/TBT/CLS measurement remains pending.
+BOT-135: continuous loading is implemented and functionally verified on exact application commit `028bfacf5e3e65a9845434c60ca99e01c1f1f0d5`, automatic Cloudflare version `7bec91b5-0331-4ee2-9ea2-84ffe969e754` (https://7bec91b5-blog.xw.workers.dev/). The first 24 entries are visible SSR; scrolling appends batches without numbered pages, URL changes or moving earlier cards. Filter reset, cancellation/retry, responsive layouts and no-JS continuation passed. Active contract: `docs/specs/2026-11-09-home-feed-streaming-design.md`; execution/evidence: `docs/plans/2026-11-09-home-feed-streaming.md`, task ledger and verification guide. Draft PR #57 tracks the exact current-HEAD build/preview smoke for documentation-only successors. Production deployment and merge remain outside scope; comparable LCP/TBT/CLS measurement remains pending. Earlier pagination QA is historical. Retain the verified font/image-origin and preview-build repairs.
 
 ## Mission
 
