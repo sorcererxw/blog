@@ -53,3 +53,16 @@ export function middleware(request: NextRequest) {
 
   return NextResponse.redirect(new URL(destination, request.url), 308);
 }
+
+export const config = {
+  matcher: [
+    "/projects",
+    "/projects/:path*",
+    "/thoughts",
+    "/thoughts/:path*",
+    "/en",
+    "/en/:path*",
+    "/zh",
+    "/zh/:path*",
+  ],
+};

@@ -12,6 +12,7 @@ The product direction is now overview-first: one public homepage with a Profile 
 - the rebuild keeps the Personal Site product model from `docs/specs/2026-05-12-personal-site-overview-design.md`
 - `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md` replaces the checked-in Telegram snapshot flow with runtime public-page crawling plus Next revalidation
 - `docs/specs/2026-05-18-provider-kv-cache-design.md` keeps external provider caching at the route assembly boundary through thin `BLOG_CACHE` wrappers instead of embedding cache policy inside Notion or Telegram providers
+- `docs/specs/2026-11-25-zero-cost-performance-optimization-design.md` upgrades `BLOG_CACHE` provider wrappers to logical SWR with incremental Telegram refresh, adds single-key X feed snapshots (`social:x:feed:v1`), adds free build-scoped Cloudflare `caches.default` HTML edge caching in `src/worker.ts`, slims Shiki to `shiki/core` with a singleton highlighter, fixes `/media/[id]` edge/browser caching, and prunes unused HeroUI CSS and redundant `/media/` `srcSet` markup with zero UI/UX or cost changes
 - repository extraction from `tempura/web/apps/blog2` to standalone `/Users/sorcererxw/repo/sorcererxw/blog` happened on 2026-05-04 with `blog2` history preserved
 - the previous Astro migration remains historical context, not the target architecture
 
@@ -52,7 +53,9 @@ Excluded:
 - Source of truth for Blog Entries and Projects: Notion through Wrangler-owned database id vars unless a later source-specific spec changes this
 - Source of truth for Social Posts: their external Social Sources; Telegram currently uses public `t.me/s/tech_bb` pages
 - App-owned derived storage: Cloudflare KV or the existing storage abstraction
-- Public route provider acceleration: Cloudflare KV wraps external providers at assembly time with a ten minute TTL
+- Public route provider acceleration: Cloudflare KV wraps external providers at assembly time with a ten minute logical freshness window, 7-day physical retention, and `waitUntil` SWR background revalidation (plus incremental page-1 Telegram refresh and daily full reconcile)
+- X Social Post reads use a single durable `social:x:feed:v1` snapshot key in `BLOG_CACHE` (with bulk KV fallback and lazy backfill), eliminating N+1 sequential KV reads on `/`
+- Worker edge HTML caching: `src/worker.ts` uses free Cloudflare `caches.default` keyed by `BUILD_ID` + canonical path/filter query for public HTML documents and `/sitemap.xml` with 10-minute logical freshness and `waitUntil` SWR, bypassing Next RSC router requests
 - Overview Feed Index freshness target: ten minutes
 - Telegram public-page crawl freshness target: ten minutes through Next fetch revalidation
 - Future escape hatch: optional partial migration to D1 if KV-only storage becomes too awkward for async workflows

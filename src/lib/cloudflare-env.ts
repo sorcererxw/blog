@@ -30,6 +30,22 @@ export async function getWorkerEnv(): Promise<Partial<CloudflareEnv>> {
   }
 }
 
+export function waitUntilInWorker(promise: Promise<unknown>): void {
+  const safePromise = promise.catch(() => undefined);
+
+  try {
+    const context = getCloudflareContext();
+    if (context?.ctx && typeof context.ctx.waitUntil === "function") {
+      context.ctx.waitUntil(safePromise);
+      return;
+    }
+  } catch {
+    // Fall through when called outside an active Cloudflare Worker request context.
+  }
+
+  void safePromise;
+}
+
 export function getAppEnvironment(env: Partial<CloudflareEnv> = getWorkerEnvSync()): AppEnvironment {
   const value = env.APP_ENV;
 

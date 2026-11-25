@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
 import { ArticleDetailView } from "@/components/article/article-detail-view";
 import { getArticleBySlug } from "@/domains/article/get-article-by-slug";
@@ -20,7 +21,7 @@ export const revalidate = 600;
 
 type ArticleParams = Promise<{ slug: string }>;
 
-async function loadArticle(slug: string) {
+const loadArticle = cache(async (slug: string) => {
   const providerCache = await createPublicProviderCache();
 
   return getArticleBySlug({
@@ -30,7 +31,7 @@ async function loadArticle(slug: string) {
     ),
     slug,
   });
-}
+});
 
 function buildArticleSeo(article: NonNullable<Awaited<ReturnType<typeof loadArticle>>>, pathname: string) {
   const image = article.cover

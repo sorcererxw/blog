@@ -1,6 +1,10 @@
 import NextImage from "next/image";
 
 import {
+  isCanonicalImageCandidate,
+  resolveCanonicalImageAsset,
+} from "@/domains/media/canonical-image";
+import {
   getDefaultImageSizes,
   getCloudflareImagePreset,
   type CloudflareImagePreset,
@@ -32,6 +36,11 @@ export function ResponsiveRemoteImage({
   const presetConfig = getCloudflareImagePreset(preset);
   const imageWidth = width ?? presetConfig.width;
   const imageHeight = height ?? Math.round(presetConfig.width * 0.625);
+  const shouldUseDirectCanonicalMedia =
+    process.env.NODE_ENV === "production" && isCanonicalImageCandidate(src);
+  const resolvedSrc = shouldUseDirectCanonicalMedia
+    ? resolveCanonicalImageAsset(src).canonicalUrl
+    : src;
 
   return (
     <NextImage
@@ -40,8 +49,9 @@ export function ResponsiveRemoteImage({
       fetchPriority={fetchPriority}
       height={imageHeight}
       loading={loading ?? (fetchPriority === "high" ? "eager" : "lazy")}
-      sizes={sizes ?? getDefaultImageSizes(preset)}
-      src={src}
+      sizes={shouldUseDirectCanonicalMedia ? undefined : (sizes ?? getDefaultImageSizes(preset))}
+      src={resolvedSrc}
+      unoptimized={shouldUseDirectCanonicalMedia || undefined}
       width={imageWidth}
     />
   );

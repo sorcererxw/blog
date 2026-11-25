@@ -1,9 +1,12 @@
 "use client";
 
 import NextLink from "next/link";
-import { Card, Chip, Tabs } from "@heroui/react";
+import { Card } from "@heroui/react/card";
+import { Chip } from "@heroui/react/chip";
+import { Tabs } from "@heroui/react/tabs";
 import {
   Fragment,
+  memo,
   useEffect,
   useMemo,
   useRef,
@@ -136,6 +139,7 @@ function renderRichTextSegment(
       <NextLink
         className="break-all font-semibold text-foreground underline underline-offset-[0.12em]"
         href={segment.url}
+        prefetch={false}
         rel="noreferrer"
         target="_blank"
       >
@@ -294,6 +298,7 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
     <NextLink
       className="block rounded-medium border border-separator px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
       href={quote.url}
+      prefetch={false}
       rel="noreferrer"
       target="_blank"
     >
@@ -363,6 +368,7 @@ function ModuleInner({
           <NextLink
             className="justify-self-start no-underline hover:[&_time]:text-foreground hover:[&_time]:underline hover:[&_time]:underline-offset-4"
             href={footerDestination.href}
+            prefetch={false}
             rel={
               footerDestination.kind === "external" ? "noreferrer" : undefined
             }
@@ -395,7 +401,7 @@ function isInteractiveTarget(
   return Boolean(interactiveTarget && interactiveTarget !== currentTarget);
 }
 
-function FeedModule({
+const FeedModule = memo(function FeedModule({
   eagerMedia,
   item,
 }: {
@@ -463,7 +469,7 @@ function FeedModule({
   );
 
   return <article>{surface}</article>;
-}
+});
 
 function getColumnCount(width: number) {
   if (width >= 1024) {

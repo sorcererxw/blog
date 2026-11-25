@@ -45,6 +45,7 @@ describe("GET /media/[id]", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
     expect(response.headers.get("X-Blog2-Canonical-Media")).toBe("1");
     expect(response.headers.get("X-Blog2-Canonical-Media-Cache")).toBe("miss");
   });
@@ -115,6 +116,87 @@ describe("GET /media/[id]", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
     expect(response.headers.get("X-Blog2-Canonical-Media-Cache")).toBe("kv-hit");
+  });
+
+  it("returns 304 when If-None-Match matches the canonical id and backfills edge cache on KV hits", async () => {
+    const sourceUrl = "https://cdn5.telesco.pe/file/example-photo-2.jpg";
+    const id = createCanonicalImageId(sourceUrl);
+    const putSpy = vi.fn(async () => undefined);
+    const originalCaches = globalThis.caches;
+
+    Object.defineProperty(globalThis, "caches", {
+      configurable: true,
+      value: {
+        async open() {
+          return {
+            async match() {
+              return undefined;
+            },
+            put: putSpy,
+          };
+        },
+      },
+    });
+
+    try {
+      const notModified = await GET(
+        new Request(
+          `https://sorcererxw.com/media/${id}?u=${encodeCanonicalImageSource(sourceUrl)}`,
+          {
+            headers: {
+              "if-none-match": `"${id}"`,
+            },
+          },
+        ),
+        {
+          params: Promise.resolve({ id }),
+        },
+      );
+      expect(notModified.status).toBe(304);
+      expect(notModified.headers.get("Cache-Control")).toBe(
+        "public, max-age=31536000, immutable",
+      );
+
+      testEnv = {
+        BLOG_CACHE: {
+          async delete() {
+            return undefined;
+          },
+          async get(_key: string, type?: "arrayBuffer" | "json") {
+            if (type === "arrayBuffer") {
+              return new Uint8Array([4, 5, 6]).buffer;
+            }
+            if (type === "json") {
+              return { contentType: "image/jpeg", sourceUrl };
+            }
+            return null;
+          },
+          async list() {
+            return { cursor: "", keys: [], list_complete: true };
+          },
+          async put() {
+            return undefined;
+          },
+        },
+      };
+
+      const kvHit = await GET(
+        new Request(
+          `https://sorcererxw.com/media/${id}?u=${encodeCanonicalImageSource(sourceUrl)}`,
+        ),
+        {
+          params: Promise.resolve({ id }),
+        },
+      );
+      expect(kvHit.status).toBe(200);
+      expect(putSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(globalThis, "caches", {
+        configurable: true,
+        value: originalCaches,
+      });
+    }
   });
 });

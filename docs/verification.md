@@ -1,5 +1,32 @@
 # Blog2 Verification Guide
 
+## 2026-11-25 Zero-Cost Performance Optimization State
+
+Current performance and caching shape:
+
+- `src/worker.ts` wraps OpenNext `handler.fetch` with free Cloudflare `caches.default` HTML/sitemap SWR (`src/lib/edge-page-cache.ts`), keyed by `BUILD_ID` + canonical pathname/filter query (`type`, `source`), normalizing `Vary` for Cache API storage, restoring original `Vary`/`Cache-Control`/`Link` headers on hits, and bypassing Next RSC router requests.
+- `BLOG_CACHE` provider wrappers (`src/integrations/kv/provider-cache.ts`, `provider-wrappers.ts`) use 600s logical freshness, 7-day physical retention, `cacheTtl: 300`, singleflight coalescing, unchanged-payload write skipping, and `waitUntil` background refresh.
+- Telegram background refreshes pass `knownIds` into `scrapeTelegramPublicPageThoughtRecords` so routine refreshes stop after overlapping page 1, with a 24h full background reconcile.
+- X Social Post reads use a single durable `social:x:feed:v1` snapshot key (updated during daily cron + bulk KV `get(keys)` fallback and lazy `waitUntil` backfill).
+- Notion `data_source_id` resolution is cached in memory and KV (`blog2:notion:data-source:<id>:v1`), and route loaders in `src/app/page.tsx` and `src/app/articles/[slug]/page.tsx` are deduplicated per request with React `cache()`.
+- `src/domains/article/highlight-code.ts` uses `shiki/core` + `shiki/engine/javascript` with curated language loaders, explicit `github-light`/`github-dark` themes, and a module-level singleton highlighter.
+- `/media/[id]` returns `Cache-Control: public, max-age=31536000, immutable`, handles `If-None-Match` 304, backfills Edge Cache on KV hits via `waitUntil`, and performs miss KV/Edge writes in `waitUntil`.
+- `ResponsiveRemoteImage` renders bypassed volatile `/media/` URLs without redundant 9-entry base64 `srcSet` in production, `next.config.ts` narrows `deviceSizes`/`imageSizes` and enables `optimizePackageImports`, and `src/app/globals.css` imports only used HeroUI v3 component stylesheets.
+
+Current evidence:
+
+- `pnpm test`: PASS, `41` files, `142` tests.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS, `.open-next/server-functions/default/handler.mjs` shrunk from `14.71 MB` to `6.98 MB` (`-52.5%`); homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`) while retaining `button`, `card`, `chip`, `separator`, `table`, `tabs`, and `surface` rules.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3310` + `curl`: PASS, `/` returned `200`, preserved `Link` and JSON-LD, reduced avg `<img>` tag size from `3,371 B` to `945 B` (`0` `/media/` `srcSet` entries); `/articles/screenshot-render`, `/?type=writing`, `/sitemap.xml`, `/projects` (`308`), `/en/blog` (`308`), `/blog` (`404`), and `/api/health` all returned expected responses.
+- `pnpm exec wrangler dev --ip 127.0.0.1 --port 3314` + `curl`: PASS, confirmed `x-blog2-edge-cache: miss` -> `hit` (`2.9ms`) on `/` and `/articles/screenshot-render`, preserved `Link`/`Vary`/`Cache-Control` on hits, confirmed `RSC: 1` bypass, confirmed `/media/[id]` `immutable` headers, and confirmed `missingAssets: []`.
+- `git diff --check`: PASS.
+
+Residual risk:
+
+- Production deployment verification and post-deploy visual spot-check in a browser remain pending `pnpm deploy`.
+
 ## 2026-05-21 Homepage Metadata / Feed Boundary
 
 Current homepage metadata shape:

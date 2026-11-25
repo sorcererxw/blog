@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 
 import { listArticles } from "@/domains/article/list-articles";
 import {
@@ -8,6 +9,7 @@ import {
 import { serializeOverviewFeedItems } from "@/domains/feed/overview-feed-serialization";
 import { listStoredXSocialPosts } from "@/domains/social/x-sync";
 import { OverviewFeed } from "@/components/feed/overview-feed-view";
+import { hasHomeTableBlock } from "@/components/home/intro-content";
 import { ProfileHero } from "@/components/home/profile-hero";
 import {
   buildCollectionPageStructuredData,
@@ -91,23 +93,23 @@ const buildHomePageSeo = ({
   });
 };
 
-async function loadHomeMetadataSeo() {
+const loadCachedHomePage = cache(async () => {
   const providerCache = await createPublicProviderCache();
   const homeSource = withCachedHomeSource(
     createNotionHomeSource(loadNotionHomePage),
     providerCache,
   );
 
-  return buildHomeMetadataSeo(await homeSource.loadHomePage());
+  return homeSource.loadHomePage();
+});
+
+async function loadHomeMetadataSeo() {
+  return buildHomeMetadataSeo(await loadCachedHomePage());
 }
 
 async function loadHomeData(searchParams?: Record<string, string | string[] | undefined>) {
   const providerCache = await createPublicProviderCache();
   const env = await getWorkerEnv();
-  const homeSource = withCachedHomeSource(
-    createNotionHomeSource(loadNotionHomePage),
-    providerCache,
-  );
   const articleSource = withCachedArticleSource(createBlogArticleSource(), providerCache);
   const projectSource = withCachedProjectSource(
     createNotionProjectSource(listProjectsFromNotion),
@@ -118,7 +120,7 @@ async function loadHomeData(searchParams?: Record<string, string | string[] | un
     ? listStoredXSocialPosts(createKvXSocialPostStore(env.BLOG_CACHE))
     : Promise.resolve([]);
   const [homePage, articles, projects, thoughts, xPosts] = await Promise.all([
-    homeSource.loadHomePage(),
+    loadCachedHomePage(),
     listArticles({ source: articleSource }),
     listProjects({ source: projectSource }),
     thoughtProvider(),
@@ -182,11 +184,14 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const { feedItems, filter, homePage, seo } = await loadHomeData(params);
+  const tableComponents = hasHomeTableBlock(homePage.blocks)
+    ? await import("@/components/rich-content/rich-content-table")
+    : undefined;
 
   return (
     <>
       <StructuredDataScripts seo={seo} />
-      <ProfileHero blocks={homePage.blocks} />
+      <ProfileHero blocks={homePage.blocks} tableComponents={tableComponents} />
       <OverviewFeed initialFilter={filter} items={feedItems} />
     </>
   );

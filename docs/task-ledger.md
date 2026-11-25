@@ -16,6 +16,97 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Zero-Cost, Zero-UI-Change Performance Optimization
+
+Status: done locally, pending production deploy verification
+
+Summary:
+
+- diagnosed live production slowness (`https://sorcererxw.com`: 8.55s cold / 7.22s KV-evicted / 1.30s warm homepage TTFB, 14.71 MB Worker bundle, 1.13 MB homepage HTML, 402 KB CSS, `/media/[id]` missing edge backfill)
+- eliminated X Social Post 100-key sequential KV waterfall by adding a single durable `social:x:feed:v1` aggregate snapshot (updated in existing daily cron + bulk KV `get(keys)` fallback and lazy `waitUntil` backfill)
+- upgraded provider KV cache wrappers to logical 600s SWR with 7-day physical retention, `cacheTtl: 300`, singleflight in-flight deduplication, and unchanged-payload write skipping
+- added incremental `knownIds` overlap stop to Telegram public-page refresh (1 page on routine background refreshes + 24h full reconcile)
+- cached Notion `databaseId -> dataSourceId` in memory + `BLOG_CACHE` KV and wrapped per-request `loadCachedHomePage` and `loadArticle` with React `cache()`
+- added free Cloudflare `caches.default` HTML/sitemap SWR edge caching in `src/worker.ts` scoped by `.open-next/assets/BUILD_ID`, normalizing `Vary` for Cache API compatibility and bypassing Next RSC router requests
+- narrowed `src/middleware.ts` with `config.matcher` to legacy redirect paths only
+- migrated `src/domains/article/highlight-code.ts` to `shiki/core` + `shiki/engine/javascript` with curated language loaders, explicit `github-light`/`github-dark` themes, and a module-level singleton highlighter (`handler.mjs` reduced from `14.71 MB` to `6.98 MB`, `-52.5%`)
+- fixed `/media/[id]` to serve `Cache-Control: public, max-age=31536000, immutable`, handle `If-None-Match` 304, backfill `edgeCache.put` on KV hits via `waitUntil`, and move miss KV/edge writes to `waitUntil`
+- prevented `ResponsiveRemoteImage` from emitting 9 duplicate base64 `srcSet` entries for bypassed volatile `/media/` URLs in production (avg `<img>` tag shrunk from `3,371 B` to `945 B`), narrowed `next.config.ts` `deviceSizes`/`imageSizes`, enabled `optimizePackageImports`, switched `src/app/globals.css` to selective HeroUI v3 component imports (homepage CSS reduced from `402 KB` to `81.8 KB`, `-79.7%`), switched `@heroui/react` to component subpaths, added `prefetch={false}` on feed links, memoized `FeedModule`, split `ProfileHero` table loading via `hasHomeTableBlock`, deduplicated serialized Telegram `summary`, and aligned `feed-layout-engine.ts` font metrics to `Courier Prime`
+
+Files:
+
+- `docs/specs/2026-11-25-zero-cost-performance-optimization-design.md`
+- `docs/plans/2026-11-25-zero-cost-performance-optimization.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+- `next.config.ts`
+- `src/app/articles/[slug]/page.tsx`
+- `src/app/globals.css`
+- `src/app/media/[id]/route.ts`
+- `src/app/media/[id]/route.test.ts`
+- `src/app/page.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/home/intro-content.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/home/profile-hero.tsx`
+- `src/components/media/responsive-remote-image.tsx`
+- `src/components/media/responsive-remote-image.test.tsx`
+- `src/components/rich-content/rich-content-table.tsx`
+- `src/components/shell/theme-toggle.tsx`
+- `src/components/thoughts/thoughts-page.tsx`
+- `src/domains/article/highlight-code.ts`
+- `src/domains/article/highlight-code.test.ts`
+- `src/domains/feed/feed-layout-engine.ts`
+- `src/domains/feed/overview-feed-serialization.ts`
+- `src/domains/social/x-sync.ts`
+- `src/domains/social/x-sync.test.ts`
+- `src/domains/thoughts/list-thoughts.ts`
+- `src/integrations/kv/provider-cache.ts`
+- `src/integrations/kv/provider-cache.test.ts`
+- `src/integrations/kv/provider-wrappers.ts`
+- `src/integrations/kv/provider-wrappers.test.ts`
+- `src/integrations/kv/x-social-post-store.ts`
+- `src/integrations/kv/x-social-post-store.test.ts`
+- `src/integrations/notion/data-source.ts`
+- `src/integrations/notion/data-source.test.ts`
+- `src/integrations/telegram/public-page.ts`
+- `src/integrations/telegram/public-page.test.ts`
+- `src/lib/cloudflare-env.ts`
+- `src/lib/edge-page-cache.ts`
+- `src/lib/edge-page-cache.test.ts`
+- `src/middleware.ts`
+- `src/middleware.test.ts`
+- `src/types/cloudflare.ts`
+- `src/worker.ts`
+
+Decisions:
+
+- kept all UI/UX behavior and zero-cost constraints strictly intact: no homepage pagination, no new Cloudflare bindings (no R2/D1/DO), no extra X API calls, no extra Cloudflare Image Transformations
+- kept `<NextLink prefetch={false}>` instead of raw `<a>` to honor `eslint.config.mjs` `local/require-next-link-and-image`
+- scoped Worker edge cache keys by `.open-next/assets/BUILD_ID` fetched once per isolate from `env.ASSETS` so deployments never serve stale-chunk HTML
+- normalized `Vary` to `Accept-Encoding` inside stored Cache API entries while restoring original `Vary` and `Cache-Control` on responses to clients
+
+Verification:
+
+- `pnpm test`: PASS, `41` test files, `142` tests passed.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS, generated `.open-next/worker.js` and `.open-next/server-functions/default/handler.mjs` (`6.98 MB`, down from `14.71 MB`); main homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`).
+- `pnpm exec next start --hostname 127.0.0.1 -p 3310` + `curl`: PASS, verified `/` (`200`, agent discovery `Link` header, `CollectionPage` JSON-LD, `55` `/media/` images with `0` redundant `srcSet` entries, avg `<img>` tag `945 B`), `/?type=writing` (`200`), `/articles/screenshot-render` (`200`, Shiki dual-theme HTML), `/sitemap.xml` (`200`), `/projects` (`308` -> `/?type=projects`), `/en/blog` (`308` -> `/blog`), `/blog` (`404`), `/api/health` (`200`).
+- `pnpm exec wrangler dev --ip 127.0.0.1 --port 3314` + `curl`: PASS, verified build-scoped `x-blog2-edge-cache: miss` -> `hit` (`2.9ms`) on `/` and `/articles/screenshot-render`, preserved `Link` and `Vary` headers on cache hits, verified `RSC: 1` bypasses edge cache (`text/x-component`), verified `/media/[id]` returns `Cache-Control: public, max-age=31536000, immutable`, verified zero missing asset references (`missingAssets: []`).
+- `git diff --check`: PASS.
+- Browser verification was not run in this turn (no UI/UX changes were made and browser verification was not requested; compiled HeroUI component CSS selectors for `button`, `card`, `chip`, `separator`, `table`, `tabs`, `surface` were verified present in the built stylesheet).
+
+Follow-up:
+
+- deploy to Cloudflare Workers (`pnpm deploy`) and re-measure production `https://sorcererxw.com/` TTFB (`x-blog2-edge-cache: miss` -> `hit` and first-hit X `social:x:feed:v1` backfill)
+- verify rendered visuals in a browser after deploy to double-check selective HeroUI CSS coverage across light/dark themes and article tables
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - Homepage Metadata Feed Decoupling
 
 Status: done locally

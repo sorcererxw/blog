@@ -1,11 +1,15 @@
-import { HomePageContent } from "./intro";
+import {
+  HomePageContentBase,
+  type RichContentTableComponents,
+} from "./intro-content";
 import type { HomePageBlock } from "@/integrations/notion/home";
 
 type ProfileHeroProps = {
   blocks: HomePageBlock[];
+  tableComponents?: RichContentTableComponents;
 };
 
-export function ProfileHero({ blocks }: ProfileHeroProps) {
+export function ProfileHero({ blocks, tableComponents }: ProfileHeroProps) {
   return (
     <section
       aria-label="Profile hero"
@@ -13,7 +17,7 @@ export function ProfileHero({ blocks }: ProfileHeroProps) {
       id="profile"
     >
       <div className="max-h-none overflow-visible">
-        <HomePageContent blocks={blocks} />
+        <HomePageContentBase blocks={blocks} tableComponents={tableComponents} />
       </div>
     </section>
   );

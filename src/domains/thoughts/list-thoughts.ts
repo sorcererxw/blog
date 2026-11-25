@@ -19,17 +19,20 @@ export const buildThoughtList = (
 export async function listThoughts({
   channelUsername,
   fetchImpl,
+  knownIds,
   maxPages,
   revalidateSeconds = TELEGRAM_THOUGHTS_REVALIDATE_SECONDS,
 }: {
   channelUsername?: string;
   fetchImpl?: typeof fetch;
+  knownIds?: ReadonlySet<string>;
   maxPages?: number;
   revalidateSeconds?: number;
 } = {}): Promise<ThoughtListItem[]> {
   const records = await scrapeTelegramPublicPageThoughtRecords({
     channelUsername,
     fetchImpl,
+    knownIds,
     maxPages,
     revalidateSeconds,
   });

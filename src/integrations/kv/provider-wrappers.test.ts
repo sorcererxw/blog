@@ -117,4 +117,64 @@ describe("provider wrappers", () => {
     expect(detailProvider.getArticleBySlug).toHaveBeenCalledTimes(1);
     expect(thoughtsProvider).toHaveBeenCalledTimes(1);
   });
+
+  it("refreshes stale thoughts incrementally with knownIds and merges with cached history", async () => {
+    const cache = createMemoryProviderCache();
+    let currentTime = 10_000_000;
+    const backgroundTasks: Promise<unknown>[] = [];
+    const thoughtsProvider = vi.fn(async ({ knownIds }: { knownIds?: ReadonlySet<string> } = {}) => {
+      if (knownIds && knownIds.has("1")) {
+        return [
+          {
+            date: new Date("2026-05-19T00:00:00.000Z"),
+            forwardedFrom: null,
+            id: "2",
+            link: "https://t.me/s/tech_bb/2",
+            photos: [],
+            reactions: [],
+            replyTo: null,
+            richText: [{ plainText: "Newer thought" }],
+            webpage: null,
+          },
+        ];
+      }
+
+      return [
+        {
+          date: new Date("2026-05-18T00:00:00.000Z"),
+          forwardedFrom: null,
+          id: "1",
+          link: "https://t.me/s/tech_bb/1",
+          photos: [],
+          reactions: [],
+          replyTo: null,
+          richText: [{ plainText: "Older thought" }],
+          webpage: null,
+        },
+      ];
+    });
+
+    const thoughts = withCachedThoughtProvider(thoughtsProvider, cache, {
+      now: () => currentTime,
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise);
+      },
+    });
+
+    const initial = await thoughts();
+    expect(initial.map((item) => item.id)).toEqual(["1"]);
+
+    currentTime += 601_000;
+    const stale = await thoughts();
+    expect(stale.map((item) => item.id)).toEqual(["1"]);
+    await Promise.all(backgroundTasks.splice(0));
+
+    const merged = await thoughts();
+    expect(merged.map((item) => item.id)).toEqual(["2", "1"]);
+    expect(thoughtsProvider).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        knownIds: new Set(["1"]),
+      }),
+    );
+  });
 });

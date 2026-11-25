@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import NextLink from "next/link";
-import { Chip } from "@heroui/react";
+import { Chip } from "@heroui/react/chip";
 import React from "react";
 
 import { MasonryFeed } from "@/components/feed/masonry-feed";

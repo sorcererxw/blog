@@ -5,8 +5,9 @@ import type { NotionArticleSource } from "@/integrations/notion/articles";
 import type { NotionArticleDetailSource } from "@/integrations/notion/article-detail";
 import type { NotionProjectRecord } from "@/domains/projects/types";
 import type { NotionProjectSource } from "@/integrations/notion/projects";
+import { sortThoughtsNewestFirst } from "@/domains/thoughts/snapshot";
 import type { ThoughtListItem } from "@/domains/thoughts/types";
-import { getWorkerEnv } from "@/lib/cloudflare-env";
+import { getWorkerEnv, waitUntilInWorker } from "@/lib/cloudflare-env";
 
 import {
   createKvProviderCache,
@@ -16,6 +17,9 @@ import {
 } from "./provider-cache";
 
 export const PUBLIC_PROVIDER_CACHE_TTL_SECONDS = 600;
+export const PUBLIC_PROVIDER_CACHE_STALE_TTL_SECONDS = 60 * 60 * 24 * 7;
+export const PUBLIC_PROVIDER_KV_EDGE_CACHE_TTL_SECONDS = 300;
+const THOUGHTS_FULL_RECONCILE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const key = {
   articleDetail: (slug: string, includeWip: boolean) =>
@@ -45,6 +49,13 @@ const key = {
     ].join(":"),
 };
 
+const swrOptions = {
+  freshTtlSeconds: PUBLIC_PROVIDER_CACHE_TTL_SECONDS,
+  kvEdgeCacheTtlSeconds: PUBLIC_PROVIDER_KV_EDGE_CACHE_TTL_SECONDS,
+  scheduleBackground: waitUntilInWorker,
+  staleTtlSeconds: PUBLIC_PROVIDER_CACHE_STALE_TTL_SECONDS,
+};
+
 export async function createPublicProviderCache(): Promise<ProviderCache> {
   const env = await getWorkerEnv();
 
@@ -63,6 +74,7 @@ export function withCachedHomeSource(
         cache,
         key.home,
         source.loadHomePage,
+        swrOptions,
       ),
   };
 }
@@ -77,6 +89,7 @@ export function withCachedArticleSource(
         cache,
         key.articles(options.includeWip === true),
         () => source.listArticles(options),
+        swrOptions,
       ),
   };
 }
@@ -91,6 +104,7 @@ export function withCachedProjectSource(
         cache,
         key.projects,
         source.listProjects,
+        swrOptions,
       ),
   };
 }
@@ -100,41 +114,89 @@ export function withCachedArticleDetailSource(
   cache: ProviderCache,
 ): NotionArticleDetailSource {
   return {
-    async getArticleBySlug(options) {
-      const cached = await cache.get<NotionArticleDetailRecord>(
+    getArticleBySlug: (options) =>
+      readThroughProviderCache<NotionArticleDetailRecord | null>(
+        cache,
         key.articleDetail(options.slug, options.includeWip === true),
-      );
-
-      if (cached) {
-        return cached;
-      }
-
-      const value = await source.getArticleBySlug(options);
-
-      if (value) {
-        await cache.set(key.articleDetail(options.slug, options.includeWip === true), value);
-      }
-
-      return value;
-    },
+        () => source.getArticleBySlug(options),
+        {
+          ...swrOptions,
+          shouldCache: (value) => value !== null,
+        },
+      ),
   };
 }
 
 export type ThoughtProviderOptions = {
   channelUsername?: string;
   fetchImpl?: typeof fetch;
+  knownIds?: ReadonlySet<string>;
   maxPages?: number;
   revalidateSeconds?: number;
+};
+
+const mergeThoughtLists = (
+  staleThoughts: ThoughtListItem[],
+  freshThoughts: ThoughtListItem[],
+): ThoughtListItem[] => {
+  const byId = new Map<string, ThoughtListItem>();
+
+  for (const item of staleThoughts) {
+    byId.set(item.id, item);
+  }
+
+  for (const item of freshThoughts) {
+    byId.set(item.id, item);
+  }
+
+  return sortThoughtsNewestFirst(Array.from(byId.values()));
 };
 
 export function withCachedThoughtProvider(
   provider: (options?: ThoughtProviderOptions) => Promise<ThoughtListItem[]>,
   cache: ProviderCache,
+  {
+    now = () => Date.now(),
+    scheduleBackground = waitUntilInWorker,
+  }: {
+    now?: () => number;
+    scheduleBackground?: (promise: Promise<unknown>) => void;
+  } = {},
 ) {
   return (options: ThoughtProviderOptions = {}) =>
     readThroughProviderCache<ThoughtListItem[]>(
       cache,
       key.thoughts(options),
       () => provider(options),
+      {
+        ...swrOptions,
+        now,
+        scheduleBackground,
+        async refreshLoad(staleThoughts, meta) {
+          const currentTime = now();
+          const needsFullReconcile =
+            staleThoughts.length === 0 ||
+            !meta.fullReconcileAt ||
+            currentTime - meta.fullReconcileAt >= THOUGHTS_FULL_RECONCILE_INTERVAL_MS;
+
+          if (needsFullReconcile) {
+            return {
+              fullReconcileAt: currentTime,
+              value: await provider(options),
+            };
+          }
+
+          const knownIds = new Set(staleThoughts.map((item) => item.id));
+          const incremental = await provider({
+            ...options,
+            knownIds,
+          });
+
+          return {
+            fullReconcileAt: meta.fullReconcileAt,
+            value: mergeThoughtLists(staleThoughts, incremental),
+          };
+        },
+      },
     );
 }

@@ -9,9 +9,10 @@ import {
   createKvCanonicalMediaCache,
   createNoopCanonicalMediaCache,
 } from "@/integrations/kv/canonical-media-cache";
+import { waitUntilInWorker } from "@/lib/cloudflare-env";
 import type { CloudflareEnv } from "@/types/cloudflare";
 
-const CANONICAL_CACHE_TTL_SECONDS = 60 * 60 * 24;
+const CANONICAL_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const CANONICAL_CACHE_NAME = "blog2:canonical-media";
 
 const badRequest = (message: string, status = 400) => new Response(message, { status });
@@ -30,6 +31,18 @@ async function getCloudflareEnv(testEnv?: Partial<CloudflareEnv>): Promise<Parti
   }
 }
 
+const matchesIfNoneMatch = (request: Request, etag: string) => {
+  const header = request.headers.get("if-none-match");
+  if (!header) {
+    return false;
+  }
+
+  return header
+    .split(",")
+    .map((token) => token.trim())
+    .some((token) => token === "*" || token === etag || token === `W/${etag}`);
+};
+
 export const dynamic = "force-dynamic";
 
 export async function GET(
@@ -46,17 +59,26 @@ export async function GET(
     return badRequest("Missing media id.", 404);
   }
 
+  const etag = `"${id}"`;
   const url = new URL(request.url);
   const encodedSource = url.searchParams.get("u");
   const cacheKey = new Request(`${url.origin}/media/${id}`);
   const edgeCache = globalThis.caches ? await globalThis.caches.open(CANONICAL_CACHE_NAME) : null;
-  const runtimeEnv = await getCloudflareEnv();
-  const mediaCache = runtimeEnv?.BLOG_CACHE
-    ? createKvCanonicalMediaCache(runtimeEnv.BLOG_CACHE)
-    : createNoopCanonicalMediaCache();
   const cached = edgeCache ? await edgeCache.match(cacheKey) : null;
 
   if (cached) {
+    if (matchesIfNoneMatch(request, etag)) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          "Cache-Control": CANONICAL_CACHE_CONTROL,
+          ETag: etag,
+          "X-Blog2-Canonical-Media": "1",
+          "X-Blog2-Canonical-Media-Cache": "edge-hit",
+        },
+      });
+    }
+
     return cached;
   }
 
@@ -80,18 +102,41 @@ export async function GET(
     return badRequest("Canonical media id does not match source.", 400);
   }
 
+  if (matchesIfNoneMatch(request, etag)) {
+    return new Response(null, {
+      status: 304,
+      headers: {
+        "Cache-Control": CANONICAL_CACHE_CONTROL,
+        ETag: etag,
+        "X-Blog2-Canonical-Media": "1",
+        "X-Blog2-Canonical-Media-Cache": "not-modified",
+      },
+    });
+  }
+
+  const runtimeEnv = await getCloudflareEnv();
+  const mediaCache = runtimeEnv?.BLOG_CACHE
+    ? createKvCanonicalMediaCache(runtimeEnv.BLOG_CACHE)
+    : createNoopCanonicalMediaCache();
+
   const kvCached = await mediaCache.get(id);
   if (kvCached) {
-    return new Response(kvCached.body, {
+    const response = new Response(kvCached.body, {
       status: 200,
       headers: {
-        "Cache-Control": `public, max-age=0, s-maxage=${String(CANONICAL_CACHE_TTL_SECONDS)}`,
+        "Cache-Control": CANONICAL_CACHE_CONTROL,
         "Content-Type": kvCached.record.contentType,
-        ETag: `"${id}"`,
+        ETag: etag,
         "X-Blog2-Canonical-Media": "1",
         "X-Blog2-Canonical-Media-Cache": "kv-hit",
       },
     });
+
+    if (edgeCache) {
+      waitUntilInWorker(edgeCache.put(cacheKey, response.clone()));
+    }
+
+    return response;
   }
 
   const upstream = await fetch(sourceUrl, {
@@ -109,28 +154,33 @@ export async function GET(
     return redirectToSource(sourceUrl);
   }
 
-  const response = new Response(await upstream.arrayBuffer(), {
+  const body = await upstream.arrayBuffer();
+  const response = new Response(body, {
     status: 200,
     headers: {
-      "Cache-Control": `public, max-age=0, s-maxage=${String(CANONICAL_CACHE_TTL_SECONDS)}`,
+      "Cache-Control": CANONICAL_CACHE_CONTROL,
       "Content-Type": contentType,
-      ETag: `"${id}"`,
+      ETag: etag,
       "X-Blog2-Canonical-Media": "1",
       "X-Blog2-Canonical-Media-Cache": "miss",
     },
   });
 
-  await mediaCache.set(id, {
-    body: await response.clone().arrayBuffer(),
-    record: {
-      contentType,
-      sourceUrl,
-    },
-  });
+  const bodyCopy = body.slice(0);
+  const edgeCopy = edgeCache ? response.clone() : null;
 
-  if (edgeCache) {
-    await edgeCache.put(cacheKey, response.clone());
-  }
+  waitUntilInWorker(
+    Promise.all([
+      mediaCache.set(id, {
+        body: bodyCopy,
+        record: {
+          contentType,
+          sourceUrl,
+        },
+      }),
+      edgeCache && edgeCopy ? edgeCache.put(cacheKey, edgeCopy) : Promise.resolve(),
+    ]),
+  );
 
   return response;
 }

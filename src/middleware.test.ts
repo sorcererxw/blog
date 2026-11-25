@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { NextRequest } from "next/server";
 
-import { middleware } from "./middleware";
+import { config, middleware } from "./middleware";
 
 function request(pathname: string): NextRequest {
   return {
@@ -42,5 +42,18 @@ describe("middleware", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("scopes middleware matcher to legacy redirect paths only", () => {
+    expect(config.matcher).toEqual([
+      "/projects",
+      "/projects/:path*",
+      "/thoughts",
+      "/thoughts/:path*",
+      "/en",
+      "/en/:path*",
+      "/zh",
+      "/zh/:path*",
+    ]);
   });
 });

@@ -69,9 +69,9 @@ type AssignOptions = {
   measureText?: TextMeasurer;
 };
 
-const SUMMARY_FONT = "15.2px \"Instrument Sans\"";
+const SUMMARY_FONT = '15.2px "Courier Prime"';
 const TITLE_FONT = "600 21.6px Libre Bodoni";
-const META_FONT = "12px \"Instrument Sans\"";
+const META_FONT = '12px "Courier Prime"';
 
 const SUMMARY_LINE_HEIGHT = 23;
 const TITLE_LINE_HEIGHT = 24;
