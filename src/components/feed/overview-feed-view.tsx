@@ -3,6 +3,7 @@ import {
   Fragment,
   memo,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -544,6 +545,16 @@ function mergeItemsForExit(
   return [...nextItems, ...exitingItems];
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+const FEED_COLUMN_GAP = 8;
+
+type MeasuredHeightCache = {
+  columnWidthKey: number;
+  heights: Record<string, number>;
+};
+
 export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const [filter, setFilter] = useState<FeedFilter>(() =>
     normalizeFilter(initialFilter),
@@ -574,6 +585,16 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const didMountRef = useRef(false);
   const transitionTimerRef = useRef<number | null>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const [fontMeasurementEpoch, setFontMeasurementEpoch] = useState(0);
+  const [measuredCache, setMeasuredCache] = useState<MeasuredHeightCache>({
+    columnWidthKey: 0,
+    heights: {},
+  });
+  const [hasRevealed, setHasRevealed] = useState(false);
+  const measurementPassRef = useRef<{ key: string; count: number }>({
+    count: 0,
+    key: "",
+  });
 
   useEffect(() => {
     const handlePopState = () => {
@@ -586,6 +607,25 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   }, []);
 
   useEffect(() => {
+    const fonts = document.fonts;
+
+    if (!fonts || fonts.status === "loaded") {
+      return;
+    }
+
+    let cancelled = false;
+    void fonts.ready.then(() => {
+      if (!cancelled) {
+        setFontMeasurementEpoch((epoch) => epoch + 1);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
     const node = feedRegionRef.current;
 
     if (!node) {
@@ -657,19 +697,112 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
       setFilter(parseFilterFromLocation());
     };
   const columnCount = containerWidth ? getColumnCount(containerWidth) : 1;
+  const columnWidthKey =
+    containerWidth && columnCount > 1
+      ? Math.round(
+          (containerWidth - FEED_COLUMN_GAP * (columnCount - 1)) / columnCount,
+        )
+      : 0;
+  const activeMeasuredHeights =
+    columnWidthKey > 0 &&
+    Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1
+      ? measuredCache.heights
+      : undefined;
   const hydratedLayout = useMemo(
     () =>
       containerWidth && columnCount > 1
         ? assignFeedLayout(renderedItems, {
             columnCount,
             containerWidth,
-            gap: 8,
+            gap: FEED_COLUMN_GAP,
+            measuredHeights: activeMeasuredHeights,
           })
         : null,
-    [columnCount, containerWidth, renderedItems],
+    [activeMeasuredHeights, columnCount, containerWidth, renderedItems],
   );
+
+  useIsomorphicLayoutEffect(() => {
+    const region = feedRegionRef.current;
+
+    if (!region || !hydratedLayout || columnWidthKey <= 0) {
+      return;
+    }
+
+    const passKey = `${columnWidthKey}:${fontMeasurementEpoch}:${renderedItems.length}:${renderedItems[0]?.id ?? ""}`;
+    if (measurementPassRef.current.key !== passKey) {
+      measurementPassRef.current = { count: 0, key: passKey };
+    }
+    if (measurementPassRef.current.count >= 2) {
+      return;
+    }
+
+    const cellNodes = region.querySelectorAll<HTMLElement>("[data-feed-cell-id]");
+    if (cellNodes.length === 0) {
+      return;
+    }
+
+    const isSameWidth =
+      Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1;
+    const nextHeights: Record<string, number> = isSameWidth
+      ? { ...measuredCache.heights }
+      : {};
+    let changed = !isSameWidth;
+
+    for (const cell of cellNodes) {
+      if (cell.dataset.feedTransition === "exit") {
+        continue;
+      }
+
+      const id = cell.dataset.feedCellId;
+      if (!id) {
+        continue;
+      }
+
+      const measuredHeight = Math.round(cell.getBoundingClientRect().height);
+      if (measuredHeight <= 0) {
+        continue;
+      }
+
+      const previousHeight = nextHeights[id];
+      if (
+        previousHeight === undefined ||
+        Math.abs(previousHeight - measuredHeight) > 1
+      ) {
+        nextHeights[id] = measuredHeight;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      measurementPassRef.current.count += 1;
+      setMeasuredCache({
+        columnWidthKey,
+        heights: nextHeights,
+      });
+    }
+  }, [
+    columnWidthKey,
+    fontMeasurementEpoch,
+    hydratedLayout,
+    measuredCache,
+    renderedItems,
+  ]);
+
+  const hasMeasuredInitialMasonry =
+    columnCount === 1 ||
+    (hydratedLayout !== null &&
+      (renderedItems.length === 0 ||
+        (columnWidthKey > 0 &&
+          Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1 &&
+          Object.keys(measuredCache.heights).length > 0)));
   const isFeedLayoutReady =
-    containerWidth !== null && (columnCount === 1 || hydratedLayout !== null);
+    containerWidth !== null && (hasRevealed || hasMeasuredInitialMasonry);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!hasRevealed && isFeedLayoutReady) {
+      setHasRevealed(true);
+    }
+  }, [hasRevealed, isFeedLayoutReady]);
   const activeFilterKey =
     filterLinks.find((link) => link.matches(filter))?.key ?? "all";
 
@@ -727,6 +860,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                     {column.items.map(({ item }) => (
                       <div
                         className={masonryStyles.cell}
+                        data-feed-cell-id={item.id}
                         data-feed-transition={transitionStates[item.id]}
                         key={item.id}
                       >

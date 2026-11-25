@@ -15,9 +15,6 @@ importers:
       '@base-ui/react':
         specifier: ^1.9.0
         version: 1.9.0(@types/react@19.2.14)(date-fns@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@chenglou/pretext':
-        specifier: ^0.0.7
-        version: 0.0.7
       '@fontsource/courier-prime':
         specifier: ^5.3.0
         version: 5.3.0
@@ -261,9 +258,6 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
-
-  '@chenglou/pretext@0.0.7':
-    resolution: {integrity: sha512-FV5hj3fGqpBlzbANUbR+s+6XuNRrghVVyuNs33zdH2SzU7MvK+7GlW6xREjDCreixKbexEn7OEkDgAFeWuu5Hg==}
 
   '@cloudflare/kv-asset-handler@0.5.1':
     resolution: {integrity: sha512-48OysfSW3MkQY1XjkhkpPkgrEkOvgfoyHzA2eyX5wpzFpijC02uWigv3hkNdJdT3C7ybW/U17yYHXeR68pLeww==}
@@ -3178,8 +3172,6 @@ snapshots:
       use-sync-external-store: 1.7.0(react@19.2.4)
     optionalDependencies:
       '@types/react': 19.2.14
-
-  '@chenglou/pretext@0.0.7': {}
 
   '@cloudflare/kv-asset-handler@0.5.1': {}
 

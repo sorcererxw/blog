@@ -1,5 +1,27 @@
 # Blog2 Verification Guide
 
+## 2026-11-25 Masonry Layout Calibration & Pretext Removal State
+
+Current masonry layout shape (`docs/specs/2026-11-25-masonry-layout-optimization-design.md`):
+
+- Removed `@chenglou/pretext` from `package.json` and `src/domains/feed/feed-layout-engine.ts`.
+- `src/domains/feed/feed-layout-engine.ts` now combines a zero-dependency heuristic estimator aligned to real card geometry (`aspect-[16/10]` single media, `QuotePreview` + `QuoteMediaGrid`, `p-5`/`gap-3`, `16px/26px` body, CJK/Latin widths), optional exact DOM `measuredHeights` overrides, and trailing undated LPT balancing (keeping all dated items strictly chronological).
+- `OverviewFeed` (`src/components/feed/overview-feed-view.tsx`) runs a single batched `useIsomorphicLayoutEffect` DOM height read before initial `opacity-0 -> opacity-100` reveal (plus re-calibration on `document.fonts.ready` and width changes), eliminating height drift across 100+ mixed CJK/English/quote/photo cards without visual jump.
+
+Current evidence:
+
+- `pnpm test`: PASS (`40` files, `139` tests in `1.75s`, including `quote` height, single-media `16:10`, exact `measuredHeights` override, and trailing undated LPT balancing in `feed-layout-engine.test.ts`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`509ms`).
+  - Client JS total dropped from `463.8 KB` (`152.0 KB` gzip) to **`427.8 KB` (`139.6 KB` gzip)** (`-36.0 KB` raw / `-12.4 KB` gzip).
+  - Server `routes-*.js` chunk dropped from `212.74 KB` to **`126.44 KB`** (`-86.3 KB`).
+- Real browser verification on local Cloudflare Worker (`http://localhost:3326/`): PASS:
+  - Desktop `1280px` (3 columns, `144` cards, `~26,700px` total height): columns `26,717px / 26,692px / 26,792px` -> bottom spread **`100px` (`0.37%`)**, down from `1,107px` measured on live preview before the fix.
+  - Filter switching (`All` -> `Writing` `42` cards / `298px` spread -> `Projects` `13` cards / `190px` spread -> `All` `144` cards / `100px` spread): zero errors, zero flicker, `reveal: "ready"`.
+  - Tablet `800px` resize (2 columns, `144` cards, `~40,000px` total height): columns `40,081px / 39,972px` -> bottom spread **`109px` (`0.27%`)**.
+- `git diff --check`: PASS.
+
 ## 2026-11-25 coss UI Complete Migration State
 
 Current UI system shape:

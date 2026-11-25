@@ -16,6 +16,39 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Optimize Masonry Layout with DOM Height Calibration & Remove Pretext
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- diagnosed `1,107px` 3-column bottom imbalance on live preview (`244` cards: `37,446px / 38,553px / 38,114px`) caused by `feed-layout-engine.ts` ignoring `quote` blocks, estimating single portrait photos by raw `height/width` instead of rendered `aspect-[16/10]`, mismatched font/line-height/chrome metrics, and Pretext measuring before web font load with CJK fallback drift
+- replaced `@chenglou/pretext` in `src/domains/feed/feed-layout-engine.ts` with a zero-dependency heuristic estimator aligned to real rendered card geometry (`quote` + `QuoteMediaGrid`, `16:10` single media, `p-5`/`gap-3`, `16px/26px` body, CJK/Latin widths), added `measuredHeights` exact-height support, and added LPT (tallest-first) balancing for the trailing contiguous undated items (preserving strict chronological order for all dated items)
+- added single-pass batched DOM height measurement (`useIsomorphicLayoutEffect`) in `src/components/feed/overview-feed-view.tsx` before initial reveal (`opacity-0 -> opacity-100`) plus `document.fonts.ready` and width-change reconciliation
+- removed `@chenglou/pretext` from `package.json` and `pnpm-lock.yaml`, reducing total Client JS from `463.8 KB` (`152.0 KB` gzip) to **`427.8 KB` (`139.6 KB` gzip)** and server `routes-*.js` from `212.74 KB` to `126.44 KB`
+
+Files:
+
+- Added: `docs/specs/2026-11-25-masonry-layout-optimization-design.md`
+- Updated: `package.json`, `pnpm-lock.yaml`, `src/domains/feed/feed-layout-engine.ts`, `src/domains/feed/feed-layout-engine.test.ts`, `src/components/feed/overview-feed-view.tsx`, `docs/roadmap.md`, `docs/verification.md`, `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `139` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`509ms`; Client JS `427.8 KB / 139.6 KB gzip`).
+- Real browser verification (`http://localhost:3326/`): PASS — Desktop 3-column (`144` cards) spread `100px` (`26,717 / 26,692 / 26,792px`, `0.37%`), Tablet 2-column (`800px`) spread `109px` (`40,081 / 39,972px`, `0.27%`), filter switches (`All`/`Writing`/`Projects`/`All`) smooth with zero errors.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify 244-card 3-column balance on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` after Workers Builds finishes deploying PR #58.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Restore Warm Stone/Paper Palette on coss UI Tokens
 
 Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
