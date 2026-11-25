@@ -5,6 +5,7 @@ export type ProviderCacheGetOptions = {
 };
 
 export type ProviderCache = {
+  delete?: (key: string) => Promise<void>;
   get: <T>(key: string, options?: ProviderCacheGetOptions) => Promise<T | null>;
   set: <T>(key: string, value: T, options?: { ttlSeconds?: number }) => Promise<void>;
 };
@@ -108,6 +109,9 @@ const isSwrEnvelope = <T>(value: unknown): value is ProviderCacheSwrEnvelope<T> 
   "value" in value;
 
 export const createNoopProviderCache = (): ProviderCache => ({
+  async delete() {
+    return undefined;
+  },
   async get() {
     return null;
   },
@@ -120,6 +124,9 @@ export const createMemoryProviderCache = (): ProviderCache => {
   const store = new Map<string, string>();
 
   return {
+    async delete(key: string) {
+      store.delete(key);
+    },
     async get<T>(key: string) {
       const value = store.get(key);
 
@@ -136,6 +143,9 @@ export const createKvProviderCache = (
   defaultTtlSeconds: number,
 ): ProviderCache => {
   const cache: ProviderCache = {
+    async delete(key: string) {
+      await namespace.delete(key);
+    },
     async get<T>(key: string, options?: ProviderCacheGetOptions) {
       const value =
         options?.cacheTtlSeconds && options.cacheTtlSeconds >= 60
@@ -251,11 +261,14 @@ export async function readThroughProviderCache<T>(
               value: await load(),
             };
         const refreshedAt = now();
-        state.lastVerifiedAt.set(key, refreshedAt);
 
         if (shouldCache && !shouldCache(refreshed.value)) {
+          state.lastVerifiedAt.delete(key);
+          await cache.delete?.(key);
           return;
         }
+
+        state.lastVerifiedAt.set(key, refreshedAt);
 
         const nextSerialized = serialize(refreshed.value);
         const shouldPersistTimestamp = refreshedAt - envelope.cachedAt >= SIX_HOURS_MS;

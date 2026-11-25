@@ -16,6 +16,31 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Invalidate Stale KV Entries on Null SWR Refresh (PR #58 Review Fix)
+
+Status: done locally and pushed to PR #58 before merge
+
+Summary:
+
+- addressed P1 PR #58 review finding on `src/integrations/kv/provider-cache.ts`: when a previously cached published article is deleted, renamed, or marked WIP and background SWR refresh succeeds with `null` (rejected by `shouldCache`), the stale KV entry is now deleted (`cache.delete(key)`) and `state.lastVerifiedAt.delete(key)` clears the verification stamp instead of retaining stale content for 7 days
+- genuine upstream errors (thrown exceptions) continue to leave stale KV entries untouched for resilience
+- added `delete` to `ProviderCache` (`createNoopProviderCache`, `createMemoryProviderCache`, `createKvProviderCache`) and regression test in `src/integrations/kv/provider-cache.test.ts`
+
+Files:
+
+- `src/integrations/kv/provider-cache.ts`
+- `src/integrations/kv/provider-cache.test.ts`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `143` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`465ms`).
+- `git diff --check`: PASS.
+
 ## 2026-11-25 - Integrate Self-Hosted Traks Analytics
 
 Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)

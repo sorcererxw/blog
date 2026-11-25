@@ -170,4 +170,73 @@ describe("provider cache", () => {
     expect(b).toBe("deduped");
     expect(slowProvider).toHaveBeenCalledTimes(1);
   });
+
+  it("invalidates stale cached entries when a successful refresh returns a non-cacheable value while retaining stale data on upstream errors", async () => {
+    const { namespace, store } = createMemoryKvNamespace();
+    const cache = createKvProviderCache(namespace, 600);
+    let currentTime = 5_000_000;
+    let mode: "ok" | "error" | "missing" = "ok";
+    const backgroundTasks: Promise<unknown>[] = [];
+    const load = vi.fn(async (): Promise<{ slug: string } | null> => {
+      if (mode === "error") {
+        throw new Error("upstream unavailable");
+      }
+
+      return mode === "missing" ? null : { slug: "hello" };
+    });
+
+    const initial = await readThroughProviderCache(cache, "article:hello", load, {
+      freshTtlSeconds: 600,
+      now: () => currentTime,
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise.catch(() => undefined));
+      },
+      shouldCache: (value) => value !== null,
+      staleTtlSeconds: 604_800,
+    });
+    expect(initial).toEqual({ slug: "hello" });
+    expect(store.has("article:hello")).toBe(true);
+
+    // Upstream failure during background refresh retains the stale entry.
+    mode = "error";
+    currentTime += 601_000;
+    const staleOnError = await readThroughProviderCache(cache, "article:hello", load, {
+      freshTtlSeconds: 600,
+      now: () => currentTime,
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise.catch(() => undefined));
+      },
+      shouldCache: (value) => value !== null,
+      staleTtlSeconds: 604_800,
+    });
+    expect(staleOnError).toEqual({ slug: "hello" });
+    await Promise.all(backgroundTasks.splice(0));
+    expect(store.has("article:hello")).toBe(true);
+
+    // Successful null refresh (article deleted/WIP) invalidates the stale entry.
+    mode = "missing";
+    currentTime += 601_000;
+    await readThroughProviderCache(cache, "article:hello", load, {
+      freshTtlSeconds: 600,
+      now: () => currentTime,
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise.catch(() => undefined));
+      },
+      shouldCache: (value) => value !== null,
+      staleTtlSeconds: 604_800,
+    });
+    await Promise.all(backgroundTasks.splice(0));
+    expect(store.has("article:hello")).toBe(false);
+
+    const afterDelete = await readThroughProviderCache(cache, "article:hello", load, {
+      freshTtlSeconds: 600,
+      now: () => currentTime,
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise.catch(() => undefined));
+      },
+      shouldCache: (value) => value !== null,
+      staleTtlSeconds: 604_800,
+    });
+    expect(afterDelete).toBeNull();
+  });
 });

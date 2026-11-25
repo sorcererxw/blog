@@ -10,10 +10,10 @@ Current analytics shape:
 
 Current evidence:
 
-- `pnpm test`: PASS (`41` files, `142` tests in `1.88s`, including `src/lib/analytics/traks.test.ts`).
+- `pnpm test`: PASS (`41` files, `143` tests in `1.84s`, including `src/lib/analytics/traks.test.ts` and SWR null-invalidation regression test in `src/integrations/kv/provider-cache.test.ts`).
 - `pnpm typecheck`: PASS (`0` errors).
 - `pnpm lint`: PASS (`0` errors, `0` warnings).
-- `pnpm build`: PASS (`562ms`).
+- `pnpm build`: PASS (`465ms`).
 - Local Cloudflare Worker (`wrangler dev --config dist/server/wrangler.json --port 3327`) `curl` checks: PASS — verified `<script data-site="pb_live_f6911j6tsl00mm9e1e0v5m3i" defer="" src="https://traks-collect.xw.workers.dev/t.js"></script>` in SSR HTML on `/`, `/articles/grpc-gateway-comparison`, and `/non-existent-check`.
 - Real browser verification (`http://localhost:3327/`): PASS — `hasQueueScript: true`, `hasCollectorScript: true`, `collectorDataSite: "pb_live_f6911j6tsl00mm9e1e0v5m3i"`, `collectorDefer: true`, `window.__pb === true` (`traksInitialized: true`, queue flushed to live `window.traks`), and `POST https://traks-collect.xw.workers.dev/api/event` returned `200`.
 - `git diff --check`: PASS.
