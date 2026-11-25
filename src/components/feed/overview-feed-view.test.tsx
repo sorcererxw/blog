@@ -279,8 +279,44 @@ describe("OverviewFeed", () => {
     expect(markup).toContain("以前我们说 idea 不值钱");
     expect(markup).toContain('href="https://x.com/supezen/status/3"');
     expect(markup).toContain('src="https://pbs.twimg.com/media/quoted.jpg"');
+    expect(markup).not.toContain("grid-cols-2");
+    expect(markup).toContain("aspect-ratio:");
     expect(markup).not.toContain("https://t.co/C6afVyxUzX");
     expect(markup).not.toContain("<span>X post</span>");
+  });
+
+  it("uses a two-column grid with a spanning lead image for three quoted media items", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed
+        initialFilter={{ source: "x" }}
+        items={serializeOverviewFeedItems([
+          item({
+            id: "social:x:quote-multi",
+            type: "social",
+            source: "x",
+            title: "",
+            summary: "Quoted gallery",
+            destination: { kind: "external", href: "https://x.com/sorcererxw/status/105" },
+            metaLabel: "X",
+            quote: {
+              authorName: "ZEN",
+              authorUsername: "supezen",
+              media: [
+                { alt: "One", height: 720, src: "https://pbs.twimg.com/media/1.jpg", width: 1280 },
+                { alt: "Two", height: 720, src: "https://pbs.twimg.com/media/2.jpg", width: 1280 },
+                { alt: "Three", height: 720, src: "https://pbs.twimg.com/media/3.jpg", width: 1280 },
+              ],
+              text: "Multi-image quote",
+              url: "https://x.com/supezen/status/4",
+            },
+          }),
+        ])}
+      />,
+    );
+
+    expect(markup).toContain("mt-3 grid grid-cols-2");
+    expect(markup).toContain("col-span-2 aspect-[16/10]");
+    expect(markup).toContain("aspect-square");
   });
 
 

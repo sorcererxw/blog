@@ -16,6 +16,39 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Fix QuoteMediaGrid Single & Odd-Count Image Layout
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- diagnosed why quoted X post images rendered at half width with an empty gray right column and cropped 16:9 diagrams: `QuoteMediaGrid` in `src/components/feed/overview-feed-view.tsx` unconditionally applied `grid-cols-2` even when `media.length === 1` (and left an empty 4th slot when `media.length === 3`)
+- updated `QuoteMediaGrid` to render a single quoted image full-width with its natural aspect ratio clamped to `[4/3, 2]` (falling back to `16/10` if dimensions are absent), preserving 16:9 / 16:10 diagrams and screenshots without horizontal clipping while keeping portrait/square previews compact
+- matched multi-image quote layout to `MediaGrid`: `grid-cols-2` with `aspect-square` cells and `col-span-2 aspect-[16/10]` on index `0` when 3 images are present
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `138` tests, including single-image full-width and 3-image spanning lead assertions in `overview-feed-view.test.tsx`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`473ms`).
+- Local `wrangler dev` (`http://127.0.0.1:3324/?source=x`): local Miniflare KV does not contain remote X posts (`0` X items), so live visual check of X quote cards awaits Cloudflare Workers Builds preview deployment on PR #58.
+
+Follow-up:
+
+- verify quoted X cards visually on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/?source=x` after Workers Builds deploys the commit.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Replace HeroUI v3 with coss UI & Fix Preview Cloudflare Image Origin
 
 Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)

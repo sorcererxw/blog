@@ -11,18 +11,19 @@ Current UI system shape:
 - `src/components/rich-content/rich-content-table.tsx` renders semantic HTML tables through coss UI `Table*` components (preserving `role="columnheader"` and `role="rowheader"`), eliminating the `117 KB` React Aria collection/table runtime.
 - `src/components/feed/overview-feed-view.tsx` composes Base UI `Tabs`/`TabsList`/`TabsTab` directly with `SiteLink` via `nativeButton={false}` and `render={<SiteLink ... />}`, retaining animated `tab-indicator` transitions and URL-driven filter state.
 - `src/lib/images/cloudflare.ts` prefixes Cloudflare Image Transformations URLs with the explicit zone origin (`CLOUDFLARE_IMAGE_ORIGIN = SITE_ORIGIN = "https://sorcererxw.com"`) and `src/components/media/responsive-remote-image.tsx` pins fallback `src` width to `presetConfig.width`, so `*.workers.dev` preview and local `wrangler dev` render transformed X/Unsplash images without environment checks or arbitrary-width variant sprawl.
+- `QuoteMediaGrid` in `src/components/feed/overview-feed-view.tsx` renders single quoted images full-width using their natural aspect ratio clamped to `[4/3, 2]` (default `16/10`) instead of `grid-cols-2`, and spans the lead image across both columns (`col-span-2 aspect-[16/10]`) when a quote contains 3 images.
 
 Current evidence:
 
 - Residue check (`rg '@heroui|heroui|HeroCard|HeroSeparator|tailwind-variants|border-separator|outline-focus|bg-default|bg-surface|rounded-small|rounded-medium|var\(--surface\)|var\(--separator\)|var\(--default\)|var\(--focus\)' src package.json`): PASS (`0` matches).
-- `pnpm build`: PASS (`client 681ms`, `ssr 679ms`; re-verified in `581ms` after image origin fix).
+- `pnpm build`: PASS (`client 681ms`, `ssr 679ms`; re-verified in `473ms` after `QuoteMediaGrid` fix).
   - Client JS total dropped from `680.2 KB` (`217.5 KB` gzip) to **`463.8 KB` (`152.0 KB` gzip)** (`-31.8%`).
   - `rich-content-table` chunk dropped from `117.09 KB` (`34.47 KB` gzip) to **`4.10 KB` (`1.13 KB` gzip)** (`-96.5%`).
   - Client CSS: `globals-*.css` `83.33 KB` (`12.80 KB` gzip); total 3 CSS bundles `92.9 KB` (`15.7 KB` gzip).
 - `pnpm exec wrangler deploy --dry-run`: PASS (`Total Upload: 4741.99 KiB / gzip: 791.07 KiB` across `75` ESM modules + `26` client assets, down from `5251.77 KiB / 893.44 KiB gzip`).
 - `pnpm typecheck`: PASS (`0` errors).
 - `pnpm lint`: PASS (`0` errors, `0` warnings; `src/components/ui/` exempted from `local/no-arbitrary-tailwind-design-tokens`).
-- `pnpm test`: PASS (`40` files, `137` tests in `2.00s`, including explicit zone origin + preset fallback width assertions in `cloudflare.test.ts` and `responsive-remote-image.test.tsx`).
+- `pnpm test`: PASS (`40` files, `138` tests in `1.70s`, including explicit zone origin + preset fallback width assertions in `cloudflare.test.ts`/`responsive-remote-image.test.tsx` and single/multi-image `QuoteMediaGrid` layout assertions in `overview-feed-view.test.tsx`).
 - Local Cloudflare Worker (`wrangler dev --config dist/server/wrangler.json`) `curl` checks: PASS for `/`, `/?type=writing`, `/articles/grpc-gateway-comparison`, and `/articles/screenshot-render`; confirmed coss UI `data-slot` markup (`button`, `tabs`, `tabs-list`, `tabs-tab`, `tab-indicator`, `card`, `badge`, `table-container`, `table`, `table-head`, `table-cell`), `role="columnheader"`, `role="rowheader"`, `isolate` root wrapper, zero residual HeroUI classes, `0` relative `"/cdn-cgi/image/` URLs, and live `HEAD` against generated `https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=960/...` returning `HTTP/2 200 image/jpeg` with `access-control-allow-origin: *`.
 - Real browser verification on local Cloudflare Worker (`http://localhost:3322/`): PASS:
   - `/` hydrated cleanly (`hasBoundaryError: false`, `feedLayout: "hydrated-masonry"`, `columnCount: 3`, `feedReveal: "ready"`, `144` cards, `noHorizontalOverflow: true`), self-hosted fonts loaded (`Libre Bodoni:500/600`, `Courier Prime:400/700`), dark and light mode coss UI tokens verified (`cardRadius: 16px`, `badgeRadius: 4px`, `buttonSize: 28x28`), and interactive filter tabs (`All` 144 -> `Writing` 42 with `aria-selected="true"` -> `All` 144) succeeded.

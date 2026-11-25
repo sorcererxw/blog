@@ -264,15 +264,55 @@ function MediaGrid({
   );
 }
 
+function getSingleQuoteMediaAspectRatio(item: FeedMediaPreview) {
+  if (!item.width || !item.height) {
+    return 16 / 10;
+  }
+
+  const ratio = item.width / item.height;
+  return Math.min(Math.max(ratio, 4 / 3), 2);
+}
+
 function QuoteMediaGrid({ media }: { media: FeedMediaPreview[] }) {
-  if (media.length === 0) {
+  const visibleMedia = media.slice(0, 4);
+
+  if (visibleMedia.length === 0) {
     return null;
+  }
+
+  if (visibleMedia.length === 1) {
+    const [item] = visibleMedia;
+
+    return (
+      <div
+        className="mt-3 overflow-hidden rounded-md bg-muted"
+        style={{ aspectRatio: String(getSingleQuoteMediaAspectRatio(item)) }}
+      >
+        <ResponsiveRemoteImage
+          alt={item.alt}
+          className="h-full w-full object-cover"
+          height={item.height ?? 720}
+          loading="lazy"
+          preset="article-card"
+          src={item.src}
+          width={item.width ?? 1280}
+        />
+      </div>
+    );
   }
 
   return (
     <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md bg-muted">
-      {media.slice(0, 4).map((item, index) => (
-        <div className="aspect-[16/10] overflow-hidden bg-muted" key={`${item.src}-${index}`}>
+      {visibleMedia.map((item, index) => (
+        <div
+          className={cn(
+            "aspect-square overflow-hidden bg-muted",
+            visibleMedia.length % 2 === 1 &&
+              index === 0 &&
+              "col-span-2 aspect-[16/10]",
+          )}
+          key={`${item.src}-${index}`}
+        >
           <ResponsiveRemoteImage
             alt={item.alt}
             className="h-full w-full object-cover"
