@@ -64,6 +64,8 @@ describe("listThoughts", () => {
 
     expect(result.map((item) => item.id)).toEqual(["2"]);
     expect(calls[0]?.url).toBe("https://t.me/s/tech_bb");
-    expect((calls[0]?.init as RequestInit & { next?: { revalidate?: number } }).next?.revalidate).toBe(123);
+    expect((calls[0]?.init?.headers as Record<string, string>)?.["user-agent"]).toContain(
+      "PersonalSiteTelegramCrawler",
+    );
   });
 });

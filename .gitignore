@@ -1,5 +1,6 @@
 .wrangler/
 .open-next/
+.tanstack/
 .pnpm-store/
 .astro/
 node_modules

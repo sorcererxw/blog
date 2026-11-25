@@ -1,18 +1,18 @@
 import type { ReactNode } from "react";
 
-import NextLink from "next/link";
-import { Chip } from "@heroui/react";
+import { SiteLink } from "@/components/navigation/site-link";
 import React from "react";
 
 import { MasonryFeed } from "@/components/feed/masonry-feed";
-import {
-  HeroCard as Card,
-  HeroCardContent as CardContent,
-  HeroCardDescription as CardDescription,
-  HeroCardHeader as CardHeader,
-  HeroCardTitle as CardTitle,
-} from "@/components/heroui/server-primitives";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { listThoughts } from "@/domains/thoughts/list-thoughts";
 import {
   createPublicProviderCache,
@@ -95,19 +95,19 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
 
     if (segment.url) {
       content = (
-        <NextLink
-          className="pointer-events-auto break-all font-medium text-accent hover:underline"
+        <SiteLink
+          className="pointer-events-auto break-all font-medium text-primary hover:underline"
           href={segment.url}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </NextLink>
+        </SiteLink>
       );
     }
 
     if (segment.hashTag) {
-      content = <span className="font-medium text-accent">{content}</span>;
+      content = <span className="font-medium text-primary">{content}</span>;
     }
 
     if (segment.bold) {
@@ -124,7 +124,7 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
 
     if (segment.monospace) {
       content = (
-        <code className="rounded bg-default px-1 py-0.5 font-code text-sm">
+        <code className="rounded bg-muted px-1 py-0.5 font-code text-sm">
           {content}
         </code>
       );
@@ -138,7 +138,7 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
       return (
         <blockquote
           key={index}
-          className="my-2 border-l-2 border-separator pl-3 text-muted"
+          className="my-2 border-l-2 border-border pl-3 text-muted-foreground"
         >
           {content}
         </blockquote>
@@ -173,12 +173,12 @@ function ReplyPreview({
   }
 
   return (
-    <NextLink
+    <SiteLink
       className="pointer-events-auto relative z-10 flex flex-row border-l-2 pl-2 hover:opacity-100"
       href={preview.href}
     >
       {body}
-    </NextLink>
+    </SiteLink>
   );
 }
 
@@ -191,7 +191,7 @@ function WebpagePreview({ item }: { item: ThoughtItem }) {
     item.webpage.photo?.originalUrl ?? item.webpage.photo?.thumbnailUrl ?? null;
 
   return (
-    <Card className="my-4 gap-3 border-none bg-default/40 py-3 ring-1 ring-foreground/8">
+    <Card className="my-4 gap-3 border-none bg-muted/40 py-3 ring-1 ring-foreground/8">
       {photoSrc ? (
         <ResponsiveRemoteImage
           alt=""
@@ -216,7 +216,7 @@ function WebpagePreview({ item }: { item: ThoughtItem }) {
 function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
   if (items.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed p-6 text-sm text-muted">
+      <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
         No thoughts published yet.
       </div>
     );
@@ -235,9 +235,9 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
         return (
           <article
             id={localMessageAnchor(item.id)}
-            className="group relative overflow-hidden rounded-xl border bg-surface shadow-sm transition-all hover:shadow-md"
+            className="group relative overflow-hidden rounded-xl border bg-card shadow-sm transition-all hover:shadow-md"
           >
-            <NextLink
+            <SiteLink
               aria-label={`Open thought from ${dateLabel} in Telegram`}
               className="absolute inset-0 z-0"
               href={item.link}
@@ -294,9 +294,9 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
               >
                 <div className="grid grid-flow-col items-center justify-start gap-2">
                   {item.reactions.map((reaction, index) => (
-                    <Chip key={`${item.id}-${index}`}>
+                    <Badge key={`${item.id}-${index}`} variant="secondary">
                       {reaction.emoticon} {reaction.count}
-                    </Chip>
+                    </Badge>
                   ))}
                 </div>
                 <div className="flex items-center gap-3 text-sm opacity-60">

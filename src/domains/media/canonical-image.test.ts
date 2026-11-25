@@ -52,6 +52,33 @@ describe("canonical-image", () => {
     expect(createCanonicalImagePath(sourceUrl)).toContain(encoded);
   });
 
+  it("round-trips encoded canonical source URLs without relying on Buffer base64url", () => {
+    const sourceUrl = "https://cdn5.telesco.pe/file/中文-photo.jpg?foo=1&bar=2";
+    const expected = Buffer.from(sourceUrl, "utf8").toString("base64url");
+    const originalBuffer = globalThis.Buffer;
+
+    try {
+      // Simulate both absent Buffer and Webpack's buffer polyfill (which lacks base64url).
+      Object.defineProperty(globalThis, "Buffer", {
+        configurable: true,
+        value: {
+          from() {
+            throw new TypeError("Unknown encoding: base64url");
+          },
+        },
+      });
+
+      const encoded = encodeCanonicalImageSource(sourceUrl);
+      expect(encoded).toBe(expected);
+      expect(decodeCanonicalImageSource(encoded)).toBe(sourceUrl);
+    } finally {
+      Object.defineProperty(globalThis, "Buffer", {
+        configurable: true,
+        value: originalBuffer,
+      });
+    }
+  });
+
   it("rejects unsafe canonical source URLs", () => {
     expect(isSafeCanonicalSourceUrl("https://cdn5.telesco.pe/file/photo.jpg")).toBe(true);
     expect(isSafeCanonicalSourceUrl("https://example.com/image.jpg")).toBe(false);

@@ -1,8 +1,7 @@
-"use client";
-
-import { Button } from "@heroui/react";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
 
 const THEME_STORAGE_KEY = "blog-theme";
 
@@ -52,16 +51,15 @@ export function ThemeToggle() {
   return (
     <Button
       aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      isIconOnly
-      onPress={() => {
+      onClick={() => {
         const nextTheme = isDark ? "light" : "dark";
 
         setTheme(nextTheme);
         applyTheme(nextTheme);
         window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
       }}
-      size="sm"
-      variant="tertiary"
+      size="icon-sm"
+      variant="ghost"
     >
       {isDark ? (
         <Sun aria-hidden="true" className="size-4" />

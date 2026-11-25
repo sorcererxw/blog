@@ -71,12 +71,12 @@ describe("OverviewFeed", () => {
     expect(markup).toContain('data-slot="tabs"');
     expect(markup).toContain('data-slot="tabs-list"');
     expect(markup).toContain('data-slot="tabs-tab"');
-    expect(markup).toContain('data-selected="true"');
+    expect(markup).toContain('aria-selected="true"');
     expect(markup).toContain('data-slot="card"');
     expect(markup).toContain('role="link"');
     expect(markup).toContain('tabindex="0"');
     expect(markup).toContain("cursor-pointer");
-    expect(markup).toContain("border-separator");
+    expect(markup).toContain("border-border");
     expect(markup).toContain("px-0");
     expect(markup).toContain("grid gap-3 p-5");
     expect(markup).not.toContain("gap-2 p-4");
@@ -87,14 +87,14 @@ describe("OverviewFeed", () => {
     expect(markup).toContain(
       '<time class="mt-1 inline-flex items-center text-xs uppercase text-foreground"',
     );
-    expect(markup).toContain("chip");
+    expect(markup).toContain('data-slot="badge"');
     expect(markup).toContain("Writing");
-    expect(markup).not.toContain("base-ui-");
+    expect(markup).not.toContain("chip--default");
     expect(markup).toContain('class="justify-self-start"');
     expect(markup).not.toContain("px-" + "[1.15rem]");
     expect(markup).not.toContain("badge--soft");
     expect(markup).toContain('href="/articles/one"');
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Farticle-cover.jpg");
+    expect(markup).toContain('src="https://example.com/article-cover.jpg"');
     expect(markup).toContain('loading="eager"');
     expect(markup).toContain('fetchPriority="high"');
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
@@ -160,8 +160,8 @@ describe("OverviewFeed", () => {
     );
 
     expect(markup.match(/loading="eager"/g)).toHaveLength(2);
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fthird.jpg");
-    expect(markup).toMatch(/loading="lazy"[^>]+srcSet="[^"]*third\.jpg/);
+    expect(markup).toContain('src="https://example.com/third.jpg"');
+    expect(markup).toMatch(/loading="lazy"[^>]+src="https:\/\/example\.com\/third\.jpg"/);
   });
 
   it("renders Telegram modules with rich text and no duplicate title", () => {
@@ -237,8 +237,8 @@ describe("OverviewFeed", () => {
       />,
     );
 
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-1.jpg");
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-2.jpg");
+    expect(markup).toContain('src="https://example.com/photo-1.jpg"');
+    expect(markup).toContain('src="https://example.com/photo-2.jpg"');
     expect(markup).toContain("grid-cols-2");
   });
 
@@ -278,9 +278,45 @@ describe("OverviewFeed", () => {
     expect(markup).toContain("@supezen");
     expect(markup).toContain("以前我们说 idea 不值钱");
     expect(markup).toContain('href="https://x.com/supezen/status/3"');
-    expect(markup).toContain("https%3A%2F%2Fpbs.twimg.com%2Fmedia%2Fquoted.jpg");
+    expect(markup).toContain('src="https://pbs.twimg.com/media/quoted.jpg"');
+    expect(markup).not.toContain("grid-cols-2");
+    expect(markup).toContain("aspect-ratio:");
     expect(markup).not.toContain("https://t.co/C6afVyxUzX");
     expect(markup).not.toContain("<span>X post</span>");
+  });
+
+  it("uses a two-column grid with a spanning lead image for three quoted media items", () => {
+    const markup = renderToStaticMarkup(
+      <OverviewFeed
+        initialFilter={{ source: "x" }}
+        items={serializeOverviewFeedItems([
+          item({
+            id: "social:x:quote-multi",
+            type: "social",
+            source: "x",
+            title: "",
+            summary: "Quoted gallery",
+            destination: { kind: "external", href: "https://x.com/sorcererxw/status/105" },
+            metaLabel: "X",
+            quote: {
+              authorName: "ZEN",
+              authorUsername: "supezen",
+              media: [
+                { alt: "One", height: 720, src: "https://pbs.twimg.com/media/1.jpg", width: 1280 },
+                { alt: "Two", height: 720, src: "https://pbs.twimg.com/media/2.jpg", width: 1280 },
+                { alt: "Three", height: 720, src: "https://pbs.twimg.com/media/3.jpg", width: 1280 },
+              ],
+              text: "Multi-image quote",
+              url: "https://x.com/supezen/status/4",
+            },
+          }),
+        ])}
+      />,
+    );
+
+    expect(markup).toContain("mt-3 grid grid-cols-2");
+    expect(markup).toContain("col-span-2 aspect-[16/10]");
+    expect(markup).toContain("aspect-square");
   });
 
 

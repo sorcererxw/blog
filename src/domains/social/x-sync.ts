@@ -1,5 +1,7 @@
 import type { Client } from "@xdevplatform/xdk";
 
+import { waitUntilInWorker } from "@/lib/cloudflare-env";
+
 export type XSocialPostKind = "original" | "quote" | "reply" | "repost";
 
 export type XSocialQuotedPost = {
@@ -105,8 +107,11 @@ type XUser = {
 };
 
 export type XSocialPostStore = {
+  getFeedSnapshot?: () => Promise<XSocialPostDetail[] | null>;
   getIndex: () => Promise<XSocialPostIndex>;
   getPost: (id: string) => Promise<XSocialPostDetail | null>;
+  getPostsBatch?: (ids: string[]) => Promise<Array<XSocialPostDetail | null>>;
+  putFeedSnapshot?: (posts: XSocialPostDetail[]) => Promise<void>;
   putIndex: (index: XSocialPostIndex) => Promise<void>;
   putPost: (post: XSocialPostDetail) => Promise<void>;
 };
@@ -441,6 +446,11 @@ export async function syncXSocialPosts({
 
   await store.putIndex(nextIndex);
 
+  if (store.putFeedSnapshot) {
+    const existingPosts = await loadOrderedPostsByIds(store, nextIndex.orderedIds, retainedPosts);
+    await store.putFeedSnapshot(existingPosts);
+  }
+
   return {
     retainedCount: retainedPosts.length,
     scannedBoundaryId,
@@ -448,18 +458,58 @@ export async function syncXSocialPosts({
   };
 }
 
+async function loadOrderedPostsByIds(
+  store: XSocialPostStore,
+  orderedIds: string[],
+  knownPosts: XSocialPostDetail[] = [],
+): Promise<XSocialPostDetail[]> {
+  if (orderedIds.length === 0) {
+    return [];
+  }
+
+  const byId = new Map<string, XSocialPostDetail>(
+    knownPosts.map((post) => [post.id, post]),
+  );
+  const missingIds = orderedIds.filter((id) => !byId.has(id));
+
+  if (missingIds.length > 0) {
+    const fetched = store.getPostsBatch
+      ? await store.getPostsBatch(missingIds)
+      : await Promise.all(missingIds.map((id) => store.getPost(id)));
+
+    for (const post of fetched) {
+      if (post) {
+        byId.set(post.id, post);
+      }
+    }
+  }
+
+  return orderedIds.flatMap((id) => {
+    const post = byId.get(id);
+    return post ? [post] : [];
+  });
+}
+
 export async function listStoredXSocialPosts(
   store: XSocialPostStore,
+  {
+    scheduleBackground = waitUntilInWorker,
+  }: {
+    scheduleBackground?: (promise: Promise<unknown>) => void;
+  } = {},
 ): Promise<XSocialPostDetail[]> {
-  const index = await store.getIndex();
-  const posts: XSocialPostDetail[] = [];
-
-  for (const id of index.orderedIds) {
-    const post = await store.getPost(id);
-
-    if (post) {
-      posts.push(post);
+  if (store.getFeedSnapshot) {
+    const snapshot = await store.getFeedSnapshot();
+    if (snapshot !== null) {
+      return snapshot;
     }
+  }
+
+  const index = await store.getIndex();
+  const posts = await loadOrderedPostsByIds(store, index.orderedIds);
+
+  if (store.putFeedSnapshot && posts.length > 0) {
+    scheduleBackground(store.putFeedSnapshot(posts));
   }
 
   return posts;

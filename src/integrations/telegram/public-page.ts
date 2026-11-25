@@ -442,12 +442,14 @@ export async function scrapeTelegramPublicPageThoughtRecords({
   channelUsername,
   fetchImpl = fetch,
   html,
+  knownIds,
   maxPages = 200,
-  revalidateSeconds = 600,
+  revalidateSeconds: _revalidateSeconds = 600,
 }: {
   channelUsername?: string;
   fetchImpl?: typeof fetch;
   html?: string;
+  knownIds?: ReadonlySet<string>;
   maxPages?: number;
   revalidateSeconds?: number;
 } = {}): Promise<TelegramThoughtRecord[]> {
@@ -481,12 +483,11 @@ export async function scrapeTelegramPublicPageThoughtRecords({
       seenBeforeTokens.add(beforeToken);
     }
 
-    const requestInit = {
+    const requestInit: RequestInit = {
       headers: {
         "user-agent": TELEGRAM_PUBLIC_PAGE_USER_AGENT,
       },
-      next: { revalidate: revalidateSeconds },
-    } as RequestInit & { next: { revalidate: number } };
+    };
 
     const response = await fetchImpl(requestUrl, requestInit);
 
@@ -505,8 +506,18 @@ export async function scrapeTelegramPublicPageThoughtRecords({
       break;
     }
 
+    let hitKnownBoundary = false;
+
     for (const record of pageResult.records) {
-      records.set(String(record.id), record);
+      const idKey = String(record.id);
+      records.set(idKey, record);
+      if (knownIds && knownIds.has(idKey)) {
+        hitKnownBoundary = true;
+      }
+    }
+
+    if (hitKnownBoundary) {
+      break;
     }
 
     nextUrl = pageResult.nextUrl;

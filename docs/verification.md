@@ -1,5 +1,157 @@
 # Blog2 Verification Guide
 
+## 2026-11-25 Traks Analytics Integration State
+
+Current analytics shape:
+
+- `src/lib/analytics/traks.ts` centralizes Traks collector config (`TRAKS_SITE_KEY = "pb_live_f6911j6tsl00mm9e1e0v5m3i"`, `TRAKS_SCRIPT_SRC = "https://traks-collect.xw.workers.dev/t.js"`, queue bootstrap script) and `trackTraksEvent` / `trackTraks404` helpers.
+- `src/routes/__root.tsx` renders the queue bootstrap script and `<script defer data-site="pb_live_f6911j6tsl00mm9e1e0v5m3i" src="https://traks-collect.xw.workers.dev/t.js">` inside SSR `<head>` on all routes (so `t.js` reads `document.currentScript` natively, hooks `history.pushState`/`popstate` for TanStack Router SPA navigation, and tracks engagement, outbound links, downloads, and UTM params).
+- `RootNotFound` (`src/routes/__root.tsx`) and `ArticleNotFound` (`src/routes/articles/$slug.tsx`) report `404` events with `{ path }` via `trackTraks404()`.
+
+Current evidence:
+
+- `pnpm test`: PASS (`41` files, `143` tests in `1.84s`, including `src/lib/analytics/traks.test.ts` and SWR null-invalidation regression test in `src/integrations/kv/provider-cache.test.ts`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`465ms`).
+- Local Cloudflare Worker (`wrangler dev --config dist/server/wrangler.json --port 3327`) `curl` checks: PASS — verified `<script data-site="pb_live_f6911j6tsl00mm9e1e0v5m3i" defer="" src="https://traks-collect.xw.workers.dev/t.js"></script>` in SSR HTML on `/`, `/articles/grpc-gateway-comparison`, and `/non-existent-check`.
+- Real browser verification (`http://localhost:3327/`): PASS — `hasQueueScript: true`, `hasCollectorScript: true`, `collectorDataSite: "pb_live_f6911j6tsl00mm9e1e0v5m3i"`, `collectorDefer: true`, `window.__pb === true` (`traksInitialized: true`, queue flushed to live `window.traks`), and `POST https://traks-collect.xw.workers.dev/api/event` returned `200`.
+- `git diff --check`: PASS.
+
+## 2026-11-25 Masonry Layout Calibration & Pretext Removal State
+
+Current masonry layout shape (`docs/specs/2026-11-25-masonry-layout-optimization-design.md`):
+
+- Removed `@chenglou/pretext` from `package.json` and `src/domains/feed/feed-layout-engine.ts`.
+- `src/domains/feed/feed-layout-engine.ts` now combines a zero-dependency heuristic estimator aligned to real card geometry (`aspect-[16/10]` single media, `QuotePreview` + `QuoteMediaGrid`, `p-5`/`gap-3`, `16px/26px` body, CJK/Latin widths), optional exact DOM `measuredHeights` overrides, and trailing undated LPT balancing (keeping all dated items strictly chronological).
+- `OverviewFeed` (`src/components/feed/overview-feed-view.tsx`) runs a single batched `useIsomorphicLayoutEffect` DOM height read before initial `opacity-0 -> opacity-100` reveal (plus re-calibration on `document.fonts.ready` and width changes), eliminating height drift across 100+ mixed CJK/English/quote/photo cards without visual jump.
+
+Current evidence:
+
+- `pnpm test`: PASS (`40` files, `139` tests in `1.75s`, including `quote` height, single-media `16:10`, exact `measuredHeights` override, and trailing undated LPT balancing in `feed-layout-engine.test.ts`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`509ms`).
+  - Client JS total dropped from `463.8 KB` (`152.0 KB` gzip) to **`427.8 KB` (`139.6 KB` gzip)** (`-36.0 KB` raw / `-12.4 KB` gzip).
+  - Server `routes-*.js` chunk dropped from `212.74 KB` to **`126.44 KB`** (`-86.3 KB`).
+- Real browser verification on local Cloudflare Worker (`http://localhost:3326/`): PASS:
+  - Desktop `1280px` (3 columns, `144` cards, `~26,700px` total height): columns `26,717px / 26,692px / 26,792px` -> bottom spread **`100px` (`0.37%`)**, down from `1,107px` measured on live preview before the fix.
+  - Filter switching (`All` -> `Writing` `42` cards / `298px` spread -> `Projects` `13` cards / `190px` spread -> `All` `144` cards / `100px` spread): zero errors, zero flicker, `reveal: "ready"`.
+  - Tablet `800px` resize (2 columns, `144` cards, `~40,000px` total height): columns `40,081px / 39,972px` -> bottom spread **`109px` (`0.27%`)**.
+- `git diff --check`: PASS.
+
+## 2026-11-25 coss UI Complete Migration State
+
+Current UI system shape:
+
+- HeroUI v3 (`@heroui/react`, `@heroui/styles`, `tailwind-variants`, `src/components/heroui/`) has been completely replaced with **coss UI** (`https://coss.com/ui`, built on `@base-ui/react@^1.9.0` + `class-variance-authority@^0.7.1` + Tailwind CSS v4).
+- Official coss UI registry primitives live under `src/components/ui/`: `badge.tsx`, `button.tsx`, `card.tsx`, `segmented-control.tsx`, `separator.tsx`, `spinner.tsx`, `table.tsx`, and `tabs.tsx`.
+- `src/styles/globals.css` maps the site's original warm stone/paper (`hue 56.06`) light/dark palette onto coss UI semantic tokens (`--background: oklch(97.02% 0.0081 56.06)` / `--card: oklch(100% 0.004 56.06)` in light mode, `--background: oklch(12% 0.0081 56.06)` / `--card: oklch(21.03% 0.0162 56.06)` in dark mode), and `segmentedControlIndicatorSurfaceClassName` uses `bg-card dark:bg-input` so active tabs match the elevated surface in both modes, while keeping self-hosted `@fontsource/libre-bodoni` and `@fontsource/courier-prime` typography.
+- `src/routes/__root.tsx` wraps the app shell in Base UI's recommended `<div className="isolate relative flex min-h-svh flex-col">`.
+- `src/components/rich-content/rich-content-table.tsx` renders semantic HTML tables through coss UI `Table*` components (preserving `role="columnheader"` and `role="rowheader"`), eliminating the `117 KB` React Aria collection/table runtime.
+- `src/components/feed/overview-feed-view.tsx` composes Base UI `Tabs`/`TabsList`/`TabsTab` directly with `SiteLink` via `nativeButton={false}` and `render={<SiteLink ... />}`, retaining animated `tab-indicator` transitions and URL-driven filter state.
+- `src/lib/images/cloudflare.ts` prefixes Cloudflare Image Transformations URLs with the explicit zone origin (`CLOUDFLARE_IMAGE_ORIGIN = SITE_ORIGIN = "https://sorcererxw.com"`) and `src/components/media/responsive-remote-image.tsx` pins fallback `src` width to `presetConfig.width`, so `*.workers.dev` preview and local `wrangler dev` render transformed X/Unsplash images without environment checks or arbitrary-width variant sprawl.
+- `QuoteMediaGrid` in `src/components/feed/overview-feed-view.tsx` renders single quoted images full-width using their natural aspect ratio clamped to `[4/3, 2]` (default `16/10`) instead of `grid-cols-2`, and spans the lead image across both columns (`col-span-2 aspect-[16/10]`) when a quote contains 3 images.
+
+Current evidence:
+
+- Residue check (`rg '@heroui|heroui|HeroCard|HeroSeparator|tailwind-variants|border-separator|outline-focus|bg-default|bg-surface|rounded-small|rounded-medium|var\(--surface\)|var\(--separator\)|var\(--default\)|var\(--focus\)' src package.json`): PASS (`0` matches).
+- `pnpm build`: PASS (`client 681ms`, `ssr 679ms`; re-verified in `473ms` after `QuoteMediaGrid` fix).
+  - Client JS total dropped from `680.2 KB` (`217.5 KB` gzip) to **`463.8 KB` (`152.0 KB` gzip)** (`-31.8%`).
+  - `rich-content-table` chunk dropped from `117.09 KB` (`34.47 KB` gzip) to **`4.10 KB` (`1.13 KB` gzip)** (`-96.5%`).
+  - Client CSS: `globals-*.css` `83.33 KB` (`12.80 KB` gzip); total 3 CSS bundles `92.9 KB` (`15.7 KB` gzip).
+- `pnpm exec wrangler deploy --dry-run`: PASS (`Total Upload: 4741.99 KiB / gzip: 791.07 KiB` across `75` ESM modules + `26` client assets, down from `5251.77 KiB / 893.44 KiB gzip`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings; `src/components/ui/` exempted from `local/no-arbitrary-tailwind-design-tokens`).
+- `pnpm test`: PASS (`40` files, `138` tests in `1.70s`, including explicit zone origin + preset fallback width assertions in `cloudflare.test.ts`/`responsive-remote-image.test.tsx` and single/multi-image `QuoteMediaGrid` layout assertions in `overview-feed-view.test.tsx`).
+- Local Cloudflare Worker (`wrangler dev --config dist/server/wrangler.json`) `curl` checks: PASS for `/`, `/?type=writing`, `/articles/grpc-gateway-comparison`, and `/articles/screenshot-render`; confirmed coss UI `data-slot` markup (`button`, `tabs`, `tabs-list`, `tabs-tab`, `tab-indicator`, `card`, `badge`, `table-container`, `table`, `table-head`, `table-cell`), `role="columnheader"`, `role="rowheader"`, `isolate` root wrapper, zero residual HeroUI classes, `0` relative `"/cdn-cgi/image/` URLs, and live `HEAD` against generated `https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=960/...` returning `HTTP/2 200 image/jpeg` with `access-control-allow-origin: *`.
+- Real browser verification on local Cloudflare Worker (`http://localhost:3322/`): PASS:
+  - `/` hydrated cleanly (`hasBoundaryError: false`, `feedLayout: "hydrated-masonry"`, `columnCount: 3`, `feedReveal: "ready"`, `144` cards, `noHorizontalOverflow: true`), self-hosted fonts loaded (`Libre Bodoni:500/600`, `Courier Prime:400/700`), restored warm `56.06` light/dark computed tokens verified (`light`: `bodyBg: oklch(0.9702 0.0081 56.06)`, `cardBg: oklch(1 0.004 56.06)`, `tabsListBg`/`badgeBg`: `oklch(0.94 0.0081 56.06)`, `indicatorBg`: `oklch(1 0.004 56.06)`; `dark`: `bodyBg: oklch(0.12 0.0081 56.06)`, `cardBg: oklch(0.2103 0.0162 56.06)`, `tabsListBg`/`badgeBg`: `oklch(0.274 0.0081 56.06)`, `indicatorBg`: `oklch(0.3964 0.0081 56.06)`), and interactive filter tabs (`All` 144 -> `Writing` 42 with `aria-selected="true"` -> `All` 144) succeeded.
+  - `/articles/grpc-gateway-comparison`: `hasBoundaryError: false`, `noHorizontalOverflow: true`, coss UI `table` + `table-container` (`overflow-x: auto`, `border-collapse: collapse`, `3` `columnheader`s, `21` cells, `7` `rowheader`s), `2` Shiki code blocks.
+  - SPA navigation `Back to writing` -> `/?type=writing`: `42` cards, `writingSelected: "true"`, `tab-indicator` CSS `translate: 49.1875px -2px` aligned to the Writing tab (`indicatorAlignedX: true`, `indicatorAlignedWidth: true`).
+  - `/articles/screenshot-render`: `hasBoundaryError: false`, `noHorizontalOverflow: true`, `<!--render-->` rendered HTML block + `2` Shiki code blocks.
+- `git diff --check`: PASS.
+
+Residual risk:
+
+- Visual preview on Cloudflare edge deployment remains pending push/deploy of the updated commit.
+
+## 2026-11-25 Vite 8 + TanStack Start + Native Cloudflare Workers Migration State
+
+Current platform and runtime shape:
+
+- Framework/runtime moved from Next.js 16 + `@opennextjs/cloudflare` to Vite 8 (`vite@8.3.8`) + TanStack Start (`@tanstack/react-start@1.169.7`) + `@cloudflare/vite-plugin@1.70.1` + `@tailwindcss/vite@4.3.5`.
+- `src/server.ts` is the native Cloudflare Worker entry (`wrangler.jsonc` `main: "./src/server.ts"`): it runs `getLegacyRedirectResponse` (`308` for `/projects`, `/thoughts`, `/en/**`, `/zh/**`, passing `/blog` through to `404`), wraps `@tanstack/react-start/server-entry` with `handleEdgeCachedFetch` (keyed by compile-time `__APP_BUILD_ID__`), and exports `scheduled()` for the daily `0 18 * * *` X sync cron.
+- `src/lib/cloudflare-env.ts` reads bindings and registers background tasks directly from native `cloudflare:workers` (`env`, `waitUntil`), removing `@opennextjs/cloudflare`.
+- File routes live under `src/routes/`: `__root.tsx`, `index.tsx`, `articles/$slug.tsx`, `api/health.ts`, `sitemap[.]xml.ts`, `[.]well-known/api-catalog.ts`, and `media/$id.ts`, backed by thin server modules under `src/server-handlers/`.
+- Navigation uses `SiteLink` (`src/components/navigation/site-link.tsx`), rendering plain `<a>` for external/hash/router-less contexts and TanStack `<Link>` for internal routes. Images use `ResponsiveRemoteImage` (`<img>` + `/media/$id` for volatile hosts, `/cdn-cgi/image/...` + `srcSet` for transform-allowed hosts).
+- Fonts (`Libre Bodoni` 400/500/600 and `Courier Prime` 400/700, Latin subsets) are self-hosted via `@fontsource/*` in `src/styles/globals.css`, keeping selective HeroUI v3 CSS imports.
+- All zero-cost optimizations from PR #58 remain intact (KV SWR, `social:x:feed:v1` snapshot, Telegram incremental `knownIds`, Notion `data_source_id` caching, `shiki/core` singleton with dynamic ESM grammar chunks, `caches.default` HTML SWR, `/media/$id` immutable + `ETag`/`304` + `waitUntil` backfill).
+
+Current evidence:
+
+- `pnpm build`: PASS in ~0.97s (client `502ms`, SSR `471ms`).
+  - Client JS total across all routes: `680.2 KB` raw / `217.5 KB` gzip (`rich-content-table` `117.09 KB` and `_slug` `11.8 KB` code-split off `/`; homepage JS ~`551 KB` raw / ~`179 KB` gzip).
+  - Client CSS: `globals-*.css` `77.79 KB` raw (`12.49 KB` gzip) + `routes-*.css` `3.92 KB` (`1.15 KB` gzip).
+  - Server Worker upload (`wrangler deploy --dry-run`): `Total Upload: 5251.77 KiB / gzip: 893.44 KiB` across `76` ESM modules (`dist/server/index.js` entry `891 KiB` / `168 KiB` gzip; Shiki language grammars split into lazy ESM chunks) + `29` static assets in `dist/client`.
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings, with updated `local/require-shared-link-and-image` rule).
+- `pnpm test`: PASS (`40` files, `137` tests in `1.73s`).
+- `pnpm exec wrangler dev --config dist/server/wrangler.json --ip 127.0.0.1 --port 3320 --test-scheduled` + `curl`: PASS:
+  - `/api/health` -> `200 application/json` (`mode: "production"`).
+  - `GET` & `HEAD /.well-known/api-catalog` -> `200 application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"` + RFC 8288 `Link` header.
+  - `/` -> `200 text/html`, `Cache-Control: public, max-age=0, s-maxage=600`, `Link` header, `x-blog2-edge-cache: miss` -> `hit` (`3.4ms–6.3ms` local TTFB), `<title>sorcererxw</title>`, canonical `https://sorcererxw.com/`, `CollectionPage` JSON-LD, `ProfileHero`, `OverviewFeed` (`144` cards with local KV), `/media/` images, zero `rich-content-table` script tags on `/`.
+  - `/?type=writing` (`42` cards, Writing tab selected) and `/?source=telegram` (`89` cards).
+  - `/sitemap.xml` -> `200 application/xml`, `x-blog2-edge-cache: miss` -> cached.
+  - `/articles/screenshot-render` -> `200`, `TechArticle` JSON-LD, `<!--render-->` rendered HTML, Shiki highlighted blocks.
+  - `/articles/grpc-gateway-comparison` -> `200`, HeroUI table rendered.
+  - `/articles/non-existent-slug-check-404` -> `404` (`Page not found.`).
+  - Legacy redirects: `/projects` -> `308 /?type=projects`, `/thoughts` -> `308 /?type=social`, `/en` -> `308 /`, `/zh/articles/screenshot-render` -> `308 /articles/screenshot-render`, `/en/blog` -> `308 /blog`, `/blog` -> `404`.
+  - `/media/<id>?u=...` -> `200 image/jpeg`, `Cache-Control: public, max-age=31536000, immutable`, `ETag`, `If-None-Match` -> `304 Not Modified`.
+  - `/assets/globals-*.css` -> `200 text/css`, `Cache-Control: public,max-age=31536000,immutable` (from `public/_headers`).
+  - `/robots.txt`, `/llms.txt`, `/favicon.svg` -> `200`; `/cdn-cgi/handler/scheduled?cron=0+0+*+*+*` -> `200 ok`.
+- Real browser verification on local Cloudflare Worker (`http://localhost:3320/`): PASS:
+  - `/` hydrated cleanly (`hasBoundaryError: false`, `feedLayout: "hydrated-masonry"`, `columnCount: 3`, `feedReveal: "ready"`, `144` cards).
+  - Self-hosted fonts loaded (`Libre Bodoni:500/600`, `Courier Prime:400/700`).
+  - Computed HeroUI v3 styles matched baseline (`cardBg: oklch(0.2103 0.0162 56.06)`, `cardRadius: 24px`, `chipBg: oklch(0.274 0.0081 56.06)`, `chipRadius: 16px`, `tabHeight: 32px`, `indicatorBg: oklch(0.3964 0.0081 56.06)`).
+  - Theme toggle (`dark` -> `light` -> `dark`) and filter tabs (`All` 144 -> `Writing` 42 -> `All` 144) worked without errors.
+  - `/articles/grpc-gateway-comparison` rendered `hasTable: true` (`8` rows), `shikiBlocks: 2`, `hasBoundaryError: false`.
+  - SPA navigation roundtrip (`/articles/grpc-gateway-comparison` -> `Back to writing` -> `/?type=writing` `42` cards -> clicking first Writing card -> `/articles/stop-migrate-nextjs-to-astro`) succeeded cleanly with zero errors.
+- `git diff --check`: PASS.
+
+Residual risk:
+
+- Cloudflare Workers Builds / PR preview deploy command should be verified once pushed to ensure Cloudflare runs `pnpm build` + `wrangler deploy`/`versions upload` (which reads `.wrangler/deploy/config.json` -> `dist/server/wrangler.json` automatically).
+- On localhost preview, `/cdn-cgi/image/...` URLs for `images.unsplash.com`/`pbs.twimg.com` return `404` as expected because Cloudflare Image Transformations run only on Cloudflare's production edge zone.
+
+## 2026-11-25 Zero-Cost Performance Optimization State
+
+Current performance and caching shape:
+
+- `src/worker.ts` wraps OpenNext `handler.fetch` with free Cloudflare `caches.default` HTML/sitemap SWR (`src/lib/edge-page-cache.ts`), keyed by `BUILD_ID` + canonical pathname/filter query (`type`, `source`), normalizing `Vary` for Cache API storage, restoring original `Vary`/`Cache-Control`/`Link` headers on hits, and bypassing Next RSC router requests.
+- `BLOG_CACHE` provider wrappers (`src/integrations/kv/provider-cache.ts`, `provider-wrappers.ts`) use 600s logical freshness, 7-day physical retention, `cacheTtl: 300`, singleflight coalescing, unchanged-payload write skipping, and `waitUntil` background refresh.
+- Telegram background refreshes pass `knownIds` into `scrapeTelegramPublicPageThoughtRecords` so routine refreshes stop after overlapping page 1, with a 24h full background reconcile.
+- X Social Post reads use a single durable `social:x:feed:v1` snapshot key (updated during daily cron + bulk KV `get(keys)` fallback and lazy `waitUntil` backfill).
+- Notion `data_source_id` resolution is cached in memory and KV (`blog2:notion:data-source:<id>:v1`), and route loaders in `src/app/page.tsx` and `src/app/articles/[slug]/page.tsx` are deduplicated per request with React `cache()`.
+- `src/domains/article/highlight-code.ts` uses `shiki/core` + `shiki/engine/javascript` with curated language loaders, explicit `github-light`/`github-dark` themes, and a module-level singleton highlighter.
+- `/media/[id]` returns `Cache-Control: public, max-age=31536000, immutable`, handles `If-None-Match` 304, backfills Edge Cache on KV hits via `waitUntil`, and performs miss KV/Edge writes in `waitUntil`.
+- `ResponsiveRemoteImage` renders bypassed volatile `/media/` URLs without redundant 9-entry base64 `srcSet` in production, `next.config.ts` narrows `deviceSizes`/`imageSizes` and enables `optimizePackageImports`, and `src/app/globals.css` imports only used HeroUI v3 component stylesheets.
+
+Current evidence:
+
+- `pnpm test`: PASS, `41` files, `143` tests (including Web-standard base64url regression test simulating Webpack's `buffer` polyfill rejecting `"base64url"`).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS, `.open-next/server-functions/default/handler.mjs` shrunk from `14.71 MB` to `6.98 MB` (`-52.5%`); homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`) while retaining `button`, `card`, `chip`, `separator`, `table`, `tabs`, and `surface` rules; removing `Buffer` from `canonical-image.ts` and `image-loader.ts` also dropped Webpack's injected `buffer` polyfill from client chunks.
+- Browser verification on local Wrangler Worker (`http://localhost:3316/`): PASS, `/` hydrated with `hasBoundaryError: false`, `layout="hydrated-masonry"` (`3` columns), `reveal="ready"`, `55` `/media/` images (`0` `srcSet`), working filter tab switching and theme toggle; preview article `/articles/grpc-gateway-comparison` also verified `hasTable: true`, `hasShiki: true`, `hasBoundaryError: false`.
+- `pnpm exec next start --hostname 127.0.0.1 -p 3310` + `curl`: PASS, `/` returned `200`, preserved `Link` and JSON-LD, reduced avg `<img>` tag size from `3,371 B` to `945 B` (`0` `/media/` `srcSet` entries); `/articles/screenshot-render`, `/?type=writing`, `/sitemap.xml`, `/projects` (`308`), `/en/blog` (`308`), `/blog` (`404`), and `/api/health` all returned expected responses.
+- `pnpm exec wrangler dev --ip 127.0.0.1 --port 3314` + `curl`: PASS, confirmed `x-blog2-edge-cache: miss` -> `hit` (`2.9ms`) on `/` and `/articles/screenshot-render`, preserved `Link`/`Vary`/`Cache-Control` on hits, confirmed `RSC: 1` bypass, confirmed `/media/[id]` `immutable` headers, and confirmed `missingAssets: []`.
+- `git diff --check`: PASS.
+
+Residual risk:
+
+- Production deployment verification and post-deploy visual spot-check in a browser remain pending `pnpm deploy`.
+
 ## 2026-05-21 Homepage Metadata / Feed Boundary
 
 Current homepage metadata shape:

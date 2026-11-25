@@ -16,6 +16,387 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Invalidate Stale KV Entries on Null SWR Refresh (PR #58 Review Fix)
+
+Status: done locally and pushed to PR #58 before merge
+
+Summary:
+
+- addressed P1 PR #58 review finding on `src/integrations/kv/provider-cache.ts`: when a previously cached published article is deleted, renamed, or marked WIP and background SWR refresh succeeds with `null` (rejected by `shouldCache`), the stale KV entry is now deleted (`cache.delete(key)`) and `state.lastVerifiedAt.delete(key)` clears the verification stamp instead of retaining stale content for 7 days
+- genuine upstream errors (thrown exceptions) continue to leave stale KV entries untouched for resilience
+- added `delete` to `ProviderCache` (`createNoopProviderCache`, `createMemoryProviderCache`, `createKvProviderCache`) and regression test in `src/integrations/kv/provider-cache.test.ts`
+
+Files:
+
+- `src/integrations/kv/provider-cache.ts`
+- `src/integrations/kv/provider-cache.test.ts`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `143` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`465ms`).
+- `git diff --check`: PASS.
+
+## 2026-11-25 - Integrate Self-Hosted Traks Analytics
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- integrated self-hosted Traks analytics (`https://traks-collect.xw.workers.dev/t.js`, `data-site="pb_live_f6911j6tsl00mm9e1e0v5m3i"`) into the root document `<head>` in `src/routes/__root.tsx` with the official `window.traks` queue bootstrap script
+- added typed helper module `src/lib/analytics/traks.ts` (`trackTraksEvent`, `trackTraks404`) and unit tests `src/lib/analytics/traks.test.ts`
+- wired `trackTraks404()` into both `RootNotFound` (`src/routes/__root.tsx`) and `ArticleNotFound` (`src/routes/articles/$slug.tsx`) to report broken URLs as Traks `404` events
+- verified `t.js` natively patches `history.pushState` + `popstate` (handling TanStack Router SPA navigation and deduplicating query-only homepage filter changes) and requires classic non-module `<script defer>` so `document.currentScript` resolves
+
+Files:
+
+- Added: `src/lib/analytics/traks.ts`, `src/lib/analytics/traks.test.ts`
+- Updated: `src/routes/__root.tsx`, `src/routes/articles/$slug.tsx`, `docs/verification.md`, `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `142` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`562ms`).
+- Local Wrangler Worker (`http://127.0.0.1:3327`) `curl` + browser verification: PASS — verified SSR `<head>` tags on `/`, `/articles/grpc-gateway-comparison`, and `/non-existent-check`; verified `window.__pb === true`, queue flushed to live `window.traks`, and `https://traks-collect.xw.workers.dev/api/event` returned `200`.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- confirm live pageviews in `https://traks-api.xw.workers.dev/portal/sites` once PR #58 is deployed to production.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Optimize Masonry Layout with DOM Height Calibration & Remove Pretext
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- diagnosed `1,107px` 3-column bottom imbalance on live preview (`244` cards: `37,446px / 38,553px / 38,114px`) caused by `feed-layout-engine.ts` ignoring `quote` blocks, estimating single portrait photos by raw `height/width` instead of rendered `aspect-[16/10]`, mismatched font/line-height/chrome metrics, and Pretext measuring before web font load with CJK fallback drift
+- replaced `@chenglou/pretext` in `src/domains/feed/feed-layout-engine.ts` with a zero-dependency heuristic estimator aligned to real rendered card geometry (`quote` + `QuoteMediaGrid`, `16:10` single media, `p-5`/`gap-3`, `16px/26px` body, CJK/Latin widths), added `measuredHeights` exact-height support, and added LPT (tallest-first) balancing for the trailing contiguous undated items (preserving strict chronological order for all dated items)
+- added single-pass batched DOM height measurement (`useIsomorphicLayoutEffect`) in `src/components/feed/overview-feed-view.tsx` before initial reveal (`opacity-0 -> opacity-100`) plus `document.fonts.ready` and width-change reconciliation
+- removed `@chenglou/pretext` from `package.json` and `pnpm-lock.yaml`, reducing total Client JS from `463.8 KB` (`152.0 KB` gzip) to **`427.8 KB` (`139.6 KB` gzip)** and server `routes-*.js` from `212.74 KB` to `126.44 KB`
+
+Files:
+
+- Added: `docs/specs/2026-11-25-masonry-layout-optimization-design.md`
+- Updated: `package.json`, `pnpm-lock.yaml`, `src/domains/feed/feed-layout-engine.ts`, `src/domains/feed/feed-layout-engine.test.ts`, `src/components/feed/overview-feed-view.tsx`, `docs/roadmap.md`, `docs/verification.md`, `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `139` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`509ms`; Client JS `427.8 KB / 139.6 KB gzip`).
+- Real browser verification (`http://localhost:3326/`): PASS — Desktop 3-column (`144` cards) spread `100px` (`26,717 / 26,692 / 26,792px`, `0.37%`), Tablet 2-column (`800px`) spread `109px` (`40,081 / 39,972px`, `0.27%`), filter switches (`All`/`Writing`/`Projects`/`All`) smooth with zero errors.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify 244-card 3-column balance on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` after Workers Builds finishes deploying PR #58.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Restore Warm Stone/Paper Palette on coss UI Tokens
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- restored the site's original warm `hue 56.06` light and dark color palette onto coss UI semantic tokens in `src/styles/globals.css` after switching to coss UI's pure-white neutral defaults had flattened page vs card contrast
+- mapped light mode canvas `--background: oklch(97.02% 0.0081 56.06)`, elevated `--card: oklch(100% 0.004 56.06)`, `--secondary`/`--muted`/`--accent: oklch(94% 0.0081 56.06)`, `--border`/`--input: oklch(90% 0.0081 56.06)`, and `--ring: oklch(80.53% 0.1034 56.06)`
+- mapped dark mode canvas `--background: oklch(12% 0.0081 56.06)`, elevated `--card: oklch(21.03% 0.0162 56.06)`, `--secondary`/`--muted`/`--accent: oklch(27.4% 0.0081 56.06)`, `--border: oklch(28% 0.0081 56.06)`, `--input: oklch(39.64% 0.0081 56.06)`, and `--ring: oklch(80.53% 0.1034 56.06)`
+- updated `segmentedControlIndicatorSurfaceClassName` in `src/components/ui/segmented-control.tsx` to `bg-card dark:bg-input` so the active tab indicator uses crisp white in light mode and `39.64%` warm stone in dark mode
+
+Files:
+
+- `src/styles/globals.css`
+- `src/components/ui/segmented-control.tsx`
+- `docs/specs/2026-11-25-coss-ui-migration-design.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `138` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`554ms`).
+- Real browser verification (`http://localhost:3325/`): PASS in both light and dark modes (`light`: `bodyBg oklch(0.9702 0.0081 56.06)` vs `cardBg oklch(1 0.004 56.06)` / `tabsListBg oklch(0.94 0.0081 56.06)` / `indicatorBg oklch(1 0.004 56.06)`; `dark`: `bodyBg oklch(0.12 0.0081 56.06)` vs `cardBg oklch(0.2103 0.0162 56.06)` / `tabsListBg oklch(0.274 0.0081 56.06)` / `indicatorBg oklch(0.3964 0.0081 56.06)`).
+
+Follow-up:
+
+- verify updated light/dark warm palette on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` once Workers Builds completes deployment.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Fix QuoteMediaGrid Single & Odd-Count Image Layout
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- diagnosed why quoted X post images rendered at half width with an empty gray right column and cropped 16:9 diagrams: `QuoteMediaGrid` in `src/components/feed/overview-feed-view.tsx` unconditionally applied `grid-cols-2` even when `media.length === 1` (and left an empty 4th slot when `media.length === 3`)
+- updated `QuoteMediaGrid` to render a single quoted image full-width with its natural aspect ratio clamped to `[4/3, 2]` (falling back to `16/10` if dimensions are absent), preserving 16:9 / 16:10 diagrams and screenshots without horizontal clipping while keeping portrait/square previews compact
+- matched multi-image quote layout to `MediaGrid`: `grid-cols-2` with `aspect-square` cells and `col-span-2 aspect-[16/10]` on index `0` when 3 images are present
+
+Files:
+
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/feed/overview-feed-view.test.tsx`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `138` tests, including single-image full-width and 3-image spanning lead assertions in `overview-feed-view.test.tsx`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`473ms`).
+- Local `wrangler dev` (`http://127.0.0.1:3324/?source=x`): local Miniflare KV does not contain remote X posts (`0` X items), so live visual check of X quote cards awaits Cloudflare Workers Builds preview deployment on PR #58.
+
+Follow-up:
+
+- verify quoted X cards visually on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/?source=x` after Workers Builds deploys the commit.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Replace HeroUI v3 with coss UI & Fix Preview Cloudflare Image Origin
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- completely replaced HeroUI v3 (`@heroui/react`, `@heroui/styles`, `tailwind-variants`, `src/components/heroui/`) with **coss UI** (`https://coss.com/ui`, built on `@base-ui/react@^1.9.0` + `class-variance-authority@^0.7.1` + Tailwind CSS v4)
+- added official coss UI registry primitives under `src/components/ui/`: `badge.tsx`, `button.tsx`, `card.tsx`, `segmented-control.tsx`, `separator.tsx`, `spinner.tsx`, `table.tsx`, and `tabs.tsx`
+- migrated `src/styles/globals.css` to official coss UI neutral light/dark CSS variables (`--background`, `--foreground`, `--card`, `--muted`, `--muted-foreground`, `--primary`, `--secondary`, `--accent`, `--border`, `--ring`, `--radius`, semantic status colors) while preserving `@fontsource/libre-bodoni` and `@fontsource/courier-prime` typography
+- added Base UI root stacking isolation (`<div className="isolate relative flex min-h-svh flex-col">`) in `src/routes/__root.tsx`
+- migrated all components and CSS modules (`theme-toggle.tsx`, `rich-content-table.tsx`, `overview-feed-view.tsx`, `article-detail-view.tsx`, `article-detail-view.module.css`, `article-list.tsx`, `intro-content.tsx`, `intro.module.css`, `projects-list.tsx`, `thoughts-page.tsx`, `site-header.tsx`, `site-footer.tsx`, `public-boundary.tsx`) from HeroUI components/tokens to coss UI components/tokens
+- updated `src/lib/images/cloudflare.ts` to emit explicit zone-origin Cloudflare Image Transformation URLs (`https://sorcererxw.com/cdn-cgi/image/...`, zero `isPre`/`workers.dev` environment branching) so `*.workers.dev` previews and local `wrangler dev` resolve transformed X/Unsplash images cleanly instead of hitting Cloudflare `404 error code: 1042`, and aligned `ResponsiveRemoteImage` fallback `src` width to `presetConfig.width` to avoid arbitrary-width unique transformation sprawl
+- updated `eslint.config.mjs` (exempting `src/components/ui/` from `local/no-arbitrary-tailwind-design-tokens` and adding browser DOM observer globals) and updated unit tests (`overview-feed-view.test.tsx`, `projects-list.test.tsx`, `cloudflare.test.ts`, `responsive-remote-image.test.tsx`)
+
+Files:
+
+- Added: `docs/specs/2026-11-25-coss-ui-migration-design.md`, `docs/plans/2026-11-25-coss-ui-migration.md`, `src/components/ui/badge.tsx`, `src/components/ui/button.tsx`, `src/components/ui/card.tsx`, `src/components/ui/segmented-control.tsx`, `src/components/ui/separator.tsx`, `src/components/ui/spinner.tsx`, `src/components/ui/table.tsx`, `src/components/ui/tabs.tsx`
+- Updated: `package.json`, `pnpm-lock.yaml`, `eslint.config.mjs`, `src/styles/globals.css`, `src/routes/__root.tsx`, `src/lib/images/cloudflare.ts`, `src/lib/images/cloudflare.test.ts`, `src/components/media/responsive-remote-image.tsx`, `src/components/media/responsive-remote-image.test.tsx`, `src/components/shell/theme-toggle.tsx`, `src/components/shell/site-header.tsx`, `src/components/shell/site-footer.tsx`, `src/components/shell/public-boundary.tsx`, `src/components/rich-content/rich-content-table.tsx`, `src/components/feed/overview-feed-view.tsx`, `src/components/feed/overview-feed-view.test.tsx`, `src/components/article/article-detail-view.tsx`, `src/components/article/article-detail-view.module.css`, `src/components/article/article-list.tsx`, `src/components/home/intro-content.tsx`, `src/components/home/intro.module.css`, `src/components/projects/projects-list.tsx`, `src/components/projects/projects-list.test.tsx`, `src/components/thoughts/thoughts-page.tsx`, `docs/roadmap.md`, `docs/task-ledger.md`, `docs/verification.md`
+- Deleted: `src/components/heroui/server-primitives.tsx`
+
+Decisions:
+
+- replaced HeroUI's React Aria collection `Table` with coss UI semantic HTML `Table*` primitives (retaining `role="columnheader"` and `role="rowheader"`), cutting the `rich-content-table` chunk by `96.5%` (`117.09 KB` -> `4.10 KB`) and total client JS by `31.8%` (`680.2 KB` -> `463.8 KB` / `152.0 KB` gzip)
+- composed coss UI `TabsTab` with `SiteLink` via `nativeButton={false}` and `render={<SiteLink ... />}`, preserving URL-driven filters and animated `TabsPrimitive.Indicator`
+- mapped legacy HeroUI token semantics cleanly to coss UI semantics (`--muted` text -> `--muted-foreground`, `--surface` -> `--card`, `--separator` -> `--border`, `--focus` -> `--ring`, `--accent` text -> `--primary`, `bg-default` -> `bg-muted`)
+- exempted `src/components/ui/` from `local/no-arbitrary-tailwind-design-tokens` so official coss UI registry components can be kept verbatim without hand-hacking upstream recipes
+- treated `https://sorcererxw.com/cdn-cgi/image/...` as an explicit Cloudflare Zone image CDN origin rather than branching on preview hostnames, keeping prod same-origin, preview/local functional, and fallback `src` widths pinned to preset breakpoints
+
+Verification:
+
+- Zero-residue grep across `src/` and `package.json`: PASS (`0` HeroUI/legacy token matches).
+- `pnpm build`: PASS (`client 681ms`, `ssr 679ms`, re-verified `581ms`; Client JS `463.8 KB / 152.0 KB gzip`, `rich-content-table` `4.10 KB / 1.13 KB gzip`, `globals-*.css` `83.33 KB / 12.80 KB gzip`).
+- `pnpm exec wrangler deploy --dry-run`: PASS (`Total Upload: 4741.99 KiB / gzip: 791.07 KiB`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm test`: PASS (`40` files, `137` tests).
+- Local Wrangler Worker `curl` checks: PASS for `/`, `/?type=writing`, `/articles/grpc-gateway-comparison`, and `/articles/screenshot-render`; verified `0` relative `"/cdn-cgi/image/` URLs and `HTTP/2 200 image/jpeg` on live `https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=960/...`.
+- Real browser verification (`http://localhost:3322/`): PASS on `/` (3-column `hydrated-masonry`, `144` cards, dark/light tokens, fonts, interactive tabs), `/articles/grpc-gateway-comparison` (coss UI Table + Shiki + zero overflow), SPA `Back to writing` (`42` cards, `tab-indicator` aligned via CSS `translate`), and `/articles/screenshot-render` (`<!--render-->` + Shiki).
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify updated Cloudflare preview deployment on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` after Workers Builds finishes deploying PR #58.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Migrate to Vite 8 + TanStack Start + Native Cloudflare Workers
+
+Status: done locally on branch `perf/zero-cost-site-optimization` (PR #58), pushed for Cloudflare preview verification
+
+Summary:
+
+- migrated the full standalone Personal Site app from Next.js 16 + `@opennextjs/cloudflare` to Vite 8 (`vite@8.3.8`) + TanStack Start (`@tanstack/react-start@1.169.7`) + native Cloudflare Workers (`@cloudflare/vite-plugin@1.70.1`) with zero UI/UX changes and zero added infrastructure cost
+- replaced `@opennextjs/cloudflare` `getCloudflareContext` with native `cloudflare:workers` (`env`, `waitUntil`) in `src/lib/cloudflare-env.ts`
+- created native Worker entry `src/server.ts` composing legacy `308` redirects (`src/lib/legacy-redirects.ts`), compile-time build-scoped Cloudflare `caches.default` HTML/sitemap SWR (`__APP_BUILD_ID__`), TanStack Start `handler.fetch`, and the daily `0 18 * * *` X sync `scheduled()` handler
+- extracted thin route/server handlers under `src/server-handlers/` (`home-data.ts`, `article-data.ts`, `health.ts`, `sitemap.ts`, `api-catalog.ts`, `canonical-media.ts`) and wired file-based TanStack Start routes under `src/routes/` (`__root.tsx`, `index.tsx`, `articles/$slug.tsx`, `api/health.ts`, `sitemap[.]xml.ts`, `[.]well-known/api-catalog.ts`, `media/$id.ts`) + `src/router.tsx` (`defaultPreload: "intent"`, `defaultStaleTime: 60_000`)
+- replaced `next/link` across all components with `SiteLink` (`src/components/navigation/site-link.tsx`), rendering plain `<a>` for external/hash/router-less contexts and TanStack `<Link>` for internal routes
+- replaced `next/image` with native `<img>` in `ResponsiveRemoteImage` (preserving zero-bloat `/media/$id` URLs and `/cdn-cgi/image/...` responsive `srcSet` for transform-allowed hosts) and `SiteHeader` logo (`/favicon.svg`)
+- replaced `next/font/google` with self-hosted Latin `@fontsource/libre-bodoni` (400/500/600) and `@fontsource/courier-prime` (400/700) in `src/styles/globals.css`, preserving selective HeroUI v3 CSS imports
+- removed all obsolete Next.js/OpenNext files (`src/app/**`, `src/middleware.ts`, `src/worker.ts`, `next.config.ts`, `open-next.config.ts`, `image-loader.ts`, `postcss.config.mjs`, `next-env.d.ts`) and updated `eslint.config.mjs`, `wrangler.jsonc`, `public/_headers`, `tsconfig.json`, `vitest.config.ts`, and `cloudflare-env.d.ts`
+
+Files:
+
+- Added: `docs/specs/2026-11-25-vite-tanstack-start-cloudflare-design.md`, `docs/plans/2026-11-25-vite-tanstack-start-cloudflare.md`, `vite.config.ts`, `src/server.ts`, `src/router.tsx`, `src/routeTree.gen.ts`, `src/routes/__root.tsx`, `src/routes/index.tsx`, `src/routes/articles/$slug.tsx`, `src/routes/api/health.ts`, `src/routes/sitemap[.]xml.ts`, `src/routes/[.]well-known/api-catalog.ts`, `src/routes/media/$id.ts`, `src/server-handlers/*`, `src/components/navigation/site-link.tsx`, `src/lib/legacy-redirects.ts`, `src/lib/legacy-redirects.test.ts`, `src/lib/seo-head.tsx`, `src/lib/seo-head.test.tsx`, `src/styles/globals.css`
+- Updated: `package.json`, `pnpm-lock.yaml`, `wrangler.jsonc`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.mjs`, `public/_headers`, `cloudflare-env.d.ts`, `.gitignore`, `src/lib/cloudflare-env.ts`, `src/lib/edge-page-cache.ts`, `src/types/cloudflare-workers.d.ts`, `src/test/cloudflare-workers.ts`, `src/components/media/responsive-remote-image.tsx`, `src/components/feed/overview-feed-view.tsx`, `src/components/feed/overview-feed-view.test.tsx`, `src/components/article/article-detail-view.tsx`, `src/components/article/article-list.tsx`, `src/components/home/intro-content.tsx`, `src/components/projects/projects-list.tsx`, `src/components/thoughts/thoughts-page.tsx`, `src/components/shell/site-header.tsx`, `src/components/shell/site-footer.tsx`, `src/components/shell/public-boundary.tsx`, `src/components/shell/theme-toggle.tsx`, `src/components/rich-content/rich-content-table.tsx`, `src/integrations/telegram/public-page.ts`, `src/domains/thoughts/list-thoughts.test.ts`, `docs/roadmap.md`, `docs/task-ledger.md`, `docs/verification.md`
+- Deleted: `src/app/**`, `src/middleware.ts`, `src/middleware.test.ts`, `src/worker.ts`, `next.config.ts`, `open-next.config.ts`, `image-loader.ts`, `src/lib/images/image-loader.test.ts`, `postcss.config.mjs`, `next-env.d.ts`
+
+Decisions:
+
+- kept `src/domains/*` and `src/integrations/*` completely framework-agnostic (zero TanStack imports inside domain or integration layers)
+- avoided importing `buildSeo` (which reads `cloudflare-env.ts` -> `cloudflare:workers`) inside client-bundled route `head()` fallbacks so browser bundles never touch `cloudflare:workers`
+- used `useRouter({ warn: false })` inside `SiteLink` so SSR component unit tests work without `<RouterProvider>` and ~300 external Telegram/X links render as lightweight native `<a>` elements with zero router subscription overhead
+- kept `rich-content-table` dynamically imported on `/` only when `hasHomeTableBlock` is true so `@heroui/react/table` (`117 KB`) never ships to homepage visitors
+- added `defaultStaleTime: 60_000` on `createRouter` so Back/Forward SPA navigation between `/` and `/articles/$slug` is instant without refetching loaders
+
+Verification:
+
+- `pnpm build`: PASS in ~0.97s; Worker upload `5251.77 KiB / gzip: 893.44 KiB` (entry `891 KiB / 168 KiB` gzip), Client JS `680.2 KB / 217.5 KB` gzip (~`551 KB / 179 KB` gzip on `/`), Client CSS `77.79 KB / 12.49 KB` gzip.
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm test`: PASS (`40` files, `137` tests).
+- Local Wrangler Worker (`wrangler dev --config dist/server/wrangler.json --port 3320 --test-scheduled`) HTTP checks: PASS for `/`, `/?type=writing`, `/?source=telegram`, `/articles/screenshot-render`, `/articles/grpc-gateway-comparison`, `/articles/non-existent-slug-check-404` (`404`), `/api/health`, `GET`/`HEAD /.well-known/api-catalog`, `/sitemap.xml`, `/media/$id` (`200 immutable` + `304`), `/assets/*` (`immutable`), `/robots.txt`, `/llms.txt`, `/favicon.svg`, legacy `308` redirects, `/blog` (`404`), and `/cdn-cgi/handler/scheduled`.
+- Real browser verification on `http://localhost:3320/`: PASS for `/` hydration (3-column `hydrated-masonry`, `reveal="ready"`, zero error boundary), self-hosted fonts (`Libre Bodoni` + `Courier Prime`), computed HeroUI v3 styles, theme toggle, filter tabs, `/articles/grpc-gateway-comparison` table + Shiki, and full SPA roundtrip navigation.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify Cloudflare Workers preview deployment and live production TTFB/LCP metrics on PR #58 (`perf/zero-cost-site-optimization`)
+- confirm Cloudflare Workers Builds uses `pnpm build` / `wrangler deploy` (or `wrangler versions upload`) instead of `opennextjs-cloudflare` commands
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Browser Base64url Hydration Fix (PR #58)
+
+Status: done locally, pushed to PR #58
+
+Summary:
+
+- diagnosed a client-side hydration error boundary on the PR #58 Cloudflare preview (`TypeError: Unknown encoding: base64url`)
+- root cause: `src/domains/media/canonical-image.ts` used `Buffer.from(..., "utf8").toString("base64url")`, which became reachable in client bundles once `ResponsiveRemoteImage` resolved canonical `/media/` URLs directly; Webpack auto-polyfilled `Buffer` with the browser `buffer` package which does not implement `"base64url"`
+- replaced `Buffer` encoding/decoding in `src/domains/media/canonical-image.ts` and `image-loader.ts` with pure Web-standard `TextEncoder`/`TextDecoder` + `btoa`/`atob` (also dropping Webpack's injected `buffer` polyfill from client JS)
+- added a regression test simulating a `Buffer` polyfill that throws on `"base64url"`
+
+Files:
+
+- `src/domains/media/canonical-image.ts`
+- `src/domains/media/canonical-image.test.ts`
+- `image-loader.ts`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `143` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS.
+- Browser verification on local Wrangler Worker (`http://localhost:3316/`): PASS, hydrated cleanly into 3-column `hydrated-masonry` with `reveal="ready"`, `55` `/media/` images (`0` `srcSet`), `hasBoundaryError: false`, and working filter/theme interactions.
+
+Follow-up:
+
+- re-verify `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` once Cloudflare finishes deploying the new commit on PR #58.
+
+Blockers:
+
+- none
+
+## 2026-11-25 - Zero-Cost, Zero-UI-Change Performance Optimization
+
+Status: done locally, pending production deploy verification
+
+Summary:
+
+- diagnosed live production slowness (`https://sorcererxw.com`: 8.55s cold / 7.22s KV-evicted / 1.30s warm homepage TTFB, 14.71 MB Worker bundle, 1.13 MB homepage HTML, 402 KB CSS, `/media/[id]` missing edge backfill)
+- eliminated X Social Post 100-key sequential KV waterfall by adding a single durable `social:x:feed:v1` aggregate snapshot (updated in existing daily cron + bulk KV `get(keys)` fallback and lazy `waitUntil` backfill)
+- upgraded provider KV cache wrappers to logical 600s SWR with 7-day physical retention, `cacheTtl: 300`, singleflight in-flight deduplication, and unchanged-payload write skipping
+- added incremental `knownIds` overlap stop to Telegram public-page refresh (1 page on routine background refreshes + 24h full reconcile)
+- cached Notion `databaseId -> dataSourceId` in memory + `BLOG_CACHE` KV and wrapped per-request `loadCachedHomePage` and `loadArticle` with React `cache()`
+- added free Cloudflare `caches.default` HTML/sitemap SWR edge caching in `src/worker.ts` scoped by `.open-next/assets/BUILD_ID`, normalizing `Vary` for Cache API compatibility and bypassing Next RSC router requests
+- narrowed `src/middleware.ts` with `config.matcher` to legacy redirect paths only
+- migrated `src/domains/article/highlight-code.ts` to `shiki/core` + `shiki/engine/javascript` with curated language loaders, explicit `github-light`/`github-dark` themes, and a module-level singleton highlighter (`handler.mjs` reduced from `14.71 MB` to `6.98 MB`, `-52.5%`)
+- fixed `/media/[id]` to serve `Cache-Control: public, max-age=31536000, immutable`, handle `If-None-Match` 304, backfill `edgeCache.put` on KV hits via `waitUntil`, and move miss KV/edge writes to `waitUntil`
+- prevented `ResponsiveRemoteImage` from emitting 9 duplicate base64 `srcSet` entries for bypassed volatile `/media/` URLs in production (avg `<img>` tag shrunk from `3,371 B` to `945 B`), narrowed `next.config.ts` `deviceSizes`/`imageSizes`, enabled `optimizePackageImports`, switched `src/app/globals.css` to selective HeroUI v3 component imports (homepage CSS reduced from `402 KB` to `81.8 KB`, `-79.7%`), switched `@heroui/react` to component subpaths, added `prefetch={false}` on feed links, memoized `FeedModule`, split `ProfileHero` table loading via `hasHomeTableBlock`, deduplicated serialized Telegram `summary`, and aligned `feed-layout-engine.ts` font metrics to `Courier Prime`
+
+Files:
+
+- `docs/specs/2026-11-25-zero-cost-performance-optimization-design.md`
+- `docs/plans/2026-11-25-zero-cost-performance-optimization.md`
+- `docs/roadmap.md`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+- `next.config.ts`
+- `src/app/articles/[slug]/page.tsx`
+- `src/app/globals.css`
+- `src/app/media/[id]/route.ts`
+- `src/app/media/[id]/route.test.ts`
+- `src/app/page.tsx`
+- `src/components/feed/overview-feed-view.tsx`
+- `src/components/home/intro-content.tsx`
+- `src/components/home/intro.tsx`
+- `src/components/home/profile-hero.tsx`
+- `src/components/media/responsive-remote-image.tsx`
+- `src/components/media/responsive-remote-image.test.tsx`
+- `src/components/rich-content/rich-content-table.tsx`
+- `src/components/shell/theme-toggle.tsx`
+- `src/components/thoughts/thoughts-page.tsx`
+- `src/domains/article/highlight-code.ts`
+- `src/domains/article/highlight-code.test.ts`
+- `src/domains/feed/feed-layout-engine.ts`
+- `src/domains/feed/overview-feed-serialization.ts`
+- `src/domains/social/x-sync.ts`
+- `src/domains/social/x-sync.test.ts`
+- `src/domains/thoughts/list-thoughts.ts`
+- `src/integrations/kv/provider-cache.ts`
+- `src/integrations/kv/provider-cache.test.ts`
+- `src/integrations/kv/provider-wrappers.ts`
+- `src/integrations/kv/provider-wrappers.test.ts`
+- `src/integrations/kv/x-social-post-store.ts`
+- `src/integrations/kv/x-social-post-store.test.ts`
+- `src/integrations/notion/data-source.ts`
+- `src/integrations/notion/data-source.test.ts`
+- `src/integrations/telegram/public-page.ts`
+- `src/integrations/telegram/public-page.test.ts`
+- `src/lib/cloudflare-env.ts`
+- `src/lib/edge-page-cache.ts`
+- `src/lib/edge-page-cache.test.ts`
+- `src/middleware.ts`
+- `src/middleware.test.ts`
+- `src/types/cloudflare.ts`
+- `src/worker.ts`
+
+Decisions:
+
+- kept all UI/UX behavior and zero-cost constraints strictly intact: no homepage pagination, no new Cloudflare bindings (no R2/D1/DO), no extra X API calls, no extra Cloudflare Image Transformations
+- kept `<NextLink prefetch={false}>` instead of raw `<a>` to honor `eslint.config.mjs` `local/require-next-link-and-image`
+- scoped Worker edge cache keys by `.open-next/assets/BUILD_ID` fetched once per isolate from `env.ASSETS` so deployments never serve stale-chunk HTML
+- normalized `Vary` to `Accept-Encoding` inside stored Cache API entries while restoring original `Vary` and `Cache-Control` on responses to clients
+
+Verification:
+
+- `pnpm test`: PASS, `41` test files, `142` tests passed.
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS, generated `.open-next/worker.js` and `.open-next/server-functions/default/handler.mjs` (`6.98 MB`, down from `14.71 MB`); main homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`).
+- `pnpm exec next start --hostname 127.0.0.1 -p 3310` + `curl`: PASS, verified `/` (`200`, agent discovery `Link` header, `CollectionPage` JSON-LD, `55` `/media/` images with `0` redundant `srcSet` entries, avg `<img>` tag `945 B`), `/?type=writing` (`200`), `/articles/screenshot-render` (`200`, Shiki dual-theme HTML), `/sitemap.xml` (`200`), `/projects` (`308` -> `/?type=projects`), `/en/blog` (`308` -> `/blog`), `/blog` (`404`), `/api/health` (`200`).
+- `pnpm exec wrangler dev --ip 127.0.0.1 --port 3314` + `curl`: PASS, verified build-scoped `x-blog2-edge-cache: miss` -> `hit` (`2.9ms`) on `/` and `/articles/screenshot-render`, preserved `Link` and `Vary` headers on cache hits, verified `RSC: 1` bypasses edge cache (`text/x-component`), verified `/media/[id]` returns `Cache-Control: public, max-age=31536000, immutable`, verified zero missing asset references (`missingAssets: []`).
+- `git diff --check`: PASS.
+- Browser verification was not run in this turn (no UI/UX changes were made and browser verification was not requested; compiled HeroUI component CSS selectors for `button`, `card`, `chip`, `separator`, `table`, `tabs`, `surface` were verified present in the built stylesheet).
+
+Follow-up:
+
+- deploy to Cloudflare Workers (`pnpm deploy`) and re-measure production `https://sorcererxw.com/` TTFB (`x-blog2-edge-cache: miss` -> `hit` and first-hit X `social:x:feed:v1` backfill)
+- verify rendered visuals in a browser after deploy to double-check selective HeroUI CSS coverage across light/dark themes and article tables
+
+Blockers:
+
+- none
+
 ## 2026-05-21 - Homepage Metadata Feed Decoupling
 
 Status: done locally

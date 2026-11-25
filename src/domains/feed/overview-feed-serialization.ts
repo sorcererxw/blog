@@ -6,4 +6,5 @@ export const serializeOverviewFeedItems = (items: FeedItem[]): OverviewFeedViewI
     ...item,
     displayedAt: item.displayedAt?.toISOString() ?? null,
     sourcePublishedAt: item.sourcePublishedAt?.toISOString() ?? null,
+    summary: item.summaryRichText?.length ? "" : item.summary,
   }));

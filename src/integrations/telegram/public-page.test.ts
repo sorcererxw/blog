@@ -223,4 +223,34 @@ describe("scrapeTelegramPublicPageThoughtRecords", () => {
     expect(calls).toBe(2);
     expect(records.map((record) => record.id)).toEqual([20]);
   });
+
+  it("stops after page 1 during incremental refresh when overlapping knownIds", async () => {
+    const first = page({
+      before: "20",
+      body: [
+        message({
+          id: 30,
+          date: "2026-04-06T12:00:00+00:00",
+          body: `<div class="tgme_widget_message_text js-message_text">newest</div>`,
+        }),
+        message({
+          id: 20,
+          date: "2026-04-06T11:00:00+00:00",
+          body: `<div class="tgme_widget_message_text js-message_text">already known</div>`,
+        }),
+      ].join(""),
+    });
+    const fetched: string[] = [];
+
+    const records = await scrapeTelegramPublicPageThoughtRecords({
+      fetchImpl: async (input) => {
+        fetched.push(String(input));
+        return response(first);
+      },
+      knownIds: new Set(["20"]),
+    });
+
+    expect(fetched).toEqual(["https://t.me/s/tech_bb"]);
+    expect(records.map((record) => record.id)).toEqual([30, 20]);
+  });
 });

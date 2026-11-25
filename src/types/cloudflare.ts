@@ -22,6 +22,11 @@ export interface CloudflareKVListResult {
   list_complete: boolean;
 }
 
+export interface CloudflareKVGetOptions<Type extends "text" | "json" | "arrayBuffer" | "stream" = "text"> {
+  cacheTtl?: number;
+  type?: Type;
+}
+
 export interface KVNamespace {
   delete(key: string): Promise<void>;
   get(key: string): Promise<string | null>;
@@ -29,6 +34,11 @@ export interface KVNamespace {
   get(key: string, type: "json"): Promise<unknown | null>;
   get(key: string, type: "stream"): Promise<ReadableStream<Uint8Array> | null>;
   get(key: string, type: "text"): Promise<string | null>;
+  get(key: string, options: CloudflareKVGetOptions<"text">): Promise<string | null>;
+  get(key: string, options: CloudflareKVGetOptions<"json">): Promise<unknown | null>;
+  get(key: string, options: CloudflareKVGetOptions<"arrayBuffer">): Promise<ArrayBuffer | null>;
+  get(key: string, options: CloudflareKVGetOptions<"stream">): Promise<ReadableStream<Uint8Array> | null>;
+  get(keys: string[], type?: "text" | CloudflareKVGetOptions<"text">): Promise<Map<string, string | null>>;
   list(options?: CloudflareKVListOptions): Promise<CloudflareKVListResult>;
   put(
     key: string,

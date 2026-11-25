@@ -1,20 +1,22 @@
-"use client";
-
-import NextLink from "next/link";
-import { Card, Chip, Tabs } from "@heroui/react";
+import { useRouter } from "@tanstack/react-router";
 import {
   Fragment,
+  memo,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ComponentProps,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
+import { SiteLink } from "@/components/navigation/site-link";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import {
   assignFeedLayout,
   getFeedModuleSize,
@@ -133,14 +135,15 @@ function renderRichTextSegment(
 
   if (segment.url) {
     content = (
-      <NextLink
+      <SiteLink
         className="break-all font-semibold text-foreground underline underline-offset-[0.12em]"
         href={segment.url}
+        prefetch={false}
         rel="noreferrer"
         target="_blank"
       >
         {content}
-      </NextLink>
+      </SiteLink>
     );
   }
 
@@ -162,7 +165,7 @@ function renderRichTextSegment(
 
   if (segment.monospace) {
     content = (
-      <code className="rounded bg-default px-1 py-0.5 font-code text-sm">
+      <code className="rounded bg-muted px-1 py-0.5 font-code text-sm">
         {content}
       </code>
     );
@@ -175,7 +178,7 @@ function renderRichTextSegment(
   if (segment.quote) {
     return (
       <blockquote
-        className="my-2 border-l-2 border-separator pl-3 text-foreground"
+        className="my-2 border-l-2 border-border pl-3 text-foreground"
         key={index}
       >
         {content}
@@ -217,7 +220,7 @@ function MediaGrid({
     const [media] = item.media;
 
     return (
-      <div className="aspect-[16/10] overflow-hidden bg-default">
+      <div className="aspect-[16/10] overflow-hidden bg-muted">
         <ResponsiveRemoteImage
           alt={media.alt}
           className="h-full w-full object-cover"
@@ -233,11 +236,11 @@ function MediaGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden bg-default">
+    <div className="grid grid-cols-2 gap-px overflow-hidden bg-muted">
       {item.media.map((media, index) => (
         <div
           className={cn(
-            "aspect-square overflow-hidden bg-default",
+            "aspect-square overflow-hidden bg-muted",
             item.media.length % 2 === 1 &&
               index === 0 &&
               "col-span-2 aspect-[16/10]",
@@ -262,15 +265,55 @@ function MediaGrid({
   );
 }
 
+function getSingleQuoteMediaAspectRatio(item: FeedMediaPreview) {
+  if (!item.width || !item.height) {
+    return 16 / 10;
+  }
+
+  const ratio = item.width / item.height;
+  return Math.min(Math.max(ratio, 4 / 3), 2);
+}
+
 function QuoteMediaGrid({ media }: { media: FeedMediaPreview[] }) {
-  if (media.length === 0) {
+  const visibleMedia = media.slice(0, 4);
+
+  if (visibleMedia.length === 0) {
     return null;
   }
 
+  if (visibleMedia.length === 1) {
+    const [item] = visibleMedia;
+
+    return (
+      <div
+        className="mt-3 overflow-hidden rounded-md bg-muted"
+        style={{ aspectRatio: String(getSingleQuoteMediaAspectRatio(item)) }}
+      >
+        <ResponsiveRemoteImage
+          alt={item.alt}
+          className="h-full w-full object-cover"
+          height={item.height ?? 720}
+          loading="lazy"
+          preset="article-card"
+          src={item.src}
+          width={item.width ?? 1280}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-small bg-default">
-      {media.slice(0, 4).map((item, index) => (
-        <div className="aspect-[16/10] overflow-hidden bg-default" key={`${item.src}-${index}`}>
+    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md bg-muted">
+      {visibleMedia.map((item, index) => (
+        <div
+          className={cn(
+            "aspect-square overflow-hidden bg-muted",
+            visibleMedia.length % 2 === 1 &&
+              index === 0 &&
+              "col-span-2 aspect-[16/10]",
+          )}
+          key={`${item.src}-${index}`}
+        >
           <ResponsiveRemoteImage
             alt={item.alt}
             className="h-full w-full object-cover"
@@ -291,9 +334,10 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
   const handle = quote.authorUsername ? `@${quote.authorUsername}` : null;
 
   return (
-    <NextLink
-      className="block rounded-medium border border-separator px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
+    <SiteLink
+      className="block rounded-lg border border-border px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
       href={quote.url}
+      prefetch={false}
       rel="noreferrer"
       target="_blank"
     >
@@ -307,7 +351,7 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
         {quote.text}
       </p>
       <QuoteMediaGrid media={quote.media} />
-    </NextLink>
+    </SiteLink>
   );
 }
 
@@ -339,7 +383,7 @@ function ModuleInner({
         className={cn("grid gap-3 p-5", moduleSize === "compact" && "gap-2")}
       >
         <div className="justify-self-start">
-          <Chip>{item.metaLabel ?? item.type}</Chip>
+          <Badge variant="secondary">{item.metaLabel ?? item.type}</Badge>
         </div>
         {isTelegram || !item.title ? null : (
           <h2
@@ -360,9 +404,10 @@ function ModuleInner({
         <FeedText item={item} />
         {item.quote ? <QuotePreview quote={item.quote} /> : null}
         {footerDestination && footerDestination.kind !== "none" ? (
-          <NextLink
+          <SiteLink
             className="justify-self-start no-underline hover:[&_time]:text-foreground hover:[&_time]:underline hover:[&_time]:underline-offset-4"
             href={footerDestination.href}
+            prefetch={false}
             rel={
               footerDestination.kind === "external" ? "noreferrer" : undefined
             }
@@ -371,7 +416,7 @@ function ModuleInner({
             }
           >
             {time}
-          </NextLink>
+          </SiteLink>
         ) : (
           time
         )}
@@ -395,13 +440,14 @@ function isInteractiveTarget(
   return Boolean(interactiveTarget && interactiveTarget !== currentTarget);
 }
 
-function FeedModule({
+const FeedModule = memo(function FeedModule({
   eagerMedia,
   item,
 }: {
   eagerMedia: boolean;
   item: OverviewFeedViewItem;
 }) {
+  const router = useRouter({ warn: false });
   const moduleSize = getFeedModuleSize(item);
   const destination =
     item.destination.kind === "none" ? null : item.destination;
@@ -413,6 +459,11 @@ function FeedModule({
 
     if (destination.kind === "external") {
       window.open(destination.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (router) {
+      void router.navigate({ to: destination.href as never });
       return;
     }
 
@@ -444,7 +495,7 @@ function FeedModule({
         destination ? `Open ${item.metaLabel ?? item.type} item` : undefined
       }
       className={cn(
-        "block gap-0 overflow-hidden border border-separator px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        "block gap-0 overflow-hidden border border-border px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         destination && "cursor-pointer",
       )}
       data-size={moduleSize}
@@ -463,7 +514,7 @@ function FeedModule({
   );
 
   return <article>{surface}</article>;
-}
+});
 
 function getColumnCount(width: number) {
   if (width >= 1024) {
@@ -494,10 +545,23 @@ function mergeItemsForExit(
   return [...nextItems, ...exitingItems];
 }
 
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+const FEED_COLUMN_GAP = 8;
+
+type MeasuredHeightCache = {
+  columnWidthKey: number;
+  heights: Record<string, number>;
+};
+
 export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const [filter, setFilter] = useState<FeedFilter>(() =>
     normalizeFilter(initialFilter),
   );
+  useEffect(() => {
+    setFilter(normalizeFilter(initialFilter));
+  }, [initialFilter.source, initialFilter.type]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesFilter(item, filter)),
     [filter, items],
@@ -521,6 +585,16 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const didMountRef = useRef(false);
   const transitionTimerRef = useRef<number | null>(null);
   const [containerWidth, setContainerWidth] = useState<number | null>(null);
+  const [fontMeasurementEpoch, setFontMeasurementEpoch] = useState(0);
+  const [measuredCache, setMeasuredCache] = useState<MeasuredHeightCache>({
+    columnWidthKey: 0,
+    heights: {},
+  });
+  const [hasRevealed, setHasRevealed] = useState(false);
+  const measurementPassRef = useRef<{ key: string; count: number }>({
+    count: 0,
+    key: "",
+  });
 
   useEffect(() => {
     const handlePopState = () => {
@@ -533,6 +607,25 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   }, []);
 
   useEffect(() => {
+    const fonts = document.fonts;
+
+    if (!fonts || fonts.status === "loaded") {
+      return;
+    }
+
+    let cancelled = false;
+    void fonts.ready.then(() => {
+      if (!cancelled) {
+        setFontMeasurementEpoch((epoch) => epoch + 1);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
     const node = feedRegionRef.current;
 
     if (!node) {
@@ -604,19 +697,112 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
       setFilter(parseFilterFromLocation());
     };
   const columnCount = containerWidth ? getColumnCount(containerWidth) : 1;
+  const columnWidthKey =
+    containerWidth && columnCount > 1
+      ? Math.round(
+          (containerWidth - FEED_COLUMN_GAP * (columnCount - 1)) / columnCount,
+        )
+      : 0;
+  const activeMeasuredHeights =
+    columnWidthKey > 0 &&
+    Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1
+      ? measuredCache.heights
+      : undefined;
   const hydratedLayout = useMemo(
     () =>
       containerWidth && columnCount > 1
         ? assignFeedLayout(renderedItems, {
             columnCount,
             containerWidth,
-            gap: 8,
+            gap: FEED_COLUMN_GAP,
+            measuredHeights: activeMeasuredHeights,
           })
         : null,
-    [columnCount, containerWidth, renderedItems],
+    [activeMeasuredHeights, columnCount, containerWidth, renderedItems],
   );
+
+  useIsomorphicLayoutEffect(() => {
+    const region = feedRegionRef.current;
+
+    if (!region || !hydratedLayout || columnWidthKey <= 0) {
+      return;
+    }
+
+    const passKey = `${columnWidthKey}:${fontMeasurementEpoch}:${renderedItems.length}:${renderedItems[0]?.id ?? ""}`;
+    if (measurementPassRef.current.key !== passKey) {
+      measurementPassRef.current = { count: 0, key: passKey };
+    }
+    if (measurementPassRef.current.count >= 2) {
+      return;
+    }
+
+    const cellNodes = region.querySelectorAll<HTMLElement>("[data-feed-cell-id]");
+    if (cellNodes.length === 0) {
+      return;
+    }
+
+    const isSameWidth =
+      Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1;
+    const nextHeights: Record<string, number> = isSameWidth
+      ? { ...measuredCache.heights }
+      : {};
+    let changed = !isSameWidth;
+
+    for (const cell of cellNodes) {
+      if (cell.dataset.feedTransition === "exit") {
+        continue;
+      }
+
+      const id = cell.dataset.feedCellId;
+      if (!id) {
+        continue;
+      }
+
+      const measuredHeight = Math.round(cell.getBoundingClientRect().height);
+      if (measuredHeight <= 0) {
+        continue;
+      }
+
+      const previousHeight = nextHeights[id];
+      if (
+        previousHeight === undefined ||
+        Math.abs(previousHeight - measuredHeight) > 1
+      ) {
+        nextHeights[id] = measuredHeight;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      measurementPassRef.current.count += 1;
+      setMeasuredCache({
+        columnWidthKey,
+        heights: nextHeights,
+      });
+    }
+  }, [
+    columnWidthKey,
+    fontMeasurementEpoch,
+    hydratedLayout,
+    measuredCache,
+    renderedItems,
+  ]);
+
+  const hasMeasuredInitialMasonry =
+    columnCount === 1 ||
+    (hydratedLayout !== null &&
+      (renderedItems.length === 0 ||
+        (columnWidthKey > 0 &&
+          Math.abs(measuredCache.columnWidthKey - columnWidthKey) <= 1 &&
+          Object.keys(measuredCache.heights).length > 0)));
   const isFeedLayoutReady =
-    containerWidth !== null && (columnCount === 1 || hydratedLayout !== null);
+    containerWidth !== null && (hasRevealed || hasMeasuredInitialMasonry);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!hasRevealed && isFeedLayoutReady) {
+      setHasRevealed(true);
+    }
+  }, [hasRevealed, isFeedLayoutReady]);
   const activeFilterKey =
     filterLinks.find((link) => link.matches(filter))?.key ?? "all";
 
@@ -628,37 +814,25 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
       id="overview"
     >
       <div className="mb-6 flex flex-nowrap items-center justify-start gap-4 overflow-x-auto sm:justify-end">
-        <Tabs selectedKey={activeFilterKey}>
-          <Tabs.ListContainer>
-            <Tabs.List aria-label="Overview feed filters">
-              {filterLinks.map((link) => {
-                return (
-                  <Tabs.Tab
+        <Tabs value={activeFilterKey}>
+          <TabsList aria-label="Overview feed filters">
+            {filterLinks.map((link) => (
+              <TabsTab
+                key={link.key}
+                nativeButton={false}
+                render={
+                  <SiteLink
+                    data-overview-filter-link
                     href={link.href}
-                    id={link.key}
-                    key={link.key}
-                    render={(domProps: unknown) => {
-                      const linkProps = domProps as ComponentProps<
-                        typeof NextLink
-                      >;
-
-                      return (
-                        <NextLink
-                          {...linkProps}
-                          data-overview-filter-link
-                          href={link.href}
-                          onClick={handleFilterClick(link.href)}
-                        />
-                      );
-                    }}
-                  >
-                    {link.label}
-                    <Tabs.Indicator />
-                  </Tabs.Tab>
-                );
-              })}
-            </Tabs.List>
-          </Tabs.ListContainer>
+                    onClick={handleFilterClick(link.href)}
+                  />
+                }
+                value={link.key}
+              >
+                {link.label}
+              </TabsTab>
+            ))}
+          </TabsList>
         </Tabs>
       </div>
       <div aria-live="polite" data-overview-feed-region ref={feedRegionRef}>
@@ -686,6 +860,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                     {column.items.map(({ item }) => (
                       <div
                         className={masonryStyles.cell}
+                        data-feed-cell-id={item.id}
                         data-feed-transition={transitionStates[item.id]}
                         key={item.id}
                       >
@@ -719,7 +894,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
             )}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-separator p-8 text-muted">
+          <div className="rounded-lg border border-dashed border-border p-8 text-muted-foreground">
             No feed items match this filter.
           </div>
         )}

@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "main": "src/worker.ts",
+  "main": "./src/server.ts",
   "name": "blog",
   "compatibility_date": "2026-04-14",
   "compatibility_flags": [
@@ -39,9 +39,5 @@
       "binding": "BLOG_CACHE",
       "id": "82255de05f7d4b9e8cf0cb43521ee243"
     }
-  ],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  }
+  ]
 }

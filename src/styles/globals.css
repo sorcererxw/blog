@@ -1,0 +1,148 @@
+@import "@fontsource/libre-bodoni/latin-400.css";
+@import "@fontsource/libre-bodoni/latin-500.css";
+@import "@fontsource/libre-bodoni/latin-600.css";
+@import "@fontsource/courier-prime/latin-400.css";
+@import "@fontsource/courier-prime/latin-700.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@source "../";
+
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  color-scheme: light;
+  --font-heading-system: "Libre Bodoni", Georgia, serif;
+  --font-courier-prime-system: "Courier Prime", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius: 0.625rem;
+  --background: oklch(97.02% 0.0081 56.06);
+  --foreground: oklch(21.03% 0.0081 56.06);
+  --card: oklch(100% 0.004 56.06);
+  --card-foreground: oklch(21.03% 0.0081 56.06);
+  --popover: oklch(100% 0.0024 56.06);
+  --popover-foreground: oklch(21.03% 0.0081 56.06);
+  --primary: oklch(21.03% 0.0081 56.06);
+  --primary-foreground: oklch(99.11% 0 0);
+  --secondary: oklch(94% 0.0081 56.06);
+  --secondary-foreground: oklch(21.03% 0.0059 56.06);
+  --muted: oklch(94% 0.0081 56.06);
+  --muted-foreground: oklch(55.17% 0.0162 56.06);
+  --accent: oklch(94% 0.0081 56.06);
+  --accent-foreground: oklch(21.03% 0.0081 56.06);
+  --destructive: var(--color-red-500);
+  --destructive-foreground: var(--color-red-700);
+  --info: var(--color-blue-500);
+  --info-foreground: var(--color-blue-700);
+  --success: var(--color-emerald-500);
+  --success-foreground: var(--color-emerald-700);
+  --warning: var(--color-amber-500);
+  --warning-foreground: var(--color-amber-700);
+  --border: oklch(90% 0.0081 56.06);
+  --input: oklch(90% 0.0081 56.06);
+  --ring: oklch(80.53% 0.1034 56.06);
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background: oklch(12% 0.0081 56.06);
+  --foreground: oklch(99.11% 0.0081 56.06);
+  --card: oklch(21.03% 0.0162 56.06);
+  --card-foreground: oklch(99.11% 0.0081 56.06);
+  --popover: oklch(21.03% 0.0162 56.06);
+  --popover-foreground: oklch(99.11% 0.0081 56.06);
+  --primary: oklch(99.11% 0.0081 56.06);
+  --primary-foreground: oklch(21.03% 0.0081 56.06);
+  --secondary: oklch(27.4% 0.0081 56.06);
+  --secondary-foreground: oklch(99.11% 0 0);
+  --muted: oklch(27.4% 0.0081 56.06);
+  --muted-foreground: oklch(70.5% 0.0162 56.06);
+  --accent: oklch(27.4% 0.0081 56.06);
+  --accent-foreground: oklch(99.11% 0.0081 56.06);
+  --destructive: color-mix(
+    in srgb,
+    var(--color-red-500) 90%,
+    var(--color-white)
+  );
+  --destructive-foreground: var(--color-red-400);
+  --info: var(--color-blue-500);
+  --info-foreground: var(--color-blue-400);
+  --success: var(--color-emerald-500);
+  --success-foreground: var(--color-emerald-400);
+  --warning: var(--color-amber-500);
+  --warning-foreground: var(--color-amber-400);
+  --border: oklch(28% 0.0081 56.06);
+  --input: oklch(39.64% 0.0081 56.06);
+  --ring: oklch(80.53% 0.1034 56.06);
+}
+
+@theme inline {
+  --font-sans: var(--font-courier-prime-system);
+  --font-heading: var(--font-heading-system);
+  --font-display: var(--font-courier-prime-system);
+  --font-code: var(--font-courier-prime-system);
+  --font-mono: var(--font-courier-prime-system);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --animate-skeleton: skeleton 2s -1s infinite linear;
+  @keyframes skeleton {
+    to {
+      background-position: -200% 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply font-display;
+  }
+
+  :where(h1, h2, h3, h4, h5, h6) {
+    @apply font-heading;
+  }
+
+  :where(pre, code) {
+    @apply font-code;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .font-code {
+    font-family: var(--font-code);
+  }
+}

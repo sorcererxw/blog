@@ -1,17 +1,18 @@
 import { Fragment, type ReactNode } from "react";
-import NextLink from "next/link";
+
+import { SiteLink } from "@/components/navigation/site-link";
 
 import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import {
-  HeroCard as Card,
-  HeroCardContent as CardContent,
-  HeroCardDescription as CardDescription,
-  HeroCardHeader as CardHeader,
-  HeroCardTitle as CardTitle,
-  HeroSeparator as Separator,
-} from "@/components/heroui/server-primitives";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   RichContentTable,
   RichContentTableBody,
@@ -111,14 +112,14 @@ function renderRichText(
 
     if (segment.href) {
       content = (
-        <NextLink
-          className="break-all text-accent underline underline-offset-4"
+        <SiteLink
+          className="break-all text-primary underline underline-offset-4"
           href={segment.href}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </NextLink>
+        </SiteLink>
       );
     }
 
@@ -164,9 +165,9 @@ const renderCaption = (
 function renderToc(nodes: ArticleDetailTocNode[]): ReactNode {
   return nodes.map((node) => (
     <Fragment key={node.id}>
-      <NextLink className={styles.tocLink} href={`#${node.id}`}>
+      <SiteLink className={styles.tocLink} href={`#${node.id}`}>
         {node.title}
-      </NextLink>
+      </SiteLink>
       {node.nodes.length > 0 ? (
         <div className={styles.tocChildren}>{renderToc(node.nodes)}</div>
       ) : null}
@@ -241,6 +242,7 @@ function renderTableBlock(
               {Array.from({ length: columnCount }).map((_, cellIndex) => (
                 <RichContentTableCell
                   className="whitespace-normal break-words align-top"
+                  isRowHeader={cellIndex === 0}
                   key={cellIndex}
                 >
                   {row.cells[cellIndex]
@@ -275,9 +277,9 @@ function renderBlock(block: ArticleDetailBlock) {
           >
             <span>{renderRichText(block.richText, block.text)}</span>
             {block.id ? (
-              <NextLink className={styles.headingAnchor} href={`#${block.id}`}>
+              <SiteLink className={styles.headingAnchor} href={`#${block.id}`}>
                 ¶
-              </NextLink>
+              </SiteLink>
             ) : null}
           </Tag>
           {renderChildren(block.children)}
@@ -312,7 +314,7 @@ function renderBlock(block: ArticleDetailBlock) {
         <figure className="space-y-3">
           <div className="grid gap-2">
             {block.language ? (
-              <p className="text-xs font-medium uppercase tracking-widest text-muted">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 {block.language}
               </p>
             ) : null}
@@ -348,7 +350,7 @@ function renderBlock(block: ArticleDetailBlock) {
     case "bookmark":
       return (
         <figure className="space-y-3">
-          <NextLink
+          <SiteLink
             className={styles.bookmarkLink}
             href={block.url}
             rel="noreferrer"
@@ -366,7 +368,7 @@ function renderBlock(block: ArticleDetailBlock) {
                 </div>
               ) : null}
               <CardHeader className="gap-2">
-                <CardDescription className="text-sm font-medium text-muted">
+                <CardDescription className="text-sm font-medium text-muted-foreground">
                   Reference
                 </CardDescription>
                 <CardTitle className="font-heading text-xl text-foreground">
@@ -375,12 +377,12 @@ function renderBlock(block: ArticleDetailBlock) {
               </CardHeader>
               <CardContent className="space-y-2">
                 {block.description ? (
-                  <p className="text-sm text-muted">{block.description}</p>
+                  <p className="text-sm text-muted-foreground">{block.description}</p>
                 ) : null}
-                <p className="break-all text-sm text-muted">{block.url}</p>
+                <p className="break-all text-sm text-muted-foreground">{block.url}</p>
               </CardContent>
             </Card>
-          </NextLink>
+          </SiteLink>
           {renderCaption(block.captionRichText, block.caption)}
         </figure>
       );
@@ -390,7 +392,7 @@ function renderBlock(block: ArticleDetailBlock) {
       return (
         <Card className={cn(styles.callout, colorToClassName(block.color))}>
           <CardContent className="grid grid-cols-[auto_1fr] gap-4 pt-4">
-            <div className="pt-1 text-xl text-muted">{block.emoji ?? "!"}</div>
+            <div className="pt-1 text-xl text-muted-foreground">{block.emoji ?? "!"}</div>
             <div className="space-y-3 text-base leading-8 text-foreground md:text-lg">
               <div>{renderRichText(block.richText, block.text)}</div>
               {renderChildren(block.children)}
@@ -521,7 +523,9 @@ export function ArticleDetailView({
 }: ArticleDetailViewProps) {
   const archiveHref = "/?type=writing";
   const authorHref = "/";
-  const date = formatArticleDetailDate(article.date);
+  const articleDate =
+    article.date instanceof Date ? article.date : new Date(article.date);
+  const date = formatArticleDetailDate(articleDate);
   const iconLabel = article.icon?.kind === "emoji" ? article.icon.value : null;
 
   return (
@@ -565,15 +569,15 @@ export function ArticleDetailView({
                   <span className={styles.authorInitial}>S</span>
                 )}
               </span>
-              <NextLink className={styles.authorLink} href={authorHref}>
+              <SiteLink className={styles.authorLink} href={authorHref}>
                 sorcererxw
-              </NextLink>
+              </SiteLink>
               <span className={styles.separator} aria-hidden="true">
                 •
               </span>
               <time
                 className={styles.date}
-                dateTime={article.date.toISOString()}
+                dateTime={articleDate.toISOString()}
               >
                 {date}
               </time>
@@ -593,9 +597,9 @@ export function ArticleDetailView({
           </section>
 
           <footer className={styles.endMatter}>
-            <NextLink className="publication-button" href={archiveHref}>
+            <SiteLink className="publication-button" href={archiveHref}>
               Back to writing
-            </NextLink>
+            </SiteLink>
           </footer>
         </div>
       </div>

@@ -48,11 +48,27 @@ export function createCanonicalImageId(sourceUrl: string) {
 }
 
 export function encodeCanonicalImageSource(sourceUrl: string) {
-  return Buffer.from(sourceUrl, "utf8").toString("base64url");
+  const bytes = new TextEncoder().encode(sourceUrl);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
 }
 
 export function decodeCanonicalImageSource(encoded: string) {
-  return Buffer.from(encoded, "base64url").toString("utf8");
+  const base64 = encoded.replaceAll("-", "+").replaceAll("_", "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new TextDecoder().decode(bytes);
 }
 
 export function createCanonicalImagePath(sourceUrl: string) {

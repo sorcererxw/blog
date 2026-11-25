@@ -235,4 +235,61 @@ describe("X Social Source sync", () => {
       },
     ]);
   });
+
+  it("reads the single-key feed snapshot without hitting per-post lookups, and backfills when absent", async () => {
+    const post = {
+      createdAt: new Date("2026-05-21T00:00:00.000Z"),
+      id: "301",
+      kind: "original" as const,
+      media: [],
+      text: "snapshot post",
+      url: "https://x.com/sorcererxw/status/301",
+    };
+    let snapshot: typeof post[] | null = null;
+    let getPostCalls = 0;
+    const backgroundTasks: Promise<unknown>[] = [];
+
+    const store = {
+      async getFeedSnapshot() {
+        return snapshot;
+      },
+      async getIndex() {
+        return {
+          lastAttemptAt: null,
+          lastError: null,
+          lastRetainedCount: 1,
+          lastScannedCount: 1,
+          lastSuccessAt: null,
+          orderedIds: ["301"],
+          scannedBoundaryId: "301",
+        };
+      },
+      async getPost(id: string) {
+        getPostCalls += 1;
+        return id === "301" ? post : null;
+      },
+      async putFeedSnapshot(posts: typeof post[]) {
+        snapshot = posts;
+      },
+      async putIndex() {
+        return undefined;
+      },
+      async putPost() {
+        return undefined;
+      },
+    };
+
+    const first = await listStoredXSocialPosts(store, {
+      scheduleBackground: (promise) => {
+        backgroundTasks.push(promise);
+      },
+    });
+    await Promise.all(backgroundTasks);
+    expect(first).toEqual([post]);
+    expect(getPostCalls).toBe(1);
+
+    const second = await listStoredXSocialPosts(store);
+    expect(second).toEqual([post]);
+    expect(getPostCalls).toBe(1);
+  });
 });
