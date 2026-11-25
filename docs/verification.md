@@ -15,10 +15,11 @@ Current performance and caching shape:
 
 Current evidence:
 
-- `pnpm test`: PASS, `41` files, `142` tests.
+- `pnpm test`: PASS, `41` files, `143` tests (including Web-standard base64url regression test simulating Webpack's `buffer` polyfill rejecting `"base64url"`).
 - `pnpm lint`: PASS.
 - `pnpm typecheck`: PASS.
-- `pnpm exec opennextjs-cloudflare build`: PASS, `.open-next/server-functions/default/handler.mjs` shrunk from `14.71 MB` to `6.98 MB` (`-52.5%`); homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`) while retaining `button`, `card`, `chip`, `separator`, `table`, `tabs`, and `surface` rules.
+- `pnpm exec opennextjs-cloudflare build`: PASS, `.open-next/server-functions/default/handler.mjs` shrunk from `14.71 MB` to `6.98 MB` (`-52.5%`); homepage CSS shrunk from `402 KB` to `81.8 KB` (`-79.7%`) while retaining `button`, `card`, `chip`, `separator`, `table`, `tabs`, and `surface` rules; removing `Buffer` from `canonical-image.ts` and `image-loader.ts` also dropped Webpack's injected `buffer` polyfill from client chunks.
+- Browser verification on local Wrangler Worker (`http://localhost:3316/`): PASS, `/` hydrated with `hasBoundaryError: false`, `layout="hydrated-masonry"` (`3` columns), `reveal="ready"`, `55` `/media/` images (`0` `srcSet`), working filter tab switching and theme toggle; preview article `/articles/grpc-gateway-comparison` also verified `hasTable: true`, `hasShiki: true`, `hasBoundaryError: false`.
 - `pnpm exec next start --hostname 127.0.0.1 -p 3310` + `curl`: PASS, `/` returned `200`, preserved `Link` and JSON-LD, reduced avg `<img>` tag size from `3,371 B` to `945 B` (`0` `/media/` `srcSet` entries); `/articles/screenshot-render`, `/?type=writing`, `/sitemap.xml`, `/projects` (`308`), `/en/blog` (`308`), `/blog` (`404`), and `/api/health` all returned expected responses.
 - `pnpm exec wrangler dev --ip 127.0.0.1 --port 3314` + `curl`: PASS, confirmed `x-blog2-edge-cache: miss` -> `hit` (`2.9ms`) on `/` and `/articles/screenshot-render`, preserved `Link`/`Vary`/`Cache-Control` on hits, confirmed `RSC: 1` bypass, confirmed `/media/[id]` `immutable` headers, and confirmed `missingAssets: []`.
 - `git diff --check`: PASS.

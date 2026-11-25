@@ -16,6 +16,41 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Browser Base64url Hydration Fix (PR #58)
+
+Status: done locally, pushed to PR #58
+
+Summary:
+
+- diagnosed a client-side hydration error boundary on the PR #58 Cloudflare preview (`TypeError: Unknown encoding: base64url`)
+- root cause: `src/domains/media/canonical-image.ts` used `Buffer.from(..., "utf8").toString("base64url")`, which became reachable in client bundles once `ResponsiveRemoteImage` resolved canonical `/media/` URLs directly; Webpack auto-polyfilled `Buffer` with the browser `buffer` package which does not implement `"base64url"`
+- replaced `Buffer` encoding/decoding in `src/domains/media/canonical-image.ts` and `image-loader.ts` with pure Web-standard `TextEncoder`/`TextDecoder` + `btoa`/`atob` (also dropping Webpack's injected `buffer` polyfill from client JS)
+- added a regression test simulating a `Buffer` polyfill that throws on `"base64url"`
+
+Files:
+
+- `src/domains/media/canonical-image.ts`
+- `src/domains/media/canonical-image.test.ts`
+- `image-loader.ts`
+- `docs/task-ledger.md`
+- `docs/verification.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `143` tests).
+- `pnpm lint`: PASS.
+- `pnpm typecheck`: PASS.
+- `pnpm exec opennextjs-cloudflare build`: PASS.
+- Browser verification on local Wrangler Worker (`http://localhost:3316/`): PASS, hydrated cleanly into 3-column `hydrated-masonry` with `reveal="ready"`, `55` `/media/` images (`0` `srcSet`), `hasBoundaryError: false`, and working filter/theme interactions.
+
+Follow-up:
+
+- re-verify `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` once Cloudflare finishes deploying the new commit on PR #58.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Zero-Cost, Zero-UI-Change Performance Optimization
 
 Status: done locally, pending production deploy verification

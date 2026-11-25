@@ -40,10 +40,6 @@ const createCanonicalImageId = (sourceUrl: string) => {
 };
 
 const encodeBase64Url = (sourceUrl: string) => {
-  if (typeof Buffer !== "undefined") {
-    return Buffer.from(sourceUrl, "utf8").toString("base64url");
-  }
-
   const bytes = new TextEncoder().encode(sourceUrl);
   let binary = "";
 
