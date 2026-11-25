@@ -4,12 +4,18 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { SiteLink } from "@/components/navigation/site-link";
 import { PublicBoundary } from "@/components/shell/public-boundary";
 import { SiteFooter } from "@/components/shell/site-footer";
 import { SiteHeader } from "@/components/shell/site-header";
+import {
+  TRAKS_QUEUE_INIT_SCRIPT,
+  TRAKS_SCRIPT_SRC,
+  TRAKS_SITE_KEY,
+  trackTraks404,
+} from "@/lib/analytics/traks";
 import appCss from "@/styles/globals.css?url";
 
 const themeInitScript = `
@@ -38,6 +44,14 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
     >
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{ __html: TRAKS_QUEUE_INIT_SCRIPT }}
+        />
+        <script
+          data-site={TRAKS_SITE_KEY}
+          defer
+          src={TRAKS_SCRIPT_SRC}
+        />
       </head>
       <body className="relative min-h-full bg-background text-foreground">
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
@@ -53,6 +67,10 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
 }
 
 function RootNotFound() {
+  useEffect(() => {
+    trackTraks404();
+  }, []);
+
   return (
     <div className="mx-auto flex justify-center">
       <PublicBoundary

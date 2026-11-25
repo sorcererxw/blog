@@ -1,8 +1,10 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 
 import { ArticleDetailView } from "@/components/article/article-detail-view";
 import { PublicBoundary } from "@/components/shell/public-boundary";
+import { trackTraks404 } from "@/lib/analytics/traks";
 import { seoToHead, StructuredDataScripts } from "@/lib/seo-head";
 import { loadArticlePageData } from "@/server-handlers/article-data";
 
@@ -14,6 +16,10 @@ const fetchArticlePageData = createServerFn({
   .handler(async ({ data }) => loadArticlePageData(data.slug));
 
 function ArticleNotFound() {
+  useEffect(() => {
+    trackTraks404();
+  }, []);
+
   return (
     <div className="mx-auto flex justify-center">
       <PublicBoundary

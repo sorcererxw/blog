@@ -16,6 +16,39 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Integrate Self-Hosted Traks Analytics
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- integrated self-hosted Traks analytics (`https://traks-collect.xw.workers.dev/t.js`, `data-site="pb_live_f6911j6tsl00mm9e1e0v5m3i"`) into the root document `<head>` in `src/routes/__root.tsx` with the official `window.traks` queue bootstrap script
+- added typed helper module `src/lib/analytics/traks.ts` (`trackTraksEvent`, `trackTraks404`) and unit tests `src/lib/analytics/traks.test.ts`
+- wired `trackTraks404()` into both `RootNotFound` (`src/routes/__root.tsx`) and `ArticleNotFound` (`src/routes/articles/$slug.tsx`) to report broken URLs as Traks `404` events
+- verified `t.js` natively patches `history.pushState` + `popstate` (handling TanStack Router SPA navigation and deduplicating query-only homepage filter changes) and requires classic non-module `<script defer>` so `document.currentScript` resolves
+
+Files:
+
+- Added: `src/lib/analytics/traks.ts`, `src/lib/analytics/traks.test.ts`
+- Updated: `src/routes/__root.tsx`, `src/routes/articles/$slug.tsx`, `docs/verification.md`, `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`41` files, `142` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`562ms`).
+- Local Wrangler Worker (`http://127.0.0.1:3327`) `curl` + browser verification: PASS — verified SSR `<head>` tags on `/`, `/articles/grpc-gateway-comparison`, and `/non-existent-check`; verified `window.__pb === true`, queue flushed to live `window.traks`, and `https://traks-collect.xw.workers.dev/api/event` returned `200`.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- confirm live pageviews in `https://traks-api.xw.workers.dev/portal/sites` once PR #58 is deployed to production.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Optimize Masonry Layout with DOM Height Calibration & Remove Pretext
 
 Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
