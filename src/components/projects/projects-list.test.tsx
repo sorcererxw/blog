@@ -78,7 +78,7 @@ describe("ProjectsList", () => {
     );
     expect(markup).toContain("project-card-title");
     expect(markup).toContain("project-card-cta");
-    expect(markup).toContain("text-muted");
+    expect(markup).toContain("text-muted-foreground");
   });
 
   it("passes responsive projects into the masonry feed", () => {

@@ -15,7 +15,7 @@ export function SiteHeader({
   const publicRoutes = getPublicRoutes(currentRoute);
 
   return (
-    <header className="bg-[color:color-mix(in_oklab,var(--background)_94%,var(--surface)_6%)]">
+    <header className="bg-[color:color-mix(in_oklab,var(--background)_94%,var(--card)_6%)]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <SiteLink
           className="inline-flex items-center gap-3 self-start text-current"
@@ -47,7 +47,7 @@ export function SiteHeader({
                     "text-sm font-medium transition-colors hover:text-foreground",
                     route.active
                       ? "text-foreground underline underline-offset-4"
-                      : "text-muted",
+                      : "text-muted-foreground",
                   )}
                   href={route.href}
                 >

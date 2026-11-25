@@ -39,9 +39,9 @@ function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
       <head>
         <HeadContent />
       </head>
-      <body className="min-h-full bg-background text-foreground">
+      <body className="relative min-h-full bg-background text-foreground">
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <div className="flex min-h-screen flex-col">
+        <div className="isolate relative flex min-h-svh flex-col">
           <SiteHeader />
           <main className="flex-1 py-12">{children}</main>
           <SiteFooter />
@@ -71,7 +71,7 @@ function RootErrorBoundary() {
   return (
     <section className="mx-auto grid w-[min(100%_-_2rem,40rem)] gap-5">
       <div className="space-y-5">
-        <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted">
+        <p className="m-0 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Publication boundary
         </p>
         <h1 className="publication-home-title text-4xl">

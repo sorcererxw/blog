@@ -5,10 +5,10 @@ export function SiteFooter() {
   const footerGroups = getFooterLinks();
 
   return (
-    <footer className="bg-[color:color-mix(in_oklab,var(--background)_94%,var(--surface)_6%)]">
+    <footer className="bg-[color:color-mix(in_oklab,var(--background)_94%,var(--card)_6%)]">
       <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 py-10 sm:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)] sm:items-start sm:gap-12 sm:px-8">
-        <div className="flex flex-col justify-end gap-3 text-muted sm:self-stretch">
-          <p className="text-xs text-muted">© 2026 sorcererxw</p>
+        <div className="flex flex-col justify-end gap-3 text-muted-foreground sm:self-stretch">
+          <p className="text-xs text-muted-foreground">© 2026 sorcererxw</p>
         </div>
 
         <nav
@@ -21,7 +21,7 @@ export function SiteFooter() {
                 link.external ? (
                   <SiteLink
                     key={link.label}
-                    className="font-medium text-muted transition-colors hover:text-foreground"
+                    className="font-medium text-muted-foreground transition-colors hover:text-foreground"
                     href={link.href}
                     rel="noreferrer"
                     target="_blank"
@@ -31,7 +31,7 @@ export function SiteFooter() {
                 ) : (
                   <SiteLink
                     key={link.label}
-                    className="font-medium text-muted transition-colors hover:text-foreground"
+                    className="font-medium text-muted-foreground transition-colors hover:text-foreground"
                     href={link.href}
                   >
                     {link.label}

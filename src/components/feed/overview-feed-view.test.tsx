@@ -71,12 +71,12 @@ describe("OverviewFeed", () => {
     expect(markup).toContain('data-slot="tabs"');
     expect(markup).toContain('data-slot="tabs-list"');
     expect(markup).toContain('data-slot="tabs-tab"');
-    expect(markup).toContain('data-selected="true"');
+    expect(markup).toContain('aria-selected="true"');
     expect(markup).toContain('data-slot="card"');
     expect(markup).toContain('role="link"');
     expect(markup).toContain('tabindex="0"');
     expect(markup).toContain("cursor-pointer");
-    expect(markup).toContain("border-separator");
+    expect(markup).toContain("border-border");
     expect(markup).toContain("px-0");
     expect(markup).toContain("grid gap-3 p-5");
     expect(markup).not.toContain("gap-2 p-4");
@@ -87,9 +87,9 @@ describe("OverviewFeed", () => {
     expect(markup).toContain(
       '<time class="mt-1 inline-flex items-center text-xs uppercase text-foreground"',
     );
-    expect(markup).toContain("chip");
+    expect(markup).toContain('data-slot="badge"');
     expect(markup).toContain("Writing");
-    expect(markup).not.toContain("base-ui-");
+    expect(markup).not.toContain("chip--default");
     expect(markup).toContain('class="justify-self-start"');
     expect(markup).not.toContain("px-" + "[1.15rem]");
     expect(markup).not.toContain("badge--soft");

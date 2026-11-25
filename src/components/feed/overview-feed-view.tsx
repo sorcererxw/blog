@@ -1,7 +1,4 @@
 import { useRouter } from "@tanstack/react-router";
-import { Card } from "@heroui/react/card";
-import { Chip } from "@heroui/react/chip";
-import { Tabs } from "@heroui/react/tabs";
 import {
   Fragment,
   memo,
@@ -9,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ComponentProps,
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
@@ -17,6 +13,9 @@ import {
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import { SiteLink } from "@/components/navigation/site-link";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import {
   assignFeedLayout,
   getFeedModuleSize,
@@ -165,7 +164,7 @@ function renderRichTextSegment(
 
   if (segment.monospace) {
     content = (
-      <code className="rounded bg-default px-1 py-0.5 font-code text-sm">
+      <code className="rounded bg-muted px-1 py-0.5 font-code text-sm">
         {content}
       </code>
     );
@@ -178,7 +177,7 @@ function renderRichTextSegment(
   if (segment.quote) {
     return (
       <blockquote
-        className="my-2 border-l-2 border-separator pl-3 text-foreground"
+        className="my-2 border-l-2 border-border pl-3 text-foreground"
         key={index}
       >
         {content}
@@ -220,7 +219,7 @@ function MediaGrid({
     const [media] = item.media;
 
     return (
-      <div className="aspect-[16/10] overflow-hidden bg-default">
+      <div className="aspect-[16/10] overflow-hidden bg-muted">
         <ResponsiveRemoteImage
           alt={media.alt}
           className="h-full w-full object-cover"
@@ -236,11 +235,11 @@ function MediaGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-px overflow-hidden bg-default">
+    <div className="grid grid-cols-2 gap-px overflow-hidden bg-muted">
       {item.media.map((media, index) => (
         <div
           className={cn(
-            "aspect-square overflow-hidden bg-default",
+            "aspect-square overflow-hidden bg-muted",
             item.media.length % 2 === 1 &&
               index === 0 &&
               "col-span-2 aspect-[16/10]",
@@ -271,9 +270,9 @@ function QuoteMediaGrid({ media }: { media: FeedMediaPreview[] }) {
   }
 
   return (
-    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-small bg-default">
+    <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md bg-muted">
       {media.slice(0, 4).map((item, index) => (
-        <div className="aspect-[16/10] overflow-hidden bg-default" key={`${item.src}-${index}`}>
+        <div className="aspect-[16/10] overflow-hidden bg-muted" key={`${item.src}-${index}`}>
           <ResponsiveRemoteImage
             alt={item.alt}
             className="h-full w-full object-cover"
@@ -295,7 +294,7 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
 
   return (
     <SiteLink
-      className="block rounded-medium border border-separator px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
+      className="block rounded-lg border border-border px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
       href={quote.url}
       prefetch={false}
       rel="noreferrer"
@@ -343,7 +342,7 @@ function ModuleInner({
         className={cn("grid gap-3 p-5", moduleSize === "compact" && "gap-2")}
       >
         <div className="justify-self-start">
-          <Chip>{item.metaLabel ?? item.type}</Chip>
+          <Badge variant="secondary">{item.metaLabel ?? item.type}</Badge>
         </div>
         {isTelegram || !item.title ? null : (
           <h2
@@ -455,7 +454,7 @@ const FeedModule = memo(function FeedModule({
         destination ? `Open ${item.metaLabel ?? item.type} item` : undefined
       }
       className={cn(
-        "block gap-0 overflow-hidden border border-separator px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+        "block gap-0 overflow-hidden border border-border px-0 py-0 text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         destination && "cursor-pointer",
       )}
       data-size={moduleSize}
@@ -642,37 +641,25 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
       id="overview"
     >
       <div className="mb-6 flex flex-nowrap items-center justify-start gap-4 overflow-x-auto sm:justify-end">
-        <Tabs selectedKey={activeFilterKey}>
-          <Tabs.ListContainer>
-            <Tabs.List aria-label="Overview feed filters">
-              {filterLinks.map((link) => {
-                return (
-                  <Tabs.Tab
+        <Tabs value={activeFilterKey}>
+          <TabsList aria-label="Overview feed filters">
+            {filterLinks.map((link) => (
+              <TabsTab
+                key={link.key}
+                nativeButton={false}
+                render={
+                  <SiteLink
+                    data-overview-filter-link
                     href={link.href}
-                    id={link.key}
-                    key={link.key}
-                    render={(domProps: unknown) => {
-                      const linkProps = domProps as ComponentProps<
-                        typeof SiteLink
-                      >;
-
-                      return (
-                        <SiteLink
-                          {...linkProps}
-                          data-overview-filter-link
-                          href={link.href}
-                          onClick={handleFilterClick(link.href)}
-                        />
-                      );
-                    }}
-                  >
-                    {link.label}
-                    <Tabs.Indicator />
-                  </Tabs.Tab>
-                );
-              })}
-            </Tabs.List>
-          </Tabs.ListContainer>
+                    onClick={handleFilterClick(link.href)}
+                  />
+                }
+                value={link.key}
+              >
+                {link.label}
+              </TabsTab>
+            ))}
+          </TabsList>
         </Tabs>
       </div>
       <div aria-live="polite" data-overview-feed-region ref={feedRegionRef}>
@@ -733,7 +720,7 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
             )}
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-separator p-8 text-muted">
+          <div className="rounded-lg border border-dashed border-border p-8 text-muted-foreground">
             No feed items match this filter.
           </div>
         )}

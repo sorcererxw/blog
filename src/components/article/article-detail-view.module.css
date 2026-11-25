@@ -17,7 +17,7 @@
   border-radius: calc(var(--radius) * 2.5);
   background:
     linear-gradient(180deg, rgb(10 10 10 / 20%) 0%, rgb(10 10 10 / 72%) 100%),
-    color-mix(in oklab, var(--surface) 92%, var(--background) 8%);
+    color-mix(in oklab, var(--card) 92%, var(--background) 8%);
 }
 
 .coverWrap {
@@ -203,7 +203,7 @@
   background-color: color-mix(
     in oklab,
     var(--background) 90%,
-    var(--surface) 10%
+    var(--card) 10%
   );
 }
 
@@ -247,7 +247,7 @@
   background-color: color-mix(
     in oklab,
     var(--background) 88%,
-    var(--surface) 12%
+    var(--card) 12%
   );
 }
 
@@ -291,7 +291,7 @@
 
 .inlineCode {
   border-radius: 0.375rem;
-  background: color-mix(in oklab, var(--background) 82%, var(--surface) 18%);
+  background: color-mix(in oklab, var(--background) 82%, var(--card) 18%);
   padding: 0.1rem 0.35rem;
   font-family: var(--font-code), monospace;
   font-size: 0.95em;
@@ -447,7 +447,7 @@
   background-color: color-mix(
     in oklab,
     var(--background) 88%,
-    var(--surface) 12%
+    var(--card) 12%
   );
 }
 
@@ -458,7 +458,7 @@
 
 .tocLink {
   font-size: 0.95rem;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 
 .tocChildren {

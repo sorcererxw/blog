@@ -89,6 +89,11 @@ const localRules = {
         schema: [],
       },
       create(context) {
+        const filename = context.filename.replaceAll("\\", "/");
+        if (filename.includes("/src/components/ui/")) {
+          return {};
+        }
+
         const arbitraryUtilityPattern =
           /(?:^|:)(?:text|tracking|leading|rounded(?:-[trblse]|-[trbl][trbl]|-[xy])?|ring(?:-(?:offset|inset|[0-9]+|[xy]))?|-?(?:m[trblxy]?|p[trblxy]?|gap(?:-[xy])?))-\[[^\]]+\]/;
 
@@ -163,15 +168,20 @@ const browserGlobals = {
   Element: "readonly",
   Event: "readonly",
   fetch: "readonly",
+  getComputedStyle: "readonly",
   Headers: "readonly",
   HTMLAnchorElement: "readonly",
+  HTMLElement: "readonly",
   HTMLImageElement: "readonly",
+  HTMLSpanElement: "readonly",
   ImageData: "readonly",
   localStorage: "readonly",
   location: "readonly",
+  MutationObserver: "readonly",
   process: "readonly",
   Request: "readonly",
   RequestInit: "readonly",
+  ResizeObserver: "readonly",
   Response: "readonly",
   setTimeout: "readonly",
   URL: "readonly",

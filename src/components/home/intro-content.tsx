@@ -4,13 +4,13 @@ import { SiteLink } from "@/components/navigation/site-link";
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import {
-  HeroCard as Card,
-  HeroCardContent as CardContent,
-  HeroCardDescription as CardDescription,
-  HeroCardHeader as CardHeader,
-  HeroCardTitle as CardTitle,
-  HeroSeparator as Separator,
-} from "@/components/heroui/server-primitives";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { HomePageBlock } from "@/integrations/notion/home";
 
@@ -143,7 +143,7 @@ function renderRichText(richText: NotionRichText[]): ReactNode[] {
     if (href) {
       content = (
         <SiteLink
-          className="break-all text-accent underline underline-offset-4"
+          className="break-all text-primary underline underline-offset-4"
           href={href}
           rel="noreferrer"
           target="_blank"
@@ -155,7 +155,7 @@ function renderRichText(richText: NotionRichText[]): ReactNode[] {
 
     if (segment.annotations?.code) {
       content = (
-        <code className="rounded bg-default px-1 py-0.5 font-code text-sm">
+        <code className="rounded bg-muted px-1 py-0.5 font-code text-sm">
           {content}
         </code>
       );
@@ -283,7 +283,7 @@ function renderBlock(
       return (
         <Card className={styles.callout}>
           <CardContent className="grid grid-cols-[auto_1fr] gap-4 pt-4">
-            <div className="pt-1 text-xl text-muted">{icon ?? "!"}</div>
+            <div className="pt-1 text-xl text-muted-foreground">{icon ?? "!"}</div>
             <div className="space-y-3 text-base leading-8 text-foreground md:text-lg">
               <div>{renderRichText(getRichText(block))}</div>
               {renderChildren(block, tableComponents)}
@@ -358,7 +358,7 @@ function renderBlock(
           >
             <Card className={styles.bookmark}>
               <CardHeader className="gap-2">
-                <CardDescription className="text-sm font-medium text-muted">
+                <CardDescription className="text-sm font-medium text-muted-foreground">
                   Reference
                 </CardDescription>
                 <CardTitle className="font-heading text-xl text-foreground">
@@ -366,7 +366,7 @@ function renderBlock(
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="break-all text-sm text-muted">{url}</p>
+                <p className="break-all text-sm text-muted-foreground">{url}</p>
               </CardContent>
             </Card>
           </SiteLink>
@@ -487,7 +487,10 @@ function renderBlock(
               {bodyRows.map((row, rowIndex) => (
                 <RichContentTableRow id={rowIndex} key={rowIndex}>
                   {Array.from({ length: columnCount }).map((_, cellIndex) => (
-                    <RichContentTableCell key={cellIndex}>
+                    <RichContentTableCell
+                      isRowHeader={cellIndex === 0}
+                      key={cellIndex}
+                    >
                       {row.cells?.[cellIndex]
                         ? renderRichText(
                             (row.cells[cellIndex].rich_text as

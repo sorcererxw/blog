@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import {
-  HeroCard as Card,
-  HeroCardContent as CardContent,
-  HeroCardDescription as CardDescription,
-  HeroCardHeader as CardHeader,
-  HeroCardTitle as CardTitle,
-  HeroSeparator as Separator,
-} from "@/components/heroui/server-primitives";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   RichContentTable,
   RichContentTableBody,
@@ -113,7 +113,7 @@ function renderRichText(
     if (segment.href) {
       content = (
         <SiteLink
-          className="break-all text-accent underline underline-offset-4"
+          className="break-all text-primary underline underline-offset-4"
           href={segment.href}
           rel="noreferrer"
           target="_blank"
@@ -242,6 +242,7 @@ function renderTableBlock(
               {Array.from({ length: columnCount }).map((_, cellIndex) => (
                 <RichContentTableCell
                   className="whitespace-normal break-words align-top"
+                  isRowHeader={cellIndex === 0}
                   key={cellIndex}
                 >
                   {row.cells[cellIndex]
@@ -313,7 +314,7 @@ function renderBlock(block: ArticleDetailBlock) {
         <figure className="space-y-3">
           <div className="grid gap-2">
             {block.language ? (
-              <p className="text-xs font-medium uppercase tracking-widest text-muted">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 {block.language}
               </p>
             ) : null}
@@ -367,7 +368,7 @@ function renderBlock(block: ArticleDetailBlock) {
                 </div>
               ) : null}
               <CardHeader className="gap-2">
-                <CardDescription className="text-sm font-medium text-muted">
+                <CardDescription className="text-sm font-medium text-muted-foreground">
                   Reference
                 </CardDescription>
                 <CardTitle className="font-heading text-xl text-foreground">
@@ -376,9 +377,9 @@ function renderBlock(block: ArticleDetailBlock) {
               </CardHeader>
               <CardContent className="space-y-2">
                 {block.description ? (
-                  <p className="text-sm text-muted">{block.description}</p>
+                  <p className="text-sm text-muted-foreground">{block.description}</p>
                 ) : null}
-                <p className="break-all text-sm text-muted">{block.url}</p>
+                <p className="break-all text-sm text-muted-foreground">{block.url}</p>
               </CardContent>
             </Card>
           </SiteLink>
@@ -391,7 +392,7 @@ function renderBlock(block: ArticleDetailBlock) {
       return (
         <Card className={cn(styles.callout, colorToClassName(block.color))}>
           <CardContent className="grid grid-cols-[auto_1fr] gap-4 pt-4">
-            <div className="pt-1 text-xl text-muted">{block.emoji ?? "!"}</div>
+            <div className="pt-1 text-xl text-muted-foreground">{block.emoji ?? "!"}</div>
             <div className="space-y-3 text-base leading-8 text-foreground md:text-lg">
               <div>{renderRichText(block.richText, block.text)}</div>
               {renderChildren(block.children)}

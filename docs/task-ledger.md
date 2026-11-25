@@ -16,6 +16,54 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Replace HeroUI v3 with coss UI & Fix Preview Cloudflare Image Origin
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- completely replaced HeroUI v3 (`@heroui/react`, `@heroui/styles`, `tailwind-variants`, `src/components/heroui/`) with **coss UI** (`https://coss.com/ui`, built on `@base-ui/react@^1.9.0` + `class-variance-authority@^0.7.1` + Tailwind CSS v4)
+- added official coss UI registry primitives under `src/components/ui/`: `badge.tsx`, `button.tsx`, `card.tsx`, `segmented-control.tsx`, `separator.tsx`, `spinner.tsx`, `table.tsx`, and `tabs.tsx`
+- migrated `src/styles/globals.css` to official coss UI neutral light/dark CSS variables (`--background`, `--foreground`, `--card`, `--muted`, `--muted-foreground`, `--primary`, `--secondary`, `--accent`, `--border`, `--ring`, `--radius`, semantic status colors) while preserving `@fontsource/libre-bodoni` and `@fontsource/courier-prime` typography
+- added Base UI root stacking isolation (`<div className="isolate relative flex min-h-svh flex-col">`) in `src/routes/__root.tsx`
+- migrated all components and CSS modules (`theme-toggle.tsx`, `rich-content-table.tsx`, `overview-feed-view.tsx`, `article-detail-view.tsx`, `article-detail-view.module.css`, `article-list.tsx`, `intro-content.tsx`, `intro.module.css`, `projects-list.tsx`, `thoughts-page.tsx`, `site-header.tsx`, `site-footer.tsx`, `public-boundary.tsx`) from HeroUI components/tokens to coss UI components/tokens
+- updated `src/lib/images/cloudflare.ts` to emit explicit zone-origin Cloudflare Image Transformation URLs (`https://sorcererxw.com/cdn-cgi/image/...`, zero `isPre`/`workers.dev` environment branching) so `*.workers.dev` previews and local `wrangler dev` resolve transformed X/Unsplash images cleanly instead of hitting Cloudflare `404 error code: 1042`, and aligned `ResponsiveRemoteImage` fallback `src` width to `presetConfig.width` to avoid arbitrary-width unique transformation sprawl
+- updated `eslint.config.mjs` (exempting `src/components/ui/` from `local/no-arbitrary-tailwind-design-tokens` and adding browser DOM observer globals) and updated unit tests (`overview-feed-view.test.tsx`, `projects-list.test.tsx`, `cloudflare.test.ts`, `responsive-remote-image.test.tsx`)
+
+Files:
+
+- Added: `docs/specs/2026-11-25-coss-ui-migration-design.md`, `docs/plans/2026-11-25-coss-ui-migration.md`, `src/components/ui/badge.tsx`, `src/components/ui/button.tsx`, `src/components/ui/card.tsx`, `src/components/ui/segmented-control.tsx`, `src/components/ui/separator.tsx`, `src/components/ui/spinner.tsx`, `src/components/ui/table.tsx`, `src/components/ui/tabs.tsx`
+- Updated: `package.json`, `pnpm-lock.yaml`, `eslint.config.mjs`, `src/styles/globals.css`, `src/routes/__root.tsx`, `src/lib/images/cloudflare.ts`, `src/lib/images/cloudflare.test.ts`, `src/components/media/responsive-remote-image.tsx`, `src/components/media/responsive-remote-image.test.tsx`, `src/components/shell/theme-toggle.tsx`, `src/components/shell/site-header.tsx`, `src/components/shell/site-footer.tsx`, `src/components/shell/public-boundary.tsx`, `src/components/rich-content/rich-content-table.tsx`, `src/components/feed/overview-feed-view.tsx`, `src/components/feed/overview-feed-view.test.tsx`, `src/components/article/article-detail-view.tsx`, `src/components/article/article-detail-view.module.css`, `src/components/article/article-list.tsx`, `src/components/home/intro-content.tsx`, `src/components/home/intro.module.css`, `src/components/projects/projects-list.tsx`, `src/components/projects/projects-list.test.tsx`, `src/components/thoughts/thoughts-page.tsx`, `docs/roadmap.md`, `docs/task-ledger.md`, `docs/verification.md`
+- Deleted: `src/components/heroui/server-primitives.tsx`
+
+Decisions:
+
+- replaced HeroUI's React Aria collection `Table` with coss UI semantic HTML `Table*` primitives (retaining `role="columnheader"` and `role="rowheader"`), cutting the `rich-content-table` chunk by `96.5%` (`117.09 KB` -> `4.10 KB`) and total client JS by `31.8%` (`680.2 KB` -> `463.8 KB` / `152.0 KB` gzip)
+- composed coss UI `TabsTab` with `SiteLink` via `nativeButton={false}` and `render={<SiteLink ... />}`, preserving URL-driven filters and animated `TabsPrimitive.Indicator`
+- mapped legacy HeroUI token semantics cleanly to coss UI semantics (`--muted` text -> `--muted-foreground`, `--surface` -> `--card`, `--separator` -> `--border`, `--focus` -> `--ring`, `--accent` text -> `--primary`, `bg-default` -> `bg-muted`)
+- exempted `src/components/ui/` from `local/no-arbitrary-tailwind-design-tokens` so official coss UI registry components can be kept verbatim without hand-hacking upstream recipes
+- treated `https://sorcererxw.com/cdn-cgi/image/...` as an explicit Cloudflare Zone image CDN origin rather than branching on preview hostnames, keeping prod same-origin, preview/local functional, and fallback `src` widths pinned to preset breakpoints
+
+Verification:
+
+- Zero-residue grep across `src/` and `package.json`: PASS (`0` HeroUI/legacy token matches).
+- `pnpm build`: PASS (`client 681ms`, `ssr 679ms`, re-verified `581ms`; Client JS `463.8 KB / 152.0 KB gzip`, `rich-content-table` `4.10 KB / 1.13 KB gzip`, `globals-*.css` `83.33 KB / 12.80 KB gzip`).
+- `pnpm exec wrangler deploy --dry-run`: PASS (`Total Upload: 4741.99 KiB / gzip: 791.07 KiB`).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm test`: PASS (`40` files, `137` tests).
+- Local Wrangler Worker `curl` checks: PASS for `/`, `/?type=writing`, `/articles/grpc-gateway-comparison`, and `/articles/screenshot-render`; verified `0` relative `"/cdn-cgi/image/` URLs and `HTTP/2 200 image/jpeg` on live `https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=960/...`.
+- Real browser verification (`http://localhost:3322/`): PASS on `/` (3-column `hydrated-masonry`, `144` cards, dark/light tokens, fonts, interactive tabs), `/articles/grpc-gateway-comparison` (coss UI Table + Shiki + zero overflow), SPA `Back to writing` (`42` cards, `tab-indicator` aligned via CSS `translate`), and `/articles/screenshot-render` (`<!--render-->` + Shiki).
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify updated Cloudflare preview deployment on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` after Workers Builds finishes deploying PR #58.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Migrate to Vite 8 + TanStack Start + Native Cloudflare Workers
 
 Status: done locally on branch `perf/zero-cost-site-optimization` (PR #58), pushed for Cloudflare preview verification

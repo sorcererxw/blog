@@ -29,7 +29,7 @@ function getIconLabel(item: ArticleListItem) {
 function IconMark({ item }: { item: ArticleListItem }) {
   if (item.icon?.kind === "emoji") {
     return (
-      <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted">
+      <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted-foreground">
         {item.icon.value}
       </span>
     );
@@ -39,7 +39,7 @@ function IconMark({ item }: { item: ArticleListItem }) {
     return (
       <span
         aria-label={`${item.title} icon`}
-        className="h-7 w-7 flex-none rounded-full border border-separator bg-surface bg-cover bg-center bg-no-repeat"
+        className="h-7 w-7 flex-none rounded-full border border-border bg-card bg-cover bg-center bg-no-repeat"
         role="img"
         style={{
           backgroundImage: `url(${buildCloudflareImageUrl(item.icon.value, "icon")})`,
@@ -66,7 +66,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
           <h2 className="m-0 font-heading text-3xl font-medium leading-none tracking-tighter md:text-4xl">
             No articles published yet.
           </h2>
-          <p className="m-0 max-w-[38rem] text-base leading-7 text-muted">
+          <p className="m-0 max-w-[38rem] text-base leading-7 text-muted-foreground">
             The archive is ready. As writing lands in Notion, published entries will
             appear here in reverse chronological order.
           </p>
@@ -92,7 +92,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
                   {item.cover ? (
                     <div
                       className={cn(
-                        "relative h-72 w-full overflow-hidden rounded-2xl bg-default",
+                        "relative h-72 w-full overflow-hidden rounded-2xl bg-muted",
                         index === 0 && "h-[22rem] sm:row-span-3 sm:h-full sm:min-h-[22rem]",
                       )}
                     >
@@ -107,7 +107,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
 
                   <div className="grid gap-2.5">
                     <time
-                      className="text-xs uppercase leading-normal tracking-widest text-muted"
+                      className="text-xs uppercase leading-normal tracking-widest text-muted-foreground"
                       dateTime={item.date.toISOString()}
                     >
                       {formatArticleDate(item.date)}
@@ -123,7 +123,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
                         {item.title}
                       </h2>
                       {iconLabel ? (
-                        <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted">
+                        <span className="inline-flex h-6 min-w-6 flex-none items-center justify-center text-base leading-none text-muted-foreground">
                           {iconLabel}
                         </span>
                       ) : null}
@@ -132,7 +132,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
                   </div>
 
                   {item.summary ? (
-                    <p className="m-0 max-w-[44rem] text-base leading-7 text-muted">
+                    <p className="m-0 max-w-[44rem] text-base leading-7 text-muted-foreground">
                       {item.summary}
                     </p>
                   ) : null}
