@@ -43,7 +43,7 @@ export function ResponsiveRemoteImage({
   const resolvedSrc = shouldUseDirectCanonicalMedia
     ? resolveCanonicalImageAsset(src).canonicalUrl
     : isProduction
-      ? buildCloudflareImageUrl(src, preset, { width: imageWidth })
+      ? buildCloudflareImageUrl(src, preset)
       : src;
   const srcSet =
     isProduction && !shouldUseDirectCanonicalMedia

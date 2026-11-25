@@ -2,6 +2,9 @@ import {
   isAllowedTransformHost,
   resolveCanonicalImageAsset,
 } from "@/domains/media/canonical-image";
+import { SITE_ORIGIN } from "@/domains/seo/agent-discovery";
+
+export const CLOUDFLARE_IMAGE_ORIGIN = SITE_ORIGIN;
 
 export type CloudflareImagePreset =
   | "hero"
@@ -128,7 +131,7 @@ export function buildCloudflareImageUrl(
     width,
   });
 
-  return `/cdn-cgi/image/${imageOptions}/${encodeSourceForCloudflare(targetUrl)}`;
+  return `${CLOUDFLARE_IMAGE_ORIGIN}/cdn-cgi/image/${imageOptions}/${encodeSourceForCloudflare(targetUrl)}`;
 }
 
 export function buildCloudflareImageSrcSet(

@@ -26,7 +26,7 @@ describe("ResponsiveRemoteImage", () => {
     expect(markup).not.toContain("srcSet=");
   });
 
-  it("preserves responsive srcSet for stable transform-allowed hosts in production", () => {
+  it("preserves responsive srcSet with the zone image origin and preset fallback width in production", () => {
     vi.stubEnv("NODE_ENV", "production");
 
     const markup = renderToStaticMarkup(
@@ -39,7 +39,13 @@ describe("ResponsiveRemoteImage", () => {
       />,
     );
 
+    expect(markup).toContain(
+      'src="https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=960/https://pbs.twimg.com/media/example.jpg"',
+    );
     expect(markup).toContain("srcSet=");
-    expect(markup).toContain("pbs.twimg.com");
+    expect(markup).toContain(
+      "https://sorcererxw.com/cdn-cgi/image/fit=cover,format=auto,quality=82,width=360/https://pbs.twimg.com/media/example.jpg 360w",
+    );
+    expect(markup).not.toContain("width=1280/");
   });
 });
