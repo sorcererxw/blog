@@ -16,6 +16,41 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Restore Warm Stone/Paper Palette on coss UI Tokens
+
+Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
+
+Summary:
+
+- restored the site's original warm `hue 56.06` light and dark color palette onto coss UI semantic tokens in `src/styles/globals.css` after switching to coss UI's pure-white neutral defaults had flattened page vs card contrast
+- mapped light mode canvas `--background: oklch(97.02% 0.0081 56.06)`, elevated `--card: oklch(100% 0.004 56.06)`, `--secondary`/`--muted`/`--accent: oklch(94% 0.0081 56.06)`, `--border`/`--input: oklch(90% 0.0081 56.06)`, and `--ring: oklch(80.53% 0.1034 56.06)`
+- mapped dark mode canvas `--background: oklch(12% 0.0081 56.06)`, elevated `--card: oklch(21.03% 0.0162 56.06)`, `--secondary`/`--muted`/`--accent: oklch(27.4% 0.0081 56.06)`, `--border: oklch(28% 0.0081 56.06)`, `--input: oklch(39.64% 0.0081 56.06)`, and `--ring: oklch(80.53% 0.1034 56.06)`
+- updated `segmentedControlIndicatorSurfaceClassName` in `src/components/ui/segmented-control.tsx` to `bg-card dark:bg-input` so the active tab indicator uses crisp white in light mode and `39.64%` warm stone in dark mode
+
+Files:
+
+- `src/styles/globals.css`
+- `src/components/ui/segmented-control.tsx`
+- `docs/specs/2026-11-25-coss-ui-migration-design.md`
+- `docs/verification.md`
+- `docs/task-ledger.md`
+
+Verification:
+
+- `pnpm test`: PASS (`40` files, `138` tests).
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm build`: PASS (`554ms`).
+- Real browser verification (`http://localhost:3325/`): PASS in both light and dark modes (`light`: `bodyBg oklch(0.9702 0.0081 56.06)` vs `cardBg oklch(1 0.004 56.06)` / `tabsListBg oklch(0.94 0.0081 56.06)` / `indicatorBg oklch(1 0.004 56.06)`; `dark`: `bodyBg oklch(0.12 0.0081 56.06)` vs `cardBg oklch(0.2103 0.0162 56.06)` / `tabsListBg oklch(0.274 0.0081 56.06)` / `indicatorBg oklch(0.3964 0.0081 56.06)`).
+
+Follow-up:
+
+- verify updated light/dark warm palette on `https://perf-zero-cost-site-optimization-blog.xw.workers.dev/` once Workers Builds completes deployment.
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Fix QuoteMediaGrid Single & Odd-Count Image Layout
 
 Status: done locally and pushed to PR #58 (`perf/zero-cost-site-optimization`)
