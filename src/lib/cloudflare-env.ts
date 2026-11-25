@@ -1,4 +1,4 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
+import { env as workerEnv, waitUntil as workerWaitUntil } from "cloudflare:workers";
 
 import type { CloudflareEnv } from "@/types/cloudflare";
 
@@ -15,28 +15,22 @@ const APP_ENV_VALUES = new Set<AppEnvironment>(["development", "production", "te
 
 export function getWorkerEnvSync(): Partial<CloudflareEnv> {
   try {
-    return getCloudflareContext().env as Partial<CloudflareEnv>;
+    return (workerEnv as Partial<CloudflareEnv> | undefined) ?? {};
   } catch {
     return {};
   }
 }
 
 export async function getWorkerEnv(): Promise<Partial<CloudflareEnv>> {
-  try {
-    const context = await getCloudflareContext({ async: true });
-    return context.env as Partial<CloudflareEnv>;
-  } catch {
-    return {};
-  }
+  return getWorkerEnvSync();
 }
 
 export function waitUntilInWorker(promise: Promise<unknown>): void {
   const safePromise = promise.catch(() => undefined);
 
   try {
-    const context = getCloudflareContext();
-    if (context?.ctx && typeof context.ctx.waitUntil === "function") {
-      context.ctx.waitUntil(safePromise);
+    if (typeof workerWaitUntil === "function") {
+      workerWaitUntil(safePromise);
       return;
     }
   } catch {

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import NextLink from "next/link";
+import { SiteLink } from "@/components/navigation/site-link";
 import { Chip } from "@heroui/react/chip";
 import React from "react";
 
@@ -95,14 +95,14 @@ function renderRichText(segments: ThoughtRichTextSegment[]): ReactNode[] {
 
     if (segment.url) {
       content = (
-        <NextLink
+        <SiteLink
           className="pointer-events-auto break-all font-medium text-accent hover:underline"
           href={segment.url}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </NextLink>
+        </SiteLink>
       );
     }
 
@@ -173,12 +173,12 @@ function ReplyPreview({
   }
 
   return (
-    <NextLink
+    <SiteLink
       className="pointer-events-auto relative z-10 flex flex-row border-l-2 pl-2 hover:opacity-100"
       href={preview.href}
     >
       {body}
-    </NextLink>
+    </SiteLink>
   );
 }
 
@@ -237,7 +237,7 @@ function ThoughtsPageBody({ items }: { items: ThoughtItem[] }) {
             id={localMessageAnchor(item.id)}
             className="group relative overflow-hidden rounded-xl border bg-surface shadow-sm transition-all hover:shadow-md"
           >
-            <NextLink
+            <SiteLink
               aria-label={`Open thought from ${dateLabel} in Telegram`}
               className="absolute inset-0 z-0"
               href={item.link}

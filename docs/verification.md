@@ -1,5 +1,53 @@
 # Blog2 Verification Guide
 
+## 2026-11-25 Vite 8 + TanStack Start + Native Cloudflare Workers Migration State
+
+Current platform and runtime shape:
+
+- Framework/runtime moved from Next.js 16 + `@opennextjs/cloudflare` to Vite 8 (`vite@8.3.8`) + TanStack Start (`@tanstack/react-start@1.169.7`) + `@cloudflare/vite-plugin@1.70.1` + `@tailwindcss/vite@4.3.5`.
+- `src/server.ts` is the native Cloudflare Worker entry (`wrangler.jsonc` `main: "./src/server.ts"`): it runs `getLegacyRedirectResponse` (`308` for `/projects`, `/thoughts`, `/en/**`, `/zh/**`, passing `/blog` through to `404`), wraps `@tanstack/react-start/server-entry` with `handleEdgeCachedFetch` (keyed by compile-time `__APP_BUILD_ID__`), and exports `scheduled()` for the daily `0 18 * * *` X sync cron.
+- `src/lib/cloudflare-env.ts` reads bindings and registers background tasks directly from native `cloudflare:workers` (`env`, `waitUntil`), removing `@opennextjs/cloudflare`.
+- File routes live under `src/routes/`: `__root.tsx`, `index.tsx`, `articles/$slug.tsx`, `api/health.ts`, `sitemap[.]xml.ts`, `[.]well-known/api-catalog.ts`, and `media/$id.ts`, backed by thin server modules under `src/server-handlers/`.
+- Navigation uses `SiteLink` (`src/components/navigation/site-link.tsx`), rendering plain `<a>` for external/hash/router-less contexts and TanStack `<Link>` for internal routes. Images use `ResponsiveRemoteImage` (`<img>` + `/media/$id` for volatile hosts, `/cdn-cgi/image/...` + `srcSet` for transform-allowed hosts).
+- Fonts (`Libre Bodoni` 400/500/600 and `Courier Prime` 400/700, Latin subsets) are self-hosted via `@fontsource/*` in `src/styles/globals.css`, keeping selective HeroUI v3 CSS imports.
+- All zero-cost optimizations from PR #58 remain intact (KV SWR, `social:x:feed:v1` snapshot, Telegram incremental `knownIds`, Notion `data_source_id` caching, `shiki/core` singleton with dynamic ESM grammar chunks, `caches.default` HTML SWR, `/media/$id` immutable + `ETag`/`304` + `waitUntil` backfill).
+
+Current evidence:
+
+- `pnpm build`: PASS in ~0.97s (client `502ms`, SSR `471ms`).
+  - Client JS total across all routes: `680.2 KB` raw / `217.5 KB` gzip (`rich-content-table` `117.09 KB` and `_slug` `11.8 KB` code-split off `/`; homepage JS ~`551 KB` raw / ~`179 KB` gzip).
+  - Client CSS: `globals-*.css` `77.79 KB` raw (`12.49 KB` gzip) + `routes-*.css` `3.92 KB` (`1.15 KB` gzip).
+  - Server Worker upload (`wrangler deploy --dry-run`): `Total Upload: 5251.77 KiB / gzip: 893.44 KiB` across `76` ESM modules (`dist/server/index.js` entry `891 KiB` / `168 KiB` gzip; Shiki language grammars split into lazy ESM chunks) + `29` static assets in `dist/client`.
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings, with updated `local/require-shared-link-and-image` rule).
+- `pnpm test`: PASS (`40` files, `137` tests in `1.73s`).
+- `pnpm exec wrangler dev --config dist/server/wrangler.json --ip 127.0.0.1 --port 3320 --test-scheduled` + `curl`: PASS:
+  - `/api/health` -> `200 application/json` (`mode: "production"`).
+  - `GET` & `HEAD /.well-known/api-catalog` -> `200 application/linkset+json; profile="https://www.rfc-editor.org/info/rfc9727"` + RFC 8288 `Link` header.
+  - `/` -> `200 text/html`, `Cache-Control: public, max-age=0, s-maxage=600`, `Link` header, `x-blog2-edge-cache: miss` -> `hit` (`3.4ms–6.3ms` local TTFB), `<title>sorcererxw</title>`, canonical `https://sorcererxw.com/`, `CollectionPage` JSON-LD, `ProfileHero`, `OverviewFeed` (`144` cards with local KV), `/media/` images, zero `rich-content-table` script tags on `/`.
+  - `/?type=writing` (`42` cards, Writing tab selected) and `/?source=telegram` (`89` cards).
+  - `/sitemap.xml` -> `200 application/xml`, `x-blog2-edge-cache: miss` -> cached.
+  - `/articles/screenshot-render` -> `200`, `TechArticle` JSON-LD, `<!--render-->` rendered HTML, Shiki highlighted blocks.
+  - `/articles/grpc-gateway-comparison` -> `200`, HeroUI table rendered.
+  - `/articles/non-existent-slug-check-404` -> `404` (`Page not found.`).
+  - Legacy redirects: `/projects` -> `308 /?type=projects`, `/thoughts` -> `308 /?type=social`, `/en` -> `308 /`, `/zh/articles/screenshot-render` -> `308 /articles/screenshot-render`, `/en/blog` -> `308 /blog`, `/blog` -> `404`.
+  - `/media/<id>?u=...` -> `200 image/jpeg`, `Cache-Control: public, max-age=31536000, immutable`, `ETag`, `If-None-Match` -> `304 Not Modified`.
+  - `/assets/globals-*.css` -> `200 text/css`, `Cache-Control: public,max-age=31536000,immutable` (from `public/_headers`).
+  - `/robots.txt`, `/llms.txt`, `/favicon.svg` -> `200`; `/cdn-cgi/handler/scheduled?cron=0+0+*+*+*` -> `200 ok`.
+- Real browser verification on local Cloudflare Worker (`http://localhost:3320/`): PASS:
+  - `/` hydrated cleanly (`hasBoundaryError: false`, `feedLayout: "hydrated-masonry"`, `columnCount: 3`, `feedReveal: "ready"`, `144` cards).
+  - Self-hosted fonts loaded (`Libre Bodoni:500/600`, `Courier Prime:400/700`).
+  - Computed HeroUI v3 styles matched baseline (`cardBg: oklch(0.2103 0.0162 56.06)`, `cardRadius: 24px`, `chipBg: oklch(0.274 0.0081 56.06)`, `chipRadius: 16px`, `tabHeight: 32px`, `indicatorBg: oklch(0.3964 0.0081 56.06)`).
+  - Theme toggle (`dark` -> `light` -> `dark`) and filter tabs (`All` 144 -> `Writing` 42 -> `All` 144) worked without errors.
+  - `/articles/grpc-gateway-comparison` rendered `hasTable: true` (`8` rows), `shikiBlocks: 2`, `hasBoundaryError: false`.
+  - SPA navigation roundtrip (`/articles/grpc-gateway-comparison` -> `Back to writing` -> `/?type=writing` `42` cards -> clicking first Writing card -> `/articles/stop-migrate-nextjs-to-astro`) succeeded cleanly with zero errors.
+- `git diff --check`: PASS.
+
+Residual risk:
+
+- Cloudflare Workers Builds / PR preview deploy command should be verified once pushed to ensure Cloudflare runs `pnpm build` + `wrangler deploy`/`versions upload` (which reads `.wrangler/deploy/config.json` -> `dist/server/wrangler.json` automatically).
+- On localhost preview, `/cdn-cgi/image/...` URLs for `images.unsplash.com`/`pbs.twimg.com` return `404` as expected because Cloudflare Image Transformations run only on Cloudflare's production edge zone.
+
 ## 2026-11-25 Zero-Cost Performance Optimization State
 
 Current performance and caching shape:

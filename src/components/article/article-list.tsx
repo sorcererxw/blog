@@ -1,4 +1,4 @@
-import NextLink from "next/link";
+import { SiteLink } from "@/components/navigation/site-link";
 
 import { cn } from "@/lib/utils";
 import { buildCloudflareImageUrl } from "@/lib/images/cloudflare";
@@ -82,7 +82,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
                 key={item.slug}
                 className={cn("min-w-0", index === 0 && "sm:col-span-2")}
               >
-                <NextLink
+                <SiteLink
                   className={cn(
                     "grid gap-4 text-inherit no-underline transition-[opacity,transform] duration-150 hover:-translate-y-0.5",
                     index === 0 && "sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] sm:items-start",
@@ -136,7 +136,7 @@ export function ArticleList({ items, className }: ArticleListProps) {
                       {item.summary}
                     </p>
                   ) : null}
-                </NextLink>
+                </SiteLink>
               </article>
             );
           })}

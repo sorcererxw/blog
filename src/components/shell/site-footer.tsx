@@ -1,5 +1,4 @@
-import NextLink from "next/link";
-
+import { SiteLink } from "@/components/navigation/site-link";
 import { getFooterLinks } from "@/domains/shell/site-links";
 
 export function SiteFooter() {
@@ -20,7 +19,7 @@ export function SiteFooter() {
             <div key={group.title} className="grid content-start gap-3">
               {group.links.map((link) =>
                 link.external ? (
-                  <NextLink
+                  <SiteLink
                     key={link.label}
                     className="font-medium text-muted transition-colors hover:text-foreground"
                     href={link.href}
@@ -28,15 +27,15 @@ export function SiteFooter() {
                     target="_blank"
                   >
                     {link.label}
-                  </NextLink>
+                  </SiteLink>
                 ) : (
-                  <NextLink
+                  <SiteLink
                     key={link.label}
                     className="font-medium text-muted transition-colors hover:text-foreground"
                     href={link.href}
                   >
                     {link.label}
-                  </NextLink>
+                  </SiteLink>
                 ),
               )}
             </div>

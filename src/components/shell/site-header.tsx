@@ -1,6 +1,4 @@
-import NextImage from "next/image";
-import NextLink from "next/link";
-
+import { SiteLink } from "@/components/navigation/site-link";
 import { cn } from "@/lib/utils";
 
 import { getCurrentPublicRoute, getPublicRoutes } from "@/domains/shell/site-links";
@@ -19,22 +17,21 @@ export function SiteHeader({
   return (
     <header className="bg-[color:color-mix(in_oklab,var(--background)_94%,var(--surface)_6%)]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <NextLink
+        <SiteLink
           className="inline-flex items-center gap-3 self-start text-current"
           href="/"
         >
-          <NextImage
+          <img
             alt="sorcererxw blog logo"
             className="h-10 w-auto flex-none"
-            height="40"
+            height={40}
             src="/favicon.svg"
-            unoptimized
-            width="37"
+            width={37}
           />
           <span className="font-display text-2xl font-medium">
             sorcererxw
           </span>
-        </NextLink>
+        </SiteLink>
 
         <div className="flex items-center gap-4 self-start sm:self-auto">
           {publicRoutes.length > 0 ? (
@@ -43,7 +40,7 @@ export function SiteHeader({
               className="flex flex-wrap items-center gap-x-6 gap-y-2 sm:justify-end"
             >
               {publicRoutes.map((route) => (
-                <NextLink
+                <SiteLink
                   key={route.key}
                   aria-current={route.active ? "page" : undefined}
                   className={cn(
@@ -55,7 +52,7 @@ export function SiteHeader({
                   href={route.href}
                 >
                   {route.label}
-                </NextLink>
+                </SiteLink>
               ))}
             </nav>
           ) : null}

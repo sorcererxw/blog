@@ -33,6 +33,7 @@ const BYPASS_REQUEST_HEADERS = [
   "next-router-segment-prefetch",
   "next-router-state-tree",
   "next-action",
+  "x-tsr-serverfn",
   "authorization",
 ];
 

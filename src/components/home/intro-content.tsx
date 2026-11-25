@@ -1,5 +1,6 @@
 import { Fragment, type ComponentType, type ReactNode } from "react";
-import NextLink from "next/link";
+
+import { SiteLink } from "@/components/navigation/site-link";
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
 import {
@@ -141,14 +142,14 @@ function renderRichText(richText: NotionRichText[]): ReactNode[] {
 
     if (href) {
       content = (
-        <NextLink
+        <SiteLink
           className="break-all text-accent underline underline-offset-4"
           href={href}
           rel="noreferrer"
           target="_blank"
         >
           {content}
-        </NextLink>
+        </SiteLink>
       );
     }
 
@@ -349,7 +350,7 @@ function renderBlock(
 
       return (
         <>
-          <NextLink
+          <SiteLink
             className={styles.bookmarkLink}
             href={url}
             rel="noreferrer"
@@ -368,7 +369,7 @@ function renderBlock(
                 <p className="break-all text-sm text-muted">{url}</p>
               </CardContent>
             </Card>
-          </NextLink>
+          </SiteLink>
           {renderChildren(block, tableComponents)}
         </>
       );

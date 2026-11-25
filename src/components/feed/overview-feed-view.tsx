@@ -1,6 +1,4 @@
-"use client";
-
-import NextLink from "next/link";
+import { useRouter } from "@tanstack/react-router";
 import { Card } from "@heroui/react/card";
 import { Chip } from "@heroui/react/chip";
 import { Tabs } from "@heroui/react/tabs";
@@ -18,6 +16,7 @@ import {
 } from "react";
 
 import { ResponsiveRemoteImage } from "@/components/media/responsive-remote-image";
+import { SiteLink } from "@/components/navigation/site-link";
 import {
   assignFeedLayout,
   getFeedModuleSize,
@@ -136,7 +135,7 @@ function renderRichTextSegment(
 
   if (segment.url) {
     content = (
-      <NextLink
+      <SiteLink
         className="break-all font-semibold text-foreground underline underline-offset-[0.12em]"
         href={segment.url}
         prefetch={false}
@@ -144,7 +143,7 @@ function renderRichTextSegment(
         target="_blank"
       >
         {content}
-      </NextLink>
+      </SiteLink>
     );
   }
 
@@ -295,7 +294,7 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
   const handle = quote.authorUsername ? `@${quote.authorUsername}` : null;
 
   return (
-    <NextLink
+    <SiteLink
       className="block rounded-medium border border-separator px-4 py-3 text-inherit no-underline transition-colors hover:border-foreground/40"
       href={quote.url}
       prefetch={false}
@@ -312,7 +311,7 @@ function QuotePreview({ quote }: { quote: FeedQuotePreview }) {
         {quote.text}
       </p>
       <QuoteMediaGrid media={quote.media} />
-    </NextLink>
+    </SiteLink>
   );
 }
 
@@ -365,7 +364,7 @@ function ModuleInner({
         <FeedText item={item} />
         {item.quote ? <QuotePreview quote={item.quote} /> : null}
         {footerDestination && footerDestination.kind !== "none" ? (
-          <NextLink
+          <SiteLink
             className="justify-self-start no-underline hover:[&_time]:text-foreground hover:[&_time]:underline hover:[&_time]:underline-offset-4"
             href={footerDestination.href}
             prefetch={false}
@@ -377,7 +376,7 @@ function ModuleInner({
             }
           >
             {time}
-          </NextLink>
+          </SiteLink>
         ) : (
           time
         )}
@@ -408,6 +407,7 @@ const FeedModule = memo(function FeedModule({
   eagerMedia: boolean;
   item: OverviewFeedViewItem;
 }) {
+  const router = useRouter({ warn: false });
   const moduleSize = getFeedModuleSize(item);
   const destination =
     item.destination.kind === "none" ? null : item.destination;
@@ -419,6 +419,11 @@ const FeedModule = memo(function FeedModule({
 
     if (destination.kind === "external") {
       window.open(destination.href, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (router) {
+      void router.navigate({ to: destination.href as never });
       return;
     }
 
@@ -504,6 +509,9 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
   const [filter, setFilter] = useState<FeedFilter>(() =>
     normalizeFilter(initialFilter),
   );
+  useEffect(() => {
+    setFilter(normalizeFilter(initialFilter));
+  }, [initialFilter.source, initialFilter.type]);
   const filteredItems = useMemo(
     () => items.filter((item) => matchesFilter(item, filter)),
     [filter, items],
@@ -645,11 +653,11 @@ export function OverviewFeed({ initialFilter, items }: OverviewFeedProps) {
                     key={link.key}
                     render={(domProps: unknown) => {
                       const linkProps = domProps as ComponentProps<
-                        typeof NextLink
+                        typeof SiteLink
                       >;
 
                       return (
-                        <NextLink
+                        <SiteLink
                           {...linkProps}
                           data-overview-filter-link
                           href={link.href}

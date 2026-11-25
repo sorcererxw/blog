@@ -1,4 +1,4 @@
-import NextLink from "next/link";
+import { SiteLink } from "@/components/navigation/site-link";
 
 type BoundaryAction = {
   href: string;
@@ -28,9 +28,9 @@ export function PublicBoundary({
         <p className="publication-home-summary">{message}</p>
         <div className="flex flex-wrap gap-3">
           {actions.map((action) => (
-            <NextLink key={action.label} className="publication-link" href={action.href}>
+            <SiteLink key={action.label} className="publication-link" href={action.href}>
               {action.label}
-            </NextLink>
+            </SiteLink>
           ))}
         </div>
         {note ? <p className="publication-note">{note}</p> : null}

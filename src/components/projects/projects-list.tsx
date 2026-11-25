@@ -1,4 +1,4 @@
-import NextLink from "next/link";
+import { SiteLink } from "@/components/navigation/site-link";
 
 import { cn } from "@/lib/utils";
 import { MasonryFeed } from "@/components/feed/masonry-feed";
@@ -56,7 +56,7 @@ export function ProjectsList({items, className}: ProjectsListProps) {
         items={items}
         renderItem={(item) => (
           <article className="h-full">
-            <NextLink
+            <SiteLink
               className="flex h-full flex-col text-inherit no-underline"
               href={item.url}
               rel="noreferrer"
@@ -82,7 +82,7 @@ export function ProjectsList({items, className}: ProjectsListProps) {
                   </span>
                 </div>
               </Card>
-            </NextLink>
+            </SiteLink>
           </article>
         )}
       />

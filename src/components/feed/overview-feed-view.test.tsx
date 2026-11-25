@@ -94,7 +94,7 @@ describe("OverviewFeed", () => {
     expect(markup).not.toContain("px-" + "[1.15rem]");
     expect(markup).not.toContain("badge--soft");
     expect(markup).toContain('href="/articles/one"');
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Farticle-cover.jpg");
+    expect(markup).toContain('src="https://example.com/article-cover.jpg"');
     expect(markup).toContain('loading="eager"');
     expect(markup).toContain('fetchPriority="high"');
     expect(markup).not.toContain('href="https://t.me/s/example/1"');
@@ -160,8 +160,8 @@ describe("OverviewFeed", () => {
     );
 
     expect(markup.match(/loading="eager"/g)).toHaveLength(2);
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fthird.jpg");
-    expect(markup).toMatch(/loading="lazy"[^>]+srcSet="[^"]*third\.jpg/);
+    expect(markup).toContain('src="https://example.com/third.jpg"');
+    expect(markup).toMatch(/loading="lazy"[^>]+src="https:\/\/example\.com\/third\.jpg"/);
   });
 
   it("renders Telegram modules with rich text and no duplicate title", () => {
@@ -237,8 +237,8 @@ describe("OverviewFeed", () => {
       />,
     );
 
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-1.jpg");
-    expect(markup).toContain("https%3A%2F%2Fexample.com%2Fphoto-2.jpg");
+    expect(markup).toContain('src="https://example.com/photo-1.jpg"');
+    expect(markup).toContain('src="https://example.com/photo-2.jpg"');
     expect(markup).toContain("grid-cols-2");
   });
 
@@ -278,7 +278,7 @@ describe("OverviewFeed", () => {
     expect(markup).toContain("@supezen");
     expect(markup).toContain("以前我们说 idea 不值钱");
     expect(markup).toContain('href="https://x.com/supezen/status/3"');
-    expect(markup).toContain("https%3A%2F%2Fpbs.twimg.com%2Fmedia%2Fquoted.jpg");
+    expect(markup).toContain('src="https://pbs.twimg.com/media/quoted.jpg"');
     expect(markup).not.toContain("https://t.co/C6afVyxUzX");
     expect(markup).not.toContain("<span>X post</span>");
   });

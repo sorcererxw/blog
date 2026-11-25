@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from "@heroui/react/button";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";

@@ -16,6 +16,54 @@ Use it to capture:
 
 Write concrete entries so future agents can continue work without replaying prior terminal sessions.
 
+## 2026-11-25 - Migrate to Vite 8 + TanStack Start + Native Cloudflare Workers
+
+Status: done locally on branch `perf/zero-cost-site-optimization` (PR #58), pushed for Cloudflare preview verification
+
+Summary:
+
+- migrated the full standalone Personal Site app from Next.js 16 + `@opennextjs/cloudflare` to Vite 8 (`vite@8.3.8`) + TanStack Start (`@tanstack/react-start@1.169.7`) + native Cloudflare Workers (`@cloudflare/vite-plugin@1.70.1`) with zero UI/UX changes and zero added infrastructure cost
+- replaced `@opennextjs/cloudflare` `getCloudflareContext` with native `cloudflare:workers` (`env`, `waitUntil`) in `src/lib/cloudflare-env.ts`
+- created native Worker entry `src/server.ts` composing legacy `308` redirects (`src/lib/legacy-redirects.ts`), compile-time build-scoped Cloudflare `caches.default` HTML/sitemap SWR (`__APP_BUILD_ID__`), TanStack Start `handler.fetch`, and the daily `0 18 * * *` X sync `scheduled()` handler
+- extracted thin route/server handlers under `src/server-handlers/` (`home-data.ts`, `article-data.ts`, `health.ts`, `sitemap.ts`, `api-catalog.ts`, `canonical-media.ts`) and wired file-based TanStack Start routes under `src/routes/` (`__root.tsx`, `index.tsx`, `articles/$slug.tsx`, `api/health.ts`, `sitemap[.]xml.ts`, `[.]well-known/api-catalog.ts`, `media/$id.ts`) + `src/router.tsx` (`defaultPreload: "intent"`, `defaultStaleTime: 60_000`)
+- replaced `next/link` across all components with `SiteLink` (`src/components/navigation/site-link.tsx`), rendering plain `<a>` for external/hash/router-less contexts and TanStack `<Link>` for internal routes
+- replaced `next/image` with native `<img>` in `ResponsiveRemoteImage` (preserving zero-bloat `/media/$id` URLs and `/cdn-cgi/image/...` responsive `srcSet` for transform-allowed hosts) and `SiteHeader` logo (`/favicon.svg`)
+- replaced `next/font/google` with self-hosted Latin `@fontsource/libre-bodoni` (400/500/600) and `@fontsource/courier-prime` (400/700) in `src/styles/globals.css`, preserving selective HeroUI v3 CSS imports
+- removed all obsolete Next.js/OpenNext files (`src/app/**`, `src/middleware.ts`, `src/worker.ts`, `next.config.ts`, `open-next.config.ts`, `image-loader.ts`, `postcss.config.mjs`, `next-env.d.ts`) and updated `eslint.config.mjs`, `wrangler.jsonc`, `public/_headers`, `tsconfig.json`, `vitest.config.ts`, and `cloudflare-env.d.ts`
+
+Files:
+
+- Added: `docs/specs/2026-11-25-vite-tanstack-start-cloudflare-design.md`, `docs/plans/2026-11-25-vite-tanstack-start-cloudflare.md`, `vite.config.ts`, `src/server.ts`, `src/router.tsx`, `src/routeTree.gen.ts`, `src/routes/__root.tsx`, `src/routes/index.tsx`, `src/routes/articles/$slug.tsx`, `src/routes/api/health.ts`, `src/routes/sitemap[.]xml.ts`, `src/routes/[.]well-known/api-catalog.ts`, `src/routes/media/$id.ts`, `src/server-handlers/*`, `src/components/navigation/site-link.tsx`, `src/lib/legacy-redirects.ts`, `src/lib/legacy-redirects.test.ts`, `src/lib/seo-head.tsx`, `src/lib/seo-head.test.tsx`, `src/styles/globals.css`
+- Updated: `package.json`, `pnpm-lock.yaml`, `wrangler.jsonc`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.mjs`, `public/_headers`, `cloudflare-env.d.ts`, `.gitignore`, `src/lib/cloudflare-env.ts`, `src/lib/edge-page-cache.ts`, `src/types/cloudflare-workers.d.ts`, `src/test/cloudflare-workers.ts`, `src/components/media/responsive-remote-image.tsx`, `src/components/feed/overview-feed-view.tsx`, `src/components/feed/overview-feed-view.test.tsx`, `src/components/article/article-detail-view.tsx`, `src/components/article/article-list.tsx`, `src/components/home/intro-content.tsx`, `src/components/projects/projects-list.tsx`, `src/components/thoughts/thoughts-page.tsx`, `src/components/shell/site-header.tsx`, `src/components/shell/site-footer.tsx`, `src/components/shell/public-boundary.tsx`, `src/components/shell/theme-toggle.tsx`, `src/components/rich-content/rich-content-table.tsx`, `src/integrations/telegram/public-page.ts`, `src/domains/thoughts/list-thoughts.test.ts`, `docs/roadmap.md`, `docs/task-ledger.md`, `docs/verification.md`
+- Deleted: `src/app/**`, `src/middleware.ts`, `src/middleware.test.ts`, `src/worker.ts`, `next.config.ts`, `open-next.config.ts`, `image-loader.ts`, `src/lib/images/image-loader.test.ts`, `postcss.config.mjs`, `next-env.d.ts`
+
+Decisions:
+
+- kept `src/domains/*` and `src/integrations/*` completely framework-agnostic (zero TanStack imports inside domain or integration layers)
+- avoided importing `buildSeo` (which reads `cloudflare-env.ts` -> `cloudflare:workers`) inside client-bundled route `head()` fallbacks so browser bundles never touch `cloudflare:workers`
+- used `useRouter({ warn: false })` inside `SiteLink` so SSR component unit tests work without `<RouterProvider>` and ~300 external Telegram/X links render as lightweight native `<a>` elements with zero router subscription overhead
+- kept `rich-content-table` dynamically imported on `/` only when `hasHomeTableBlock` is true so `@heroui/react/table` (`117 KB`) never ships to homepage visitors
+- added `defaultStaleTime: 60_000` on `createRouter` so Back/Forward SPA navigation between `/` and `/articles/$slug` is instant without refetching loaders
+
+Verification:
+
+- `pnpm build`: PASS in ~0.97s; Worker upload `5251.77 KiB / gzip: 893.44 KiB` (entry `891 KiB / 168 KiB` gzip), Client JS `680.2 KB / 217.5 KB` gzip (~`551 KB / 179 KB` gzip on `/`), Client CSS `77.79 KB / 12.49 KB` gzip.
+- `pnpm typecheck`: PASS (`0` errors).
+- `pnpm lint`: PASS (`0` errors, `0` warnings).
+- `pnpm test`: PASS (`40` files, `137` tests).
+- Local Wrangler Worker (`wrangler dev --config dist/server/wrangler.json --port 3320 --test-scheduled`) HTTP checks: PASS for `/`, `/?type=writing`, `/?source=telegram`, `/articles/screenshot-render`, `/articles/grpc-gateway-comparison`, `/articles/non-existent-slug-check-404` (`404`), `/api/health`, `GET`/`HEAD /.well-known/api-catalog`, `/sitemap.xml`, `/media/$id` (`200 immutable` + `304`), `/assets/*` (`immutable`), `/robots.txt`, `/llms.txt`, `/favicon.svg`, legacy `308` redirects, `/blog` (`404`), and `/cdn-cgi/handler/scheduled`.
+- Real browser verification on `http://localhost:3320/`: PASS for `/` hydration (3-column `hydrated-masonry`, `reveal="ready"`, zero error boundary), self-hosted fonts (`Libre Bodoni` + `Courier Prime`), computed HeroUI v3 styles, theme toggle, filter tabs, `/articles/grpc-gateway-comparison` table + Shiki, and full SPA roundtrip navigation.
+- `git diff --check`: PASS.
+
+Follow-up:
+
+- verify Cloudflare Workers preview deployment and live production TTFB/LCP metrics on PR #58 (`perf/zero-cost-site-optimization`)
+- confirm Cloudflare Workers Builds uses `pnpm build` / `wrangler deploy` (or `wrangler versions upload`) instead of `opennextjs-cloudflare` commands
+
+Blockers:
+
+- none
+
 ## 2026-11-25 - Browser Base64url Hydration Fix (PR #58)
 
 Status: done locally, pushed to PR #58

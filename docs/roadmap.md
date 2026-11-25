@@ -8,13 +8,13 @@ The product direction is now overview-first: one public homepage with a Profile 
 
 ## Architecture Direction
 
-- `docs/specs/2026-05-13-opennext-nextjs-rebuild-design.md` supersedes the Astro runtime direction and makes OpenNext + Next.js the active platform target
+- `docs/specs/2026-11-25-vite-tanstack-start-cloudflare-design.md` supersedes the OpenNext + Next.js runtime direction and makes Vite 8 + TanStack Start + native Cloudflare Workers (`@cloudflare/vite-plugin`) the active platform target
 - the rebuild keeps the Personal Site product model from `docs/specs/2026-05-12-personal-site-overview-design.md`
-- `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md` replaces the checked-in Telegram snapshot flow with runtime public-page crawling plus Next revalidation
+- `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md` replaces the checked-in Telegram snapshot flow with runtime public-page crawling cached via `BLOG_CACHE` KV SWR
 - `docs/specs/2026-05-18-provider-kv-cache-design.md` keeps external provider caching at the route assembly boundary through thin `BLOG_CACHE` wrappers instead of embedding cache policy inside Notion or Telegram providers
-- `docs/specs/2026-11-25-zero-cost-performance-optimization-design.md` upgrades `BLOG_CACHE` provider wrappers to logical SWR with incremental Telegram refresh, adds single-key X feed snapshots (`social:x:feed:v1`), adds free build-scoped Cloudflare `caches.default` HTML edge caching in `src/worker.ts`, slims Shiki to `shiki/core` with a singleton highlighter, fixes `/media/[id]` edge/browser caching, and prunes unused HeroUI CSS and redundant `/media/` `srcSet` markup with zero UI/UX or cost changes
+- `docs/specs/2026-11-25-zero-cost-performance-optimization-design.md` upgrades `BLOG_CACHE` provider wrappers to logical SWR with incremental Telegram refresh, adds single-key X feed snapshots (`social:x:feed:v1`), adds free build-scoped Cloudflare `caches.default` HTML edge caching in `src/server.ts`, slims Shiki to `shiki/core` with a singleton highlighter, fixes `/media/$id` edge/browser caching, and prunes unused HeroUI CSS and redundant `/media/` `srcSet` markup with zero UI/UX or cost changes
 - repository extraction from `tempura/web/apps/blog2` to standalone `/Users/sorcererxw/repo/sorcererxw/blog` happened on 2026-05-04 with `blog2` history preserved
-- the previous Astro migration remains historical context, not the target architecture
+- the previous Astro and OpenNext + Next.js migrations remain historical context, not the target architecture
 
 ## Documentation Shape
 
@@ -55,9 +55,9 @@ Excluded:
 - App-owned derived storage: Cloudflare KV or the existing storage abstraction
 - Public route provider acceleration: Cloudflare KV wraps external providers at assembly time with a ten minute logical freshness window, 7-day physical retention, and `waitUntil` SWR background revalidation (plus incremental page-1 Telegram refresh and daily full reconcile)
 - X Social Post reads use a single durable `social:x:feed:v1` snapshot key in `BLOG_CACHE` (with bulk KV fallback and lazy backfill), eliminating N+1 sequential KV reads on `/`
-- Worker edge HTML caching: `src/worker.ts` uses free Cloudflare `caches.default` keyed by `BUILD_ID` + canonical path/filter query for public HTML documents and `/sitemap.xml` with 10-minute logical freshness and `waitUntil` SWR, bypassing Next RSC router requests
+- Worker edge HTML caching: `src/server.ts` uses free Cloudflare `caches.default` keyed by compile-time `__APP_BUILD_ID__` + canonical path/filter query for public HTML documents and `/sitemap.xml` with 10-minute logical freshness and `waitUntil` SWR, bypassing server-function/non-HTML requests
 - Overview Feed Index freshness target: ten minutes
-- Telegram public-page crawl freshness target: ten minutes through Next fetch revalidation
+- Telegram public-page crawl freshness target: ten minutes through `BLOG_CACHE` KV SWR with incremental `knownIds` refresh
 - Future escape hatch: optional partial migration to D1 if KV-only storage becomes too awkward for async workflows
 
 ## Milestones
@@ -183,12 +183,12 @@ Exit criteria:
 - Notion remains authoritative for content
 - KV remains the default storage choice unless docs are updated
 - legacy code is reference material, not target architecture
-- the active framework migration target is Next.js App Router deployed through OpenNext on Cloudflare Workers
-- Wrangler enters through checked-in `src/worker.ts`, which delegates fetch handling to OpenNext's generated worker and leaves room for future Worker-level handlers
-- runtime variables are defined through Wrangler `vars` and `secrets.required`; there is no repo-local `src/config` package
+- the active framework platform is Vite 8 + TanStack Start deployed natively on Cloudflare Workers via `@cloudflare/vite-plugin`
+- Wrangler enters through checked-in `src/server.ts`, which applies legacy `308` redirects, build-scoped Cloudflare `caches.default` SWR HTML caching, delegates SSR/server routes to `@tanstack/react-start/server-entry`, and owns the `0 18 * * *` scheduled X sync cron handler
+- runtime variables are defined through Wrangler `vars` and `secrets.required`, accessed natively via `cloudflare:workers` (`env`, `waitUntil`) in `src/lib/cloudflare-env.ts`; there is no repo-local `src/config` package
 - runtime integrations must not synthesize content when source configuration is missing
 - `/sitemap.xml` is runtime-generated so Cloudflare builds do not require `NOTION_SECRET`, while runtime requests still require valid Notion configuration
-- compatibility redirects are implemented in `src/middleware.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
+- compatibility redirects are implemented in `src/lib/legacy-redirects.ts` and executed in `src/server.ts`, not standalone pages or route handlers; `/blog` is intentionally not redirected
 - article detail pages may render trusted authored HTML only from Notion `html` code blocks whose text starts with `<!--render-->`; all other code blocks remain display code
 - feed UI primitives and tokens have migrated from the local shadcn/Base UI component set to HeroUI v3 under `docs/specs/2026-05-18-heroui-design-system-migration-design.md`; `src/components/ui/*`, `components.json`, `shadcn/tailwind.css`, and the old shadcn/Base UI dependencies are no longer part of the active source tree
 - Overview Feed layout estimates are browser-owned; Content Sources provide standard Feed Items, SSR uses a single-column fallback, and hydrated tablet/desktop masonry uses the Feed Layout Engine with Pretext
@@ -201,11 +201,10 @@ Exit criteria:
 ## Active Priorities
 
 1. use `docs/specs/2026-05-12-personal-site-overview-design.md` as the active product spec
-2. make OpenNext + Next.js the active runtime direction
-3. implement the Profile Hero and Overview Feed Index before broad visual polish
-4. preserve article details and old-route compatibility while removing archive pages from the primary product structure
-5. keep Telegram social content on the runtime public-page crawler defined in `docs/specs/2026-05-17-telegram-public-page-runtime-ingestion-design.md`
-6. implement X Social Source sync from `docs/plans/2026-05-21-x-social-source.md` without adding homepage-time X API calls
+2. keep Vite 8 + TanStack Start + native Cloudflare Workers (`@cloudflare/vite-plugin`) as the active runtime direction
+3. preserve article details, SEO/GEO discovery, and old-route compatibility while verifying Cloudflare preview/production deployment
+4. keep Telegram social content on the runtime public-page crawler with `BLOG_CACHE` KV SWR
+5. keep X Social Source sync on the daily `0 18 * * *` cron + `social:x:feed:v1` snapshot without adding homepage-time X API calls
 
 ## Open Questions
 

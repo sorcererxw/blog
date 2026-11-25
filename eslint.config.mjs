@@ -112,27 +112,37 @@ const localRules = {
         };
       },
     },
-    "require-next-link-and-image": {
+    "require-shared-link-and-image": {
       meta: {
         type: "problem",
         messages: {
-          noRawAnchor: "Use NextLink from next/link instead of a raw JSX <a> element.",
-          noRawImage: "Use NextImage from next/image or the shared ResponsiveRemoteImage wrapper instead of a raw JSX <img> element.",
+          noRawAnchor:
+            "Use SiteLink from @/components/navigation/site-link instead of a raw JSX <a> element.",
+          noRawImage:
+            "Use ResponsiveRemoteImage instead of a raw JSX <img> element.",
         },
         schema: [],
       },
       create(context) {
+        const filename = context.filename.replaceAll("\\", "/");
+        const allowRawAnchor = filename.endsWith(
+          "/src/components/navigation/site-link.tsx",
+        );
+        const allowRawImage =
+          filename.endsWith("/src/components/media/responsive-remote-image.tsx") ||
+          filename.endsWith("/src/components/shell/site-header.tsx");
+
         return {
           JSXOpeningElement(node) {
             if (node.name.type !== "JSXIdentifier") {
               return;
             }
 
-            if (node.name.name === "a") {
+            if (node.name.name === "a" && !allowRawAnchor) {
               context.report({ node: node.name, messageId: "noRawAnchor" });
             }
 
-            if (node.name.name === "img") {
+            if (node.name.name === "img" && !allowRawImage) {
               context.report({ node: node.name, messageId: "noRawImage" });
             }
           },
@@ -143,6 +153,7 @@ const localRules = {
 };
 
 const browserGlobals = {
+  __APP_BUILD_ID__: "readonly",
   AbortSignal: "readonly",
   BodyInit: "readonly",
   clearTimeout: "readonly",
@@ -174,11 +185,13 @@ const eslintConfig = tseslint.config(
       ".astro/**",
       ".next/**",
       ".open-next/**",
+      ".tanstack/**",
       ".wrangler/**",
       "build/**",
       "dist/**",
       "node_modules/**",
       "out/**",
+      "src/routeTree.gen.ts",
     ],
   },
   js.configs.recommended,
@@ -195,7 +208,7 @@ const eslintConfig = tseslint.config(
       "local/no-arbitrary-tailwind-design-tokens": "error",
       "local/no-unapproved-css-module-imports": "error",
       "local/require-cn-for-complex-classname": "error",
-      "local/require-next-link-and-image": "error",
+      "local/require-shared-link-and-image": "error",
     },
   },
 );
